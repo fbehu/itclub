@@ -22,10 +22,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     navigate('/');
   };
 
-  const navItems = [
-    { path: '/dashboard/profile', label: 'Profil', icon: User },
-    { path: '/dashboard/statistics', label: 'Statistika', icon: BarChart3 },
-  ];
+  const navItems = user?.role === 'admin' 
+    ? [
+        { path: '/dashboard/admin/users', label: 'Foydalanuvchilar', icon: User },
+        { path: '/dashboard/statistics', label: 'Statistika', icon: BarChart3 },
+      ]
+    : [
+        { path: '/dashboard/profile', label: 'Profil', icon: User },
+        { path: '/dashboard/statistics', label: 'Statistika', icon: BarChart3 },
+      ];
 
   const isActive = (path: string) => location.pathname === path;
 

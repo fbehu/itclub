@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import Statistics from "./pages/Statistics";
+import UserManagement from "./pages/admin/UserManagement";
+import AddUser from "./pages/admin/AddUser";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +42,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Statistics />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard/admin/users" 
+              element={
+                <ProtectedRoute>
+                  <UserManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard/admin/add-user" 
+              element={
+                <ProtectedRoute>
+                  <AddUser />
                 </ProtectedRoute>
               } 
             />
