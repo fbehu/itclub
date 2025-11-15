@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, User, BarChart3 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -36,17 +37,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {!isMobile && (
         <aside className="fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border animate-fade-in">
           <div className="p-6 border-b border-sidebar-border">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={user.image} />
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {user.firstName[0]}{user.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-semibold text-sidebar-foreground">{user.firstName}</p>
-                <p className="text-sm text-sidebar-foreground/70">{user.role === 'student' ? 'Talaba' : 'Admin'}</p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={user.photo} />
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {user.surname[0]}{user.lastname[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold text-sidebar-foreground">{user.surname}</p>
+                  <p className="text-sm text-sidebar-foreground/70">{user.role === 'student' ? 'Talaba' : 'Admin'}</p>
+                </div>
               </div>
+              <ThemeToggle />
             </div>
           </div>
 
@@ -87,6 +91,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content */}
       <main className={`${!isMobile ? 'ml-64' : 'mb-20'} min-h-screen`}>
         <div className="p-6">
+          <div className="flex justify-end mb-4 md:hidden">
+            <ThemeToggle />
+          </div>
           {children}
         </div>
       </main>

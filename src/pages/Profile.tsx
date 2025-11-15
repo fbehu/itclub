@@ -3,11 +3,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Download } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { toPng } from 'html-to-image';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
+
+const getLevelInfo = (level?: string) => {
+  switch (level) {
+    case 'beginner':
+      return { label: 'Boshlang\'ich', color: 'bg-green-500' };
+    case 'intermediate':
+      return { label: 'O\'rta', color: 'bg-yellow-500' };
+    case 'advanced':
+      return { label: 'Yuksak', color: 'bg-red-500' };
+    default:
+      return { label: '', color: '' };
+  }
+};
 
 export default function Profile() {
   const { user } = useAuth();
@@ -52,22 +66,43 @@ export default function Profile() {
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={user.image} />
+                  <AvatarImage src={user.photo} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                    {user.firstName[0]}{user.lastName[0]}
+                    {user.surname[0]}{user.lastname[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="text-xl font-semibold">{user.firstName} {user.lastName}</h3>
+                  <h3 className="text-xl font-semibold">{user.surname} {user.lastname}</h3>
                   <p className="text-sm text-muted-foreground">@{user.username}</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="border-b pb-2">
-                  <p className="text-sm text-muted-foreground">Telefon raqam</p>
-                  <p className="font-medium">{user.phone}</p>
+                  <p className="text-sm text-muted-foreground">UUID</p>
+                  <p className="font-mono text-xs break-all">{user.id}</p>
                 </div>
+
+                <div className="border-b pb-2">
+                  <p className="text-sm text-muted-foreground">Telefon raqam</p>
+                  <p className="font-medium">{user.phone_number}</p>
+                </div>
+
+                {user.tg_username && (
+                  <div className="border-b pb-2">
+                    <p className="text-sm text-muted-foreground">Telegram</p>
+                    <p className="font-medium">@{user.tg_username}</p>
+                  </div>
+                )}
+
+                {user.level && (
+                  <div className="border-b pb-2">
+                    <p className="text-sm text-muted-foreground">Daraja</p>
+                    <Badge className={`${getLevelInfo(user.level).color} text-white`}>
+                      {getLevelInfo(user.level).label}
+                    </Badge>
+                  </div>
+                )}
                 
                 {user.course && (
                   <div className="border-b pb-2">
@@ -80,13 +115,6 @@ export default function Profile() {
                   <div className="border-b pb-2">
                     <p className="text-sm text-muted-foreground">Yo'nalish</p>
                     <p className="font-medium">{user.direction}</p>
-                  </div>
-                )}
-
-                {user.telegram && (
-                  <div className="border-b pb-2">
-                    <p className="text-sm text-muted-foreground">Telegram</p>
-                    <p className="font-medium">@{user.telegram}</p>
                   </div>
                 )}
               </div>
