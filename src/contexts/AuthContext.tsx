@@ -3,14 +3,16 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 export interface User {
   id: string;
   username: string;
+  password: string;
   role: 'student' | 'admin';
-  firstName: string;
-  lastName: string;
-  phone: string;
-  course: string;
-  direction: string;
-  telegram?: string;
-  image?: string;
+  surname: string;
+  lastname: string;
+  phone_number: string;
+  tg_username?: string;
+  level?: 'beginner' | 'intermediate' | 'advanced';
+  course?: string;
+  direction?: string;
+  photo?: string;
 }
 
 interface AuthContextType {
@@ -27,27 +29,29 @@ const defaultUsers: Record<string, { password: string; user: User }> = {
   student: {
     password: 'student123',
     user: {
-      id: 'STU001',
+      id: 'e4c9b8f1-5a2d-4e3c-9b1f-6d8a7c5e4b3a',
       username: 'student',
+      password: 'student123',
       role: 'student',
-      firstName: 'Aziz',
-      lastName: 'Karimov',
-      phone: '+998901234567',
-      course: '2-kurs',
+      surname: 'Karimov',
+      lastname: 'Aziz',
+      phone_number: '+998901234567',
+      tg_username: 'aziz_karimov',
+      level: 'intermediate',
+      course: 'Kurs 2',
       direction: 'Dasturiy injinering',
     },
   },
   admin: {
     password: 'admin123',
     user: {
-      id: 'ADM001',
+      id: 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d',
       username: 'admin',
+      password: 'admin123',
       role: 'admin',
-      firstName: 'Admin',
-      lastName: 'User',
-      phone: '+998901234568',
-      course: '',
-      direction: '',
+      surname: 'Admin',
+      lastname: 'User',
+      phone_number: '+998901234568',
     },
   },
 };
