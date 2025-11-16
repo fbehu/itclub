@@ -29,19 +29,20 @@ interface Admin {
   photo?: string;
 }
 
-interface Conversation {
-  user_id: string;
-  user_name: string;
-  last_message: string;
-  last_message_time: string;
-  user_photo?: string;
+interface Student {
+  id: string;
+  first_name: string;
+  last_name: string;
+  photo?: string;
+  direction?: string;
+  course?: string;
 }
 
 export default function Chat() {
   const { user } = useAuth();
   const [admins, setAdmins] = useState<Admin[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedUser, setSelectedUser] = useState<Admin | Conversation | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedUser, setSelectedUser] = useState<Admin | Student | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -60,7 +61,7 @@ export default function Chat() {
     if (user?.role === 'student') {
       loadAdmins();
     } else if (user?.role === 'admin') {
-      loadConversations();
+      loadStudents();
     }
   }, [user]);
 
@@ -84,15 +85,16 @@ export default function Chat() {
     }
   };
 
-  const loadConversations = async () => {
+  const loadStudents = async () => {
     try {
-      const response = await authFetch(API_ENDPOINTS.GET_CONVERSATIONS);
+      const response = await authFetch(API_ENDPOINTS.USERS_LIST);
       if (response.ok) {
         const data = await response.json();
-        setConversations(data);
+        const studentUsers = data.filter((u: any) => u.role === 'student');
+        setStudents(studentUsers);
       }
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      console.error('Error loading students:', error);
     }
   };
 
@@ -102,7 +104,7 @@ export default function Chat() {
     try {
       const userId = user?.role === 'student' 
         ? (selectedUser as Admin).id 
-        : (selectedUser as Conversation).user_id;
+        : (selectedUser as Student).id;
       const response = await authFetch(`${API_ENDPOINTS.MESSAGES}?${user?.role === 'student' ? 'admin_id' : 'student_id'}=${userId}`);
       
       if (response.ok) {
@@ -151,7 +153,7 @@ export default function Chat() {
     if (user?.role === 'student') {
       formData.append('admin_id', (selectedUser as Admin).id);
     } else {
-      formData.append('student_id', (selectedUser as Conversation).user_id);
+      formData.append('student_id', (selectedUser as Student).id);
     }
 
     if (selectedFile) {
@@ -168,9 +170,6 @@ export default function Chat() {
         setNewMessage('');
         setSelectedFile(null);
         loadMessages();
-        if (user?.role === 'admin') {
-          loadConversations();
-        }
       } else {
         toast.error('Xabar yuborishda xatolik');
       }
@@ -224,25 +223,25 @@ export default function Chat() {
               </div>
             ) : (
               <div className="p-2">
-                {conversations.map((conv) => (
+                {students.map((student) => (
                   <Button
-                    key={conv.user_id}
+                    key={student.id}
                     variant="ghost"
                     className={`w-full justify-start mb-2 h-auto p-3 ${
-                      (selectedUser as Conversation)?.user_id === conv.user_id ? 'bg-accent' : ''
+                      (selectedUser as Student)?.id === student.id ? 'bg-accent' : ''
                     }`}
-                    onClick={() => setSelectedUser(conv)}
+                    onClick={() => setSelectedUser(student)}
                   >
                     <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={conv.user_photo} />
+                      <AvatarImage src={student.photo} />
                       <AvatarFallback>
-                        {conv.user_name.split(' ').map(n => n[0]).join('')}
+                        {student.first_name[0]}{student.last_name[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div className="text-left flex-1">
-                      <p className="font-medium">{conv.user_name}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {conv.last_message}
+                      <p className="font-medium">{student.first_name} {student.last_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {student.direction || 'Yo\'nalish ko\'rsatilmagan'} • {student.course || 'Kurs ko\'rsatilmagan'}
                       </p>
                     </div>
                   </Button>
@@ -259,11 +258,11 @@ export default function Chat() {
               {/* Chat Header */}
               <div className="p-4 border-b flex items-center gap-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={user?.role === 'student' ? (selectedUser as Admin).photo : (selectedUser as Conversation).user_photo} />
+                  <AvatarImage src={user?.role === 'student' ? (selectedUser as Admin).photo : (selectedUser as Student).photo} />
                   <AvatarFallback>
                     {user?.role === 'student' 
                       ? `${(selectedUser as Admin).first_name[0]}${(selectedUser as Admin).last_name[0]}`
-                      : (selectedUser as Conversation).user_name.split(' ').map(n => n[0]).join('')
+                      : `${(selectedUser as Student).first_name[0]}${(selectedUser as Student).last_name[0]}`
                     }
                   </AvatarFallback>
                 </Avatar>
@@ -271,7 +270,7 @@ export default function Chat() {
                   <p className="font-semibold">
                     {user?.role === 'student' 
                       ? `${(selectedUser as Admin).first_name} ${(selectedUser as Admin).last_name}`
-                      : (selectedUser as Conversation).user_name
+                      : `${(selectedUser as Student).first_name} ${(selectedUser as Student).last_name}`
                     }
                   </p>
                   <p className="text-sm text-muted-foreground">
