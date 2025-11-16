@@ -19,4 +19,9 @@ export const API_ENDPOINTS = {
   
   // Check User
   CHECK_USER: '/users/check-users/',
+  
+  // Messages
+  MESSAGES: '/message/',
+  GET_ADMINS: '/users/admins/',
+  GET_CONVERSATIONS: '/message/conversations/',
 };
