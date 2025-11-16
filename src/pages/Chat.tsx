@@ -90,7 +90,7 @@ export default function Chat() {
       const response = await authFetch(API_ENDPOINTS.USERS_LIST);
       if (response.ok) {
         const data = await response.json();
-        const studentUsers = data.filter((u: any) => u.role === 'student');
+        const studentUsers = data.results?.filter((u: any) => u.role === 'student') || [];
         setStudents(studentUsers);
       }
     } catch (error) {
