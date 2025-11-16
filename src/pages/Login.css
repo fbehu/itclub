@@ -1,0 +1,359 @@
+/* Login Page Styles */
+.login-page {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+/* Background with Gradient */
+.background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #001f3f, #007BFF);
+  z-index: 1;
+}
+
+/* Animated Shapes */
+.shape {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  filter: blur(5px);
+  opacity: 0.7;
+  animation: float 6s ease-in-out infinite;
+}
+
+.shape-1 {
+  width: 150px;
+  height: 150px;
+  top: 10%;
+  left: 5%;
+  background: rgba(0, 191, 255, 0.3);
+  animation-delay: 0s;
+}
+
+.shape-2 {
+  width: 200px;
+  height: 200px;
+  bottom: 0%;
+  right: -10%;
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  background: rgba(255, 255, 255, 0.15);
+  animation-delay: 1s;
+}
+
+.shape-3 {
+  width: 100px;
+  height: 100px;
+  top: 50%;
+  right: 20%;
+  background: rgba(0, 191, 255, 0.4);
+  animation-delay: 2s;
+}
+
+.shape-4 {
+  width: 120px;
+  height: 120px;
+  bottom: 20%;
+  left: 15%;
+  background: rgba(135, 206, 250, 0.3);
+  animation-delay: 3s;
+}
+
+.shape-5 {
+  width: 180px;
+  height: 180px;
+  top: 20%;
+  right: 10%;
+  border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  background: rgba(0, 191, 255, 0.2);
+  animation-delay: 4s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px) rotate(5deg);
+  }
+  50% {
+    transform: translateY(-10px) translateX(-10px) rotate(-5deg);
+  }
+  75% {
+    transform: translateY(-15px) translateX(5px) rotate(3deg);
+  }
+}
+
+/* Login Card with Glassmorphism */
+.login-card {
+  position: relative;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 40px 50px;
+  width: 500px;
+  max-width: 90%;
+  border-radius: 20px;
+  text-align: center;
+  color: #ffffff;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logo-placeholder {
+  max-width: 150px;
+  height: auto;
+  margin: 0 auto 20px;
+  display: block;
+}
+
+.login-header h3 {
+  font-size: 1.2em;
+  margin-bottom: 30px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Form Styles */
+.login-form {
+  text-align: left;
+}
+
+.login-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  font-size: 0.9em;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.login-form input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 1em;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.login-form input:focus {
+  outline: none;
+  border-color: rgba(0, 191, 255, 0.6);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 10px rgba(0, 191, 255, 0.3);
+}
+
+.login-form input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.login-form input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.forgot-password {
+  display: block;
+  text-align: right;
+  color: #87CEFA;
+  text-decoration: none;
+  font-size: 0.9em;
+  margin-bottom: 25px;
+  transition: color 0.3s ease;
+}
+
+.forgot-password:hover {
+  color: #00BFFF;
+}
+
+.signin-btn {
+  width: 100%;
+  background-color: #00BFFF;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  margin-bottom: 0;
+  box-shadow: 0 4px 15px rgba(0, 191, 255, 0.3);
+}
+
+.signin-btn:hover:not(:disabled) {
+  background-color: #009ACD;
+  box-shadow: 0 6px 20px rgba(0, 191, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.signin-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.signin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Neon border for beginner */
+.level-bg-beginner {
+  box-shadow: 0 0 10px 0 #39ff14, 0 0 20px 0 #39ff14 inset;
+  border-radius: 20px;
+  animation: neonGreenGlow 1.5s infinite alternate;
+}
+
+@keyframes neonGreenGlow {
+  0% {
+    box-shadow: 0 0 10px 2px #39ff14, 0 0 20px 4px #39ff14 inset;
+  }
+  100% {
+    box-shadow: 0 0 20px 6px #39ff14, 0 0 40px 8px #39ff14 inset;
+  }
+}
+
+
+/* Neon border for intermediate */
+.level-bg-intermediate {
+  box-shadow: 0 0 10px 0px #d6a400, 0 0 25px 0px #d1a019 inset;
+  border-radius: 20px;
+  animation: neonYellowGlow 1s infinite alternate;
+}
+
+@keyframes neonYellowGlow {
+  0% {
+    box-shadow: 0 0 10px 2px #ffd000, 0 0 20px 4px #ffee00 inset;
+  }
+  100% {
+    box-shadow: 0 0 20px 6px #ffee00, 0 0 40px 8px #ffd900 inset;
+  }
+}
+/* Neon border for expert (multi-color) */
+.level-bg-expert {
+  box-shadow:
+    0 0 10px 2px #f7005f,
+    0 0 10px 2px #ac0022,
+    0 0 10px 2px #00b42d,
+    0 0 20px 3px #f7005f inset,
+    0 0 20px 3px #ac0022 inset,
+    0 0 20px 3px #00b42d inset;
+  border-radius: 20px;
+  animation: neonMultiGlow 1.2s infinite alternate;
+}
+
+@keyframes neonMultiGlow {
+  0% {
+    box-shadow:
+      0 0 10px 2px #f7005f,
+      0 0 10px 2px #ac0022,
+      0 0 10px 2px #00b42d,
+      0 0 20px 3px #f7005f inset,
+      0 0 20px 3px #ac0022 inset,
+      0 0 20px 3px #00b42d inset;
+  }
+  100% {
+    box-shadow:
+      0 0 20px 3px #f7005f,
+      0 0 20px 3px #ac0022,
+      0 0 20px 3px #00b42d,
+      0 0 40px 6px #f7005f inset,
+      0 0 40px 6px #ac0022 inset,
+      0 0 40px 6px #00b42d inset;
+  }
+}
+
+
+
+/* Make sure glass-card-bg overlays the color softly */
+.glass-card-bg {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  color: #ffffff;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  z-index: 2;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .login-card {
+    padding: 30px 25px;
+    width: 350px;
+  }
+
+  .logo-placeholder {
+    font-size: 2em;
+  }
+
+  .login-header h3 {
+    font-size: 1em;
+  }
+
+  .shape-1,
+  .shape-2,
+  .shape-3,
+  .shape-4,
+  .shape-5 {
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 25px 20px;
+    width: 90%;
+  }
+
+  .logo-placeholder {
+    font-size: 1.8em;
+  }
+
+  .login-header h3 {
+    font-size: 0.9em;
+  }
+
+  .login-form input {
+    padding: 10px;
+    font-size: 0.95em;
+  }
+
+  .signin-btn {
+    padding: 10px;
+    font-size: 1em;
+  }
+}

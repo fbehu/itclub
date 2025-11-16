@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,47 +19,121 @@ import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import QRScanner from '@/components/QRScanner';
+import { authFetch } from '@/lib/authFetch';
+import { API_ENDPOINTS } from '@/config/api';
+
+const userSchema = z.object({
+  first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50, 'Ism 50 ta belgidan oshmasligi kerak'),
+  last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50, 'Familya 50 ta belgidan oshmasligi kerak'),
+  username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30, 'Username 30 ta belgidan oshmasligi kerak'),
+  password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
+  phone_number: z.string().min(6, 'Telefon raqam kiriting'),
+  tg_username: z.string().max(50).optional(),
+  level: z.enum(['beginner', 'intermediate', 'expert'], { required_error: 'Level tanlang' }),
+  course: z.string().min(1, 'Kurs tanlang'),
+  direction: z.string().min(2, 'Yo\'nalish kamida 2 ta belgidan iborat bo\'lishi kerak').max(100),
+  uuid: z.string().regex(/^ITC\d{3}$/, 'UUID Topilmadi)'),
+});
+
+type UserFormData = z.infer<typeof userSchema>;
 
 export default function AddUser() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
-    surname: '',
-    lastname: '',
-    username: '',
-    password: '',
-    phone_number: '',
-    tg_username: '',
-    level: '',
-    course: '',
-    direction: '',
-    uuid: '',
-    photo: '',
+  const form = useForm<UserFormData>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      first_name: '',
+      last_name: '',
+      username: '',
+      password: '',
+      phone_number: '',
+      tg_username: '',
+      level: undefined,
+      course: '',
+      direction: '',
+      uuid: '',
+    },
   });
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
   const handleQRScan = (decodedText: string) => {
-    setFormData((prev) => ({ ...prev, uuid: decodedText }));
+    form.setValue('uuid', decodedText);
     toast({
       title: 'QR kod muvaffaqiyatli skanerlandi',
       description: `UUID: ${decodedText}`,
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Here you would save the user data
-    toast({
-      title: 'Foydalanuvchi qo\'shildi',
-      description: 'Yangi foydalanuvchi muvaffaqiyatli qo\'shildi',
-    });
-    navigate('/dashboard/admin/users');
+  const onSubmit = async (data: UserFormData) => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append('username', data.username);
+      formData.append('first_name', data.first_name);
+      formData.append('last_name', data.last_name);
+      formData.append('uuid', data.uuid);
+      formData.append('phone_number', data.phone_number);
+      formData.append('tg_username', data.tg_username || '');
+      formData.append('level', data.level);
+      formData.append('course', data.course);
+      formData.append('direction', data.direction);
+      formData.append('password', data.password);
+      
+      if (photoFile) {
+        formData.append('photo', photoFile);
+      }
+
+      const response = await authFetch(API_ENDPOINTS.ADD_USER, {
+        method: 'POST',
+        headers: {},
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+
+        // Field-level xatoliklarni toast qilamiz
+        Object.entries(errorData).forEach(([field, messages]) => {
+          if (Array.isArray(messages)) {
+            messages.forEach((msg) => {
+              toast({
+                title: `Xatolik: ${field}`,
+                description: msg as string,
+                variant: 'destructive',
+              });
+            });
+          }
+        });
+
+        // Xatolikdan keyin isSubmitting = false qilinadi
+        setIsSubmitting(false);
+        return; // throw qilmaymiz, shunda form yana ishlaydi
+      }
+
+      toast({
+        title: 'Muvaffaqiyatli',
+        description: 'Yangi foydalanuvchi qo\'shildi',
+      });
+
+      navigate('/dashboard/admin/users');
+
+    } catch (error) {
+      toast({
+        title: 'Xato',
+        description: error instanceof Error ? error.message : 'Foydalanuvchi qo\'shishda xatolik',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false); // Xatolik bo‘lsa ham tugmani tiklaymiz
+    }
   };
+
 
   if (user?.role !== 'admin') {
     return null;
@@ -81,36 +158,39 @@ export default function AddUser() {
             <CardTitle>Foydalanuvchi ma'lumotlari</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="surname">Ism *</Label>
+                  <Label htmlFor="first_name">Ism *</Label>
                   <Input
-                    id="surname"
-                    value={formData.surname}
-                    onChange={(e) => handleInputChange('surname', e.target.value)}
-                    required
+                    id="first_name"
+                    {...form.register('first_name')}
                   />
+                  {form.formState.errors.first_name && (
+                    <p className="text-sm text-destructive">{form.formState.errors.first_name.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lastname">Familya *</Label>
+                  <Label htmlFor="last_name">Familya *</Label>
                   <Input
-                    id="lastname"
-                    value={formData.lastname}
-                    onChange={(e) => handleInputChange('lastname', e.target.value)}
-                    required
+                    id="last_name"
+                    {...form.register('last_name')}
                   />
+                  {form.formState.errors.last_name && (
+                    <p className="text-sm text-destructive">{form.formState.errors.last_name.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="username">Username *</Label>
                   <Input
                     id="username"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
-                    required
+                    {...form.register('username')}
                   />
+                  {form.formState.errors.username && (
+                    <p className="text-sm text-destructive">{form.formState.errors.username.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -118,22 +198,26 @@ export default function AddUser() {
                   <Input
                     id="password"
                     type="password"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    required
+                    {...form.register('password')}
+                    placeholder="Kamida 6 ta belgi"
                   />
+                  {form.formState.errors.password && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.password.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone_number">Telefon raqam *</Label>
+                  <Label htmlFor="phone_number">Telefon raqami *</Label>
                   <Input
                     id="phone_number"
-                    type="tel"
                     placeholder="+998901234567"
-                    value={formData.phone_number}
-                    onChange={(e) => handleInputChange('phone_number', e.target.value)}
-                    required
+                    {...form.register('phone_number')}
                   />
+                  {form.formState.errors.phone_number && (
+                    <p className="text-sm text-destructive">{form.formState.errors.phone_number.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -141,59 +225,65 @@ export default function AddUser() {
                   <Input
                     id="tg_username"
                     placeholder="@username"
-                    value={formData.tg_username}
-                    onChange={(e) => handleInputChange('tg_username', e.target.value)}
+                    {...form.register('tg_username')}
                   />
+                  {form.formState.errors.tg_username && (
+                    <p className="text-sm text-destructive">{form.formState.errors.tg_username.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="level">Level *</Label>
-                  <Select value={formData.level} onValueChange={(value) => handleInputChange('level', value)}>
+                  <Select
+                    value={form.watch('level')}
+                    onValueChange={(value) => form.setValue('level', value as 'beginner' | 'intermediate' | 'expert')}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Level tanlang" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="beginner">Boshlang'ich (Yashil)</SelectItem>
                       <SelectItem value="intermediate">O'rta (Sariq)</SelectItem>
-                      <SelectItem value="advanced">Yuksak (Qizil)</SelectItem>
+                      <SelectItem value="expert">Yuksak (Qizil)</SelectItem>
                     </SelectContent>
                   </Select>
+                  {form.formState.errors.level && (
+                    <p className="text-sm text-destructive">{form.formState.errors.level.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="course">Kurs *</Label>
-                  <Select value={formData.course} onValueChange={(value) => handleInputChange('course', value)}>
+                  <Select
+                    value={form.watch('course')}
+                    onValueChange={(value) => form.setValue('course', value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Kurs tanlang" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Kurs 1">Kurs 1</SelectItem>
-                      <SelectItem value="Kurs 2">Kurs 2</SelectItem>
-                      <SelectItem value="Kurs 3">Kurs 3</SelectItem>
-                      <SelectItem value="Kurs 4">Kurs 4</SelectItem>
-                      <SelectItem value="Kurs 5">Kurs 5</SelectItem>
+                      <SelectItem value="kurs-1">Kurs 1</SelectItem>
+                      <SelectItem value="kurs-2">Kurs 2</SelectItem>
+                      <SelectItem value="kurs-3">Kurs 3</SelectItem>
+                      <SelectItem value="kurs-4">Kurs 4</SelectItem>
+                      <SelectItem value="kurs-5">Kurs 5</SelectItem>
                     </SelectContent>
                   </Select>
+                  {form.formState.errors.course && (
+                    <p className="text-sm text-destructive">{form.formState.errors.course.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="direction">Yo'nalish *</Label>
                   <Input
                     id="direction"
-                    value={formData.direction}
-                    onChange={(e) => handleInputChange('direction', e.target.value)}
-                    required
+                    placeholder="Masalan: Dasturiy injinering"
+                    {...form.register('direction')}
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="photo">Rasm URL</Label>
-                  <Input
-                    id="photo"
-                    type="url"
-                    value={formData.photo}
-                    onChange={(e) => handleInputChange('photo', e.target.value)}
-                  />
+                  {form.formState.errors.direction && (
+                    <p className="text-sm text-destructive">{form.formState.errors.direction.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -201,13 +291,35 @@ export default function AddUser() {
                   <div className="flex gap-2">
                     <Input
                       id="uuid"
-                      value={formData.uuid}
-                      onChange={(e) => handleInputChange('uuid', e.target.value)}
-                      required
+                      {...form.register('uuid')}
+                      placeholder="QR kod skanerlang"
                       readOnly
                     />
                     <QRScanner onScanSuccess={handleQRScan} />
                   </div>
+                  {form.formState.errors.uuid && (
+                    <p className="text-sm text-destructive">{form.formState.errors.uuid.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="photo">Foydalanuvchi rasmi</Label>
+                  <Input
+                    id="photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setPhotoFile(file);
+                      }
+                    }}
+                  />
+                  {photoFile && (
+                    <p className="text-sm text-muted-foreground">
+                      Tanlangan: {photoFile.name}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -219,8 +331,8 @@ export default function AddUser() {
                 >
                   Bekor qilish
                 </Button>
-                <Button type="submit">
-                  Saqlash
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saqlanmoqda...' : 'Saqlash'}
                 </Button>
               </div>
             </form>

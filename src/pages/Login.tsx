@@ -1,87 +1,131 @@
-import { useState } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogIn } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
+import { API_ENDPOINTS } from '@/config/api';
+import './Login.css';
 
 export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const { login } = useAuth();
   const navigate = useNavigate();
+  const { login, isLoading: authLoading, setUser } = useAuth();
   const { toast } = useToast();
+  const [usernameOrPhone, setUsernameOrPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [localLoading, setLocalLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const isLoading = authLoading || localLoading;
+
+  // Check tokens and redirect if already logged in
+  useEffect(() => {
+    const accessToken = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (accessToken && refreshToken) {
+      // Try to fetch user info
+      (async () => {
+        try {
+          const response = await authFetch(API_ENDPOINTS.USER_ME, { method: 'GET' });
+          if (response.ok) {
+            const user = await response.json();
+            setUser(user);
+            if (user.role === 'admin') {
+              navigate('/dashboard');
+            } else {
+              navigate('/dashboard');
+            }
+          }
+        } catch (err) {
+          // If error, stay on login page
+        }
+      })();
+    }
+  }, [navigate, setUser]);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
-    if (login(username, password)) {
+    if (!usernameOrPhone.trim() || !password.trim()) {
       toast({
-        title: "Kirish muvaffaqiyatli!",
-        description: "Xush kelibsiz!",
+        title: 'Xato',
+        description: 'Username yoki parol maydonini to\'ldiring',
+        variant: 'destructive',
       });
-      navigate('/dashboard');
-    } else {
+      return;
+    }
+
+    setLocalLoading(true);
+
+    try {
+      const result = await login(usernameOrPhone, password);
+      if (result.success) {
+        toast({
+          title: 'Muvaffaqiyatli!',
+          description: 'Tizimga kirdingiz',
+        });
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: 'Xato',
+          description: result.error || 'Tizimga kirishda xatolik yuz berdi',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Xato",
-        description: "Login yoki parol noto'g'ri",
-        variant: "destructive",
+        title: 'Xato',
+        description: error instanceof Error ? error.message : 'Tizimga kirishda xatolik yuz berdi',
+        variant: 'destructive',
       });
+    } finally {
+      setLocalLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
-      <Card className="w-full max-w-md animate-fade-in">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center mb-2">
-            <LogIn className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Tizimga kirish</CardTitle>
-          <CardDescription>
-            Login va parolingizni kiriting
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Login</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="student yoki admin"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Parol</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Kirish
-            </Button>
-          </form>
-          <div className="mt-6 p-4 bg-muted rounded-lg text-sm space-y-2">
-            <p className="font-semibold text-muted-foreground">Test login ma'lumotlari:</p>
-            <div className="space-y-1 text-muted-foreground">
-              <p>Student: <span className="font-mono">student / student123</span></p>
-              <p>Admin: <span className="font-mono">admin / admin123</span></p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="login-page">
+      <div className="background">
+        <div className="shape shape-1"></div>
+        <div className="shape shape-2"></div>
+        <div className="shape shape-3"></div>
+        <div className="shape shape-4"></div>
+        <div className="shape shape-5"></div>
+      </div>
+
+      <div className="login-card">
+        <img className="logo-placeholder" src="/logo.png" alt="Logo" />
+        
+        <div className="login-header">
+          <h3>University of Business and Science<br />Tashkent branch</h3>
+        </div>
+
+        <form className="login-form" onSubmit={handleSubmit}>
+          <label htmlFor="usernameOrPhone">Username yoki Telefon</label>
+          <input
+            type="text"
+            id="usernameOrPhone"
+            placeholder="username yoki telefon raqam"
+            value={usernameOrPhone}
+            onChange={(e) => setUsernameOrPhone(e.target.value)}
+            required
+            disabled={isLoading}
+          />
+
+          <label htmlFor="password">Parol</label>
+          <input
+            type="password"
+            id="password"
+            placeholder="********"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={isLoading}
+          />
+
+          <button type="submit" className="signin-btn" disabled={isLoading}>
+            {isLoading ? 'Yuklanmoqda...' : 'Login'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

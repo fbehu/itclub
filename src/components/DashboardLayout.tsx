@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, User, BarChart3 } from 'lucide-react';
+import { LogOut, User, BarChart3, Settings, Users, ScanLine } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -24,12 +24,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navItems = user?.role === 'admin' 
     ? [
-        { path: '/dashboard/admin/users', label: 'Foydalanuvchilar', icon: User },
-        { path: '/dashboard/statistics', label: 'Statistika', icon: BarChart3 },
+        { path: '/dashboard/admin/users', label: 'Users', icon: Users },
+        { path: '/dashboard/admin/qr-scanner', label: 'Scanner', icon: ScanLine },
+        { path: '/dashboard/profile', label: 'Profile', icon: User },
+        { path: '/dashboard/statistics', label: 'Stats', icon: BarChart3 },
+        { path: '/dashboard/settings', label: 'Settings', icon: Settings },
       ]
     : [
-        { path: '/dashboard/profile', label: 'Profil', icon: User },
-        { path: '/dashboard/statistics', label: 'Statistika', icon: BarChart3 },
+        { path: '/dashboard/profile', label: 'Profile', icon: User },
+        { path: '/dashboard/statistics', label: 'Stats', icon: BarChart3 },
+        { path: '/dashboard/settings', label: 'Settings', icon: Settings },
       ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -47,11 +51,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={user.photo} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    {user.surname[0]}{user.lastname[0]}
+                    {(user.first_name?.[0] || '') + (user.last_name?.[0] || '')}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold text-sidebar-foreground">{user.surname}</p>
+                  <p className="font-semibold text-sidebar-foreground">{user.first_name || ''}</p>
                   <p className="text-sm text-sidebar-foreground/70">{user.role === 'student' ? 'Talaba' : 'Admin'}</p>
                 </div>
               </div>
@@ -129,7 +133,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-sidebar-foreground"
             >
               <LogOut className="h-6 w-6" />
-              <span className="text-xs font-medium">Chiqish</span>
+              <span className="text-xs font-medium">Logout</span>
             </button>
           </div>
         </nav>
