@@ -13,6 +13,7 @@ import Settings from "./pages/Settings";
 import UserManagement from "./pages/admin/UserManagement";
 import AddUser from "./pages/admin/AddUser";
 import QRScannerPage from "./pages/admin/QRScanner";
+import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -86,6 +87,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <QRScannerPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/chat" 
+                element={
+                  <ProtectedRoute>
+                    <Chat />
                   </ProtectedRoute>
                 } 
               />
