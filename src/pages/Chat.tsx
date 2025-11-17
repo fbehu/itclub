@@ -283,9 +283,8 @@ export default function Chat() {
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
                   {messages.map((msg) => {
-                    const isOwn = user?.role === 'student' 
-                      ? !!msg.admin_id 
-                      : !!msg.student_id;
+                    const currentUserName = `${user?.first_name} ${user?.last_name}`;
+                    const isOwn = msg.sender_name === currentUserName;
 
                     return (
                       <div
