@@ -196,19 +196,18 @@ export default function Chat() {
 
   const handleUserSelect = (user: Admin | Student) => {
     setSelectedUser(user);
-    if (isMobile) {
-      setShowChat(true);
-    }
+    setShowChat(true);
   };
 
   const handleBackToList = () => {
     setShowChat(false);
+    setSelectedUser(null);
   };
 
   return (
     <div className="flex h-screen w-full bg-background">
-      {/* Users List */}
-      <Card className={`flex flex-col border-0 rounded-none ${isMobile ? (showChat ? 'hidden' : 'w-full') : 'w-80'}`}>
+      {/* Users List Sidebar */}
+      <Card className={`flex flex-col border-0 rounded-none ${showChat ? 'hidden' : 'w-full md:w-80'}`}>
           <div className="p-4 border-b">
             <h2 className="font-semibold text-lg">
               {user?.role === 'student' ? 'Adminlar' : 'Studentlar'}
@@ -270,21 +269,19 @@ export default function Chat() {
         </Card>
 
       {/* Chat Area */}
-      <Card className={`flex flex-col border-0 rounded-none ${isMobile ? (showChat ? 'w-full' : 'hidden') : 'flex-1'}`}>
+      <Card className={`flex flex-col border-0 rounded-none ${showChat ? 'w-full' : 'hidden md:flex md:flex-1'}`}>
           {selectedUser ? (
             <>
               {/* Chat Header */}
               <div className="p-4 border-b flex items-center gap-3">
-                {isMobile && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleBackToList}
-                    className="mr-2"
-                  >
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleBackToList}
+                  className="mr-2"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={user?.role === 'student' ? (selectedUser as Admin).photo : (selectedUser as Student).photo} />
                   <AvatarFallback>
