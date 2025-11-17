@@ -112,11 +112,17 @@ export default function Chat() {
       
       if (response.ok) {
         const data = await response.json();
-        setMessages(data);
+        // Reverse the messages so newest is at the bottom
+        setMessages(data.reverse());
       }
     } catch (error) {
       console.error('Error loading messages:', error);
     }
+  };
+
+  const isImageFile = (url: string) => {
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+    return imageExtensions.some(ext => url.toLowerCase().endsWith(ext));
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -324,15 +330,25 @@ export default function Chat() {
                         >
                           {msg.text && <p className="break-words">{msg.text}</p>}
                           {msg.file_url && (
-                            <a
-                              href={msg.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 mt-2 text-sm underline"
-                            >
-                              <Paperclip className="h-4 w-4" />
-                              {msg.file_name}
-                            </a>
+                            <>
+                              {isImageFile(msg.file_url) ? (
+                                <img
+                                  src={msg.file_url}
+                                  alt={msg.file_name || 'Image'}
+                                  className="mt-2 rounded-lg max-w-full max-h-64 object-cover"
+                                />
+                              ) : (
+                                <a
+                                  href={msg.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 mt-2 text-sm underline"
+                                >
+                                  <Paperclip className="h-4 w-4" />
+                                  {msg.file_name}
+                                </a>
+                              )}
+                            </>
                           )}
                           <p className="text-xs opacity-70 mt-1">
                             {new Date(msg.created_at).toLocaleTimeString('uz-UZ', {
