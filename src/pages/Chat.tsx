@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
-import { Send, Paperclip, X } from 'lucide-react';
+import { Send, Paperclip, X, ArrowLeft } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Message {
   id: string;
@@ -40,12 +41,14 @@ interface Student {
 
 export default function Chat() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedUser, setSelectedUser] = useState<Admin | Student | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showChat, setShowChat] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -186,11 +189,22 @@ export default function Chat() {
     }
   };
 
+  const handleUserSelect = (user: Admin | Student) => {
+    setSelectedUser(user);
+    if (isMobile) {
+      setShowChat(true);
+    }
+  };
+
+  const handleBackToList = () => {
+    setShowChat(false);
+  };
+
   return (
     <DashboardLayout>
       <div className="flex h-[calc(100vh-6rem)] gap-4">
         {/* Users List */}
-        <Card className="w-80 flex flex-col">
+        <Card className={`flex flex-col ${isMobile ? (showChat ? 'hidden' : 'w-full') : 'w-80'}`}>
           <div className="p-4 border-b">
             <h2 className="font-semibold text-lg">
               {user?.role === 'student' ? 'Adminlar' : 'Studentlar'}
@@ -206,7 +220,7 @@ export default function Chat() {
                     className={`w-full justify-start mb-2 h-auto p-3 ${
                       (selectedUser as Admin)?.id === admin.id ? 'bg-accent' : ''
                     }`}
-                    onClick={() => setSelectedUser(admin)}
+                    onClick={() => handleUserSelect(admin)}
                   >
                     <Avatar className="h-10 w-10 mr-3">
                       <AvatarImage src={admin.photo} />
@@ -230,7 +244,7 @@ export default function Chat() {
                     className={`w-full justify-start mb-2 h-auto p-3 ${
                       (selectedUser as Student)?.id === student.id ? 'bg-accent' : ''
                     }`}
-                    onClick={() => setSelectedUser(student)}
+                    onClick={() => handleUserSelect(student)}
                   >
                     <Avatar className="h-10 w-10 mr-3">
                       <AvatarImage src={student.photo} />
@@ -252,11 +266,21 @@ export default function Chat() {
         </Card>
 
         {/* Chat Area */}
-        <Card className="flex-1 flex flex-col">
+        <Card className={`flex flex-col ${isMobile ? (showChat ? 'w-full' : 'hidden') : 'flex-1'}`}>
           {selectedUser ? (
             <>
               {/* Chat Header */}
               <div className="p-4 border-b flex items-center gap-3">
+                {isMobile && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleBackToList}
+                    className="mr-2"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                )}
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={user?.role === 'student' ? (selectedUser as Admin).photo : (selectedUser as Student).photo} />
                   <AvatarFallback>
