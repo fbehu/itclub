@@ -161,7 +161,7 @@ export default function Chat() {
     }
 
     try {
-      const response = await authFetch(API_ENDPOINTS.MESSAGES, {
+      const response = await authFetch(`${API_ENDPOINTS.MESSAGES}add/`, {
         method: 'POST',
         body: formData,
       });
