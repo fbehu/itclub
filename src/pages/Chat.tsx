@@ -284,8 +284,8 @@ export default function Chat() {
                 <div className="space-y-4">
                   {messages.map((msg) => {
                     const isOwn = user?.role === 'student' 
-                      ? !msg.admin_id 
-                      : !msg.student_id;
+                      ? !!msg.admin_id 
+                      : !!msg.student_id;
 
                     return (
                       <div
