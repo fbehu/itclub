@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -207,10 +206,9 @@ export default function Chat() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="flex h-[calc(100vh-6rem)] gap-4">
-        {/* Users List */}
-        <Card className={`flex flex-col ${isMobile ? (showChat ? 'hidden' : 'w-full') : 'w-80'}`}>
+    <div className="flex h-screen w-full bg-background">
+      {/* Users List */}
+      <Card className={`flex flex-col border-0 rounded-none ${isMobile ? (showChat ? 'hidden' : 'w-full') : 'w-80'}`}>
           <div className="p-4 border-b">
             <h2 className="font-semibold text-lg">
               {user?.role === 'student' ? 'Adminlar' : 'Studentlar'}
@@ -271,8 +269,8 @@ export default function Chat() {
           </ScrollArea>
         </Card>
 
-        {/* Chat Area */}
-        <Card className={`flex flex-col ${isMobile ? (showChat ? 'w-full' : 'hidden') : 'flex-1'}`}>
+      {/* Chat Area */}
+      <Card className={`flex flex-col border-0 rounded-none ${isMobile ? (showChat ? 'w-full' : 'hidden') : 'flex-1'}`}>
           {selectedUser ? (
             <>
               {/* Chat Header */}
@@ -413,7 +411,6 @@ export default function Chat() {
             </div>
           )}
         </Card>
-      </div>
-    </DashboardLayout>
+    </div>
   );
 }
