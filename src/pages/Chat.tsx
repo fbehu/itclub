@@ -10,6 +10,7 @@ import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNavigate } from 'react-router-dom';
 
 interface Message {
   id: string;
@@ -50,6 +51,7 @@ export default function Chat() {
   const [showChat, setShowChat] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -102,13 +104,13 @@ export default function Chat() {
 
   const loadMessages = async () => {
     if (!selectedUser) return;
-    
+
     try {
-      const userId = user?.role === 'student' 
-        ? (selectedUser as Admin).id 
+      const userId = user?.role === 'student'
+        ? (selectedUser as Admin).id
         : (selectedUser as Student).id;
       const response = await authFetch(`${API_ENDPOINTS.MESSAGES}?${user?.role === 'student' ? 'admin_id' : 'student_id'}=${userId}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         // Reverse the messages so newest is at the bottom
@@ -157,7 +159,7 @@ export default function Chat() {
 
     const formData = new FormData();
     formData.append('text', newMessage);
-    
+
     if (user?.role === 'student') {
       formData.append('admin_id', (selectedUser as Admin).id);
     } else {
@@ -204,210 +206,221 @@ export default function Chat() {
     setSelectedUser(null);
   };
 
+
+  const handleBack = () => {
+    navigate(-1); // 1 sahifa orqaga qaytadi
+  };
+
   return (
     <div className="flex h-screen w-full bg-background">
       {/* Users List Sidebar */}
       <Card className={`flex flex-col border-0 rounded-none ${showChat ? 'hidden' : 'w-full md:w-80'}`}>
-          <div className="p-4 border-b">
-            <h2 className="font-semibold text-lg">
-              {user?.role === 'student' ? 'Adminlar' : 'Studentlar'}
-            </h2>
-          </div>
-          <ScrollArea className="flex-1">
-            {user?.role === 'student' ? (
-              <div className="p-2">
-                {admins.map((admin) => (
-                  <Button
-                    key={admin.id}
-                    variant="ghost"
-                    className={`w-full justify-start mb-2 h-auto p-3 ${
-                      (selectedUser as Admin)?.id === admin.id ? 'bg-accent' : ''
+        <div className="flex items-center p-4 border-b">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="mr-2"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+
+          <h2 className="font-semibold text-lg">
+            {user?.role === 'student' ? 'Adminlar' : 'Studentlar'}
+          </h2>
+        </div>
+        <ScrollArea className="flex-1">
+          {user?.role === 'student' ? (
+            <div className="p-2">
+              {admins.map((admin) => (
+                <Button
+                  key={admin.id}
+                  variant="ghost"
+                  className={`w-full justify-start mb-2 h-auto p-3 ${(selectedUser as Admin)?.id === admin.id ? 'bg-accent' : ''
                     }`}
-                    onClick={() => handleUserSelect(admin)}
-                  >
-                    <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={admin.photo} />
-                      <AvatarFallback>
-                        {admin.first_name[0]}{admin.last_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="text-left">
-                      <p className="font-medium">{admin.first_name} {admin.last_name}</p>
-                      <p className="text-sm text-muted-foreground">Admin</p>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <div className="p-2">
-                {students.map((student) => (
-                  <Button
-                    key={student.id}
-                    variant="ghost"
-                    className={`w-full justify-start mb-2 h-auto p-3 ${
-                      (selectedUser as Student)?.id === student.id ? 'bg-accent' : ''
+                  onClick={() => handleUserSelect(admin)}
+                >
+                  <Avatar className="h-10 w-10 mr-3">
+                    <AvatarImage src={admin.photo} />
+                    <AvatarFallback>
+                      {admin.first_name[0]}{admin.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="text-left">
+                    <p className="font-medium">{admin.first_name} {admin.last_name}</p>
+                    <p className="text-sm text-muted-foreground">Admin</p>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <div className="p-2">
+              {students.map((student) => (
+                <Button
+                  key={student.id}
+                  variant="ghost"
+                  className={`w-full justify-start mb-2 h-auto p-3 ${(selectedUser as Student)?.id === student.id ? 'bg-accent' : ''
                     }`}
-                    onClick={() => handleUserSelect(student)}
-                  >
-                    <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={student.photo} />
-                      <AvatarFallback>
-                        {student.first_name[0]}{student.last_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="text-left flex-1">
-                      <p className="font-medium">{student.first_name} {student.last_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {student.direction || 'Yo\'nalish ko\'rsatilmagan'} • {student.course || 'Kurs ko\'rsatilmagan'}
-                      </p>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </Card>
+                  onClick={() => handleUserSelect(student)}
+                >
+                  <Avatar className="h-10 w-10 mr-3">
+                    <AvatarImage src={student.photo} />
+                    <AvatarFallback>
+                      {student.first_name[0]}{student.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="text-left flex-1">
+                    <p className="font-medium">{student.first_name} {student.last_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {student.direction || 'Yo\'nalish ko\'rsatilmagan'} • {student.course || 'Kurs ko\'rsatilmagan'}
+                    </p>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </Card>
 
       {/* Chat Area */}
       <Card className={`flex flex-col border-0 rounded-none ${showChat ? 'w-full' : 'hidden md:flex md:flex-1'}`}>
-          {selectedUser ? (
-            <>
-              {/* Chat Header */}
-              <div className="p-4 border-b flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleBackToList}
-                  className="mr-2"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={user?.role === 'student' ? (selectedUser as Admin).photo : (selectedUser as Student).photo} />
-                  <AvatarFallback>
-                    {user?.role === 'student' 
-                      ? `${(selectedUser as Admin).first_name[0]}${(selectedUser as Admin).last_name[0]}`
-                      : `${(selectedUser as Student).first_name[0]}${(selectedUser as Student).last_name[0]}`
-                    }
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold">
-                    {user?.role === 'student' 
-                      ? `${(selectedUser as Admin).first_name} ${(selectedUser as Admin).last_name}`
-                      : `${(selectedUser as Student).first_name} ${(selectedUser as Student).last_name}`
-                    }
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {user?.role === 'student' ? 'Admin' : 'Student'}
-                  </p>
-                </div>
+        {selectedUser ? (
+          <>
+            {/* Chat Header */}
+            <div className="p-4 border-b flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBackToList}
+                className="mr-2"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={user?.role === 'student' ? (selectedUser as Admin).photo : (selectedUser as Student).photo} />
+                <AvatarFallback>
+                  {user?.role === 'student'
+                    ? `${(selectedUser as Admin).first_name[0]}${(selectedUser as Admin).last_name[0]}`
+                    : `${(selectedUser as Student).first_name[0]}${(selectedUser as Student).last_name[0]}`
+                  }
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold">
+                  {user?.role === 'student'
+                    ? `${(selectedUser as Admin).first_name} ${(selectedUser as Admin).last_name}`
+                    : `${(selectedUser as Student).first_name} ${(selectedUser as Student).last_name}`
+                  }
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {user?.role === 'student' ? 'Admin' : 'Student'}
+                </p>
               </div>
-
-              {/* Messages */}
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
-                  {messages.map((msg) => {
-                    const currentUserName = `${user?.first_name} ${user?.last_name}`;
-                    const isOwn = msg.sender_name === currentUserName;
-
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[70%] rounded-lg p-3 ${
-                            isOwn
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
-                          }`}
-                        >
-                          {msg.text && <p className="break-words">{msg.text}</p>}
-                          {msg.file_url && (
-                            <>
-                              {isImageFile(msg.file_url) ? (
-                                <img
-                                  src={msg.file_url}
-                                  alt={msg.file_name || 'Image'}
-                                  className="mt-2 rounded-lg max-w-full max-h-64 object-cover"
-                                />
-                              ) : (
-                                <a
-                                  href={msg.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 mt-2 text-sm underline"
-                                >
-                                  <Paperclip className="h-4 w-4" />
-                                  {msg.file_name}
-                                </a>
-                              )}
-                            </>
-                          )}
-                          <p className="text-xs opacity-70 mt-1">
-                            {new Date(msg.created_at).toLocaleTimeString('uz-UZ', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-
-              {/* Input Area */}
-              <div className="p-4 border-t">
-                {selectedFile && (
-                  <div className="mb-2 flex items-center gap-2 p-2 bg-muted rounded">
-                    <Paperclip className="h-4 w-4" />
-                    <span className="text-sm flex-1">{selectedFile.name}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedFile(null)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                    accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Xabar yozing..."
-                    className="flex-1"
-                  />
-                  <Button onClick={sendMessage}>
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <p>Suhbat boshlash uchun foydalanuvchini tanlang</p>
             </div>
-          )}
-        </Card>
+
+            {/* Messages */}
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-4">
+                {messages.map((msg) => {
+                  const currentUserName = `${user?.first_name} ${user?.last_name}`;
+                  const isOwn = msg.sender_name === currentUserName;
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[70%] rounded-lg p-3 ${isOwn
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                          }`}
+                      >
+                        {msg.text && <p className="break-words">{msg.text}</p>}
+                        {msg.file_url && (
+                          <>
+                            {isImageFile(msg.file_url) ? (
+                              <img
+                                src={msg.file_url}
+                                alt={msg.file_name || 'Image'}
+                                className="mt-2 rounded-lg max-w-full max-h-64 object-cover"
+                              />
+                            ) : (
+                              <a
+                                href={msg.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 mt-2 text-sm underline"
+                              >
+                                <Paperclip className="h-4 w-4" />
+                                {msg.file_name}
+                              </a>
+                            )}
+                          </>
+                        )}
+                        <p className="text-xs opacity-70 mt-1">
+                          {new Date(msg.created_at).toLocaleTimeString('uz-UZ', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* Input Area */}
+            <div className="p-4 border-t">
+              {selectedFile && (
+                <div className="mb-2 flex items-center gap-2 p-2 bg-muted rounded">
+                  <Paperclip className="h-4 w-4" />
+                  <span className="text-sm flex-1">{selectedFile.name}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedFile(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Xabar yozing..."
+                  className="flex-1"
+                />
+                <Button onClick={sendMessage}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            <p>Suhbat boshlash uchun foydalanuvchini tanlang</p>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
