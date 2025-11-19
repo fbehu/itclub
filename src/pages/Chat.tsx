@@ -224,7 +224,7 @@ export default function Chat() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-
+    
           <h2 className="font-semibold text-lg">
             {user?.role === 'student' ? 'Adminlar' : 'Studentlar'}
           </h2>
