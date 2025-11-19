@@ -24,7 +24,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { UserPlus, Pencil, Trash2, ChevronLeft, ChevronRight, Eye, KeyRound, Lock, LockOpen } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UserPlus, Pencil, Trash2, ChevronLeft, ChevronRight, Eye, KeyRound, Lock, LockOpen, Search, Filter } from 'lucide-react';
 import { useAuth, User } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import EditUserDialog from './EditUserDialog';
@@ -50,19 +52,34 @@ export default function UserManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const itemsPerPage = 20; // har sahifadagi foydalanuvchilar soni
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isActiveFilter, setIsActiveFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [levelFilter, setLevelFilter] = useState<string>('all');
+  const [orderBy, setOrderBy] = useState<string>('-created_at');
+  const itemsPerPage = 20;
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   useEffect(() => {
     fetchUsers(currentPage);
-  }, [currentPage]);
+  }, [currentPage, searchQuery, isActiveFilter, roleFilter, levelFilter, orderBy]);
 
   const fetchUsers = async (page: number) => {
     setIsLoading(true);
     try {
-      const url = page === 1
-        ? `${API_ENDPOINTS.USERS_LIST}` // page 1 uchun ?page param qo'shilmaydi
-        : `${API_ENDPOINTS.USERS_LIST}?page=${page}`;
+      const params = new URLSearchParams();
+      
+      if (page > 1) params.append('page', page.toString());
+      if (searchQuery) params.append('search', searchQuery);
+      if (isActiveFilter !== 'all') params.append('is_active', isActiveFilter);
+      if (roleFilter !== 'all') params.append('role', roleFilter);
+      if (levelFilter !== 'all') params.append('level', levelFilter);
+      if (orderBy) params.append('ordering', orderBy);
+      
+      const queryString = params.toString();
+      const url = queryString 
+        ? `${API_ENDPOINTS.USERS_LIST}?${queryString}`
+        : API_ENDPOINTS.USERS_LIST;
         
       const response = await authFetch(url, { method: 'GET' });
 
@@ -208,6 +225,89 @@ export default function UserManagement() {
             Yangi foydalanuvchi
           </Button>
         </div>
+
+        {/* Search and Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              {/* Search */}
+              <div className="lg:col-span-2 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Ism, username yoki telefon..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-9"
+                />
+              </div>
+
+              {/* Active Filter */}
+              <Select value={isActiveFilter} onValueChange={(value) => {
+                setIsActiveFilter(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Holat" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi</SelectItem>
+                  <SelectItem value="true">Faol</SelectItem>
+                  <SelectItem value="false">Faol emas</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Role Filter */}
+              <Select value={roleFilter} onValueChange={(value) => {
+                setRoleFilter(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi</SelectItem>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Level Filter */}
+              <Select value={levelFilter} onValueChange={(value) => {
+                setLevelFilter(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Daraja" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi</SelectItem>
+                  <SelectItem value="beginner">Boshlang'ich</SelectItem>
+                  <SelectItem value="intermediate">O'rta</SelectItem>
+                  <SelectItem value="expert">Ekspert</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Order By */}
+              <Select value={orderBy} onValueChange={(value) => {
+                setOrderBy(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Saralash" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="-created_at">Oxirgi qo'shilgan</SelectItem>
+                  <SelectItem value="created_at">Birinchi qo'shilgan</SelectItem>
+                  <SelectItem value="first_name">Ism bo'yicha</SelectItem>
+                  <SelectItem value="-coins">Tangalar bo'yicha</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
