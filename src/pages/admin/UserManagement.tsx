@@ -71,7 +71,7 @@ export default function UserManagement() {
       }
 
       const data: UsersResponse = await response.json();
-      const filteredUsers = data.results.filter(u => u.role === 'student');
+      const filteredUsers = data.results.filter(u => u.role === null);
       setUsers(filteredUsers.length > 0 ? filteredUsers : data.results);
       setTotalCount(data.count);
 
@@ -178,7 +178,25 @@ export default function UserManagement() {
     }
   };
 
-  if (user?.role !== 'admin') return null;
+
+
+  const getRoleColor = (level?: string) => {
+    switch (level) {
+      case 'student': return 'bg-green-500';
+      case 'admin': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getRoleText = (level?: string) => {
+    switch (level) {
+      case 'student': return 'Student';
+      case 'admin': return 'Admin';
+      default: return level;
+    }
+  };
+
+
 
   return (
     <DashboardLayout>
@@ -213,6 +231,7 @@ export default function UserManagement() {
                         <TableHead>Telefon</TableHead>
                         <TableHead>Kurs</TableHead>
                         <TableHead>Level</TableHead>
+                        <TableHead>Rol</TableHead>
                         <TableHead>Yo'nalish</TableHead>
                         <TableHead>Tangalar</TableHead>
                         <TableHead>Holat</TableHead>
@@ -229,6 +248,9 @@ export default function UserManagement() {
                           <TableCell>{student.course}</TableCell>
                           <TableCell>
                             <Badge className={getLevelColor(student.level)}>{getLevelText(student.level)}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getRoleColor(student.role)}>{getRoleText(student.role)}</Badge>
                           </TableCell>
                           <TableCell>{student.direction}</TableCell>
                           <TableCell>
