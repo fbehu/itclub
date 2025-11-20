@@ -14,7 +14,6 @@ import UserManagement from "./pages/admin/UserManagement";
 import AddUser from "./pages/admin/AddUser";
 import QRScannerPage from "./pages/admin/QRScanner";
 import Chat from "./pages/Chat";
-import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -96,14 +95,6 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Chat />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/dashboard/notifications" 
-                element={
-                  <ProtectedRoute>
-                    <Notifications />
                   </ProtectedRoute>
                 } 
               />
