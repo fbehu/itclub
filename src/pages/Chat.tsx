@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
-import { Send, Paperclip, X, ArrowLeft } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Send, Paperclip, X, ArrowLeft, Loader2 } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { toast } from 'sonner';
@@ -37,20 +38,35 @@ interface Student {
   photo?: string;
   direction?: string;
   course?: string;
+  role?: string;
+}
+
+interface ChatUser {
+  id: string;
+  first_name: string;
+  last_name: string;
+  photo?: string;
+  role: 'admin' | 'student';
+  unread_count?: number;
+  direction?: string;
+  course?: string;
 }
 
 export default function Chat() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const [admins, setAdmins] = useState<Admin[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [selectedUser, setSelectedUser] = useState<Admin | Student | null>(null);
+  const [chatUsers, setChatUsers] = useState<ChatUser[]>([]);
+  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showChat, setShowChat] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const scrollToBottom = () => {
@@ -62,43 +78,95 @@ export default function Chat() {
   }, [messages]);
 
   useEffect(() => {
-    if (user?.role === 'student') {
-      loadAdmins();
-    } else if (user?.role === 'admin') {
-      loadStudents();
-    }
+    loadUsers(1);
   }, [user]);
 
   useEffect(() => {
     if (selectedUser) {
+      markAsRead();
       loadMessages();
       const interval = setInterval(loadMessages, 3000);
       return () => clearInterval(interval);
     }
   }, [selectedUser]);
 
-  const loadAdmins = async () => {
+  const loadUsers = async (pageNum: number) => {
+    if (isLoadingMore) return;
+    
     try {
-      const response = await authFetch(API_ENDPOINTS.GET_ADMINS);
-      if (response.ok) {
-        const data = await response.json();
-        setAdmins(data);
+      setIsLoadingMore(true);
+      
+      if (user?.role === 'student') {
+        const response = await authFetch(API_ENDPOINTS.GET_ADMINS);
+        if (response.ok) {
+          const data = await response.json();
+          const adminsWithRole = data.map((admin: Admin) => ({
+            ...admin,
+            role: 'admin' as const,
+            unread_count: 0
+          }));
+          
+          if (pageNum === 1) {
+            setChatUsers(adminsWithRole);
+          } else {
+            setChatUsers(prev => [...prev, ...adminsWithRole]);
+          }
+          setHasMore(false);
+        }
+      } else if (user?.role === 'admin') {
+        const response = await authFetch(`${API_ENDPOINTS.GET_CONVERSATIONS}?page=${pageNum}`);
+        if (response.ok) {
+          const data = await response.json();
+          const users = data.results || [];
+          
+          if (pageNum === 1) {
+            setChatUsers(users);
+          } else {
+            setChatUsers(prev => [...prev, ...users]);
+          }
+          
+          setHasMore(data.next !== null);
+          setPage(pageNum);
+        }
       }
     } catch (error) {
-      console.error('Error loading admins:', error);
+      console.error('Error loading users:', error);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
-  const loadStudents = async () => {
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const scrollPercentage = (target.scrollTop + target.clientHeight) / target.scrollHeight;
+    
+    if (scrollPercentage > 0.8 && hasMore && !isLoadingMore) {
+      loadUsers(page + 1);
+    }
+  };
+
+  const markAsRead = async () => {
+    if (!selectedUser) return;
+    
     try {
-      const response = await authFetch(API_ENDPOINTS.USERS_LIST);
-      if (response.ok) {
-        const data = await response.json();
-        const studentUsers = data.results?.filter((u: any) => u.role === 'student') || [];
-        setStudents(studentUsers);
-      }
+      await authFetch(API_ENDPOINTS.MARK_AS_READ, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: selectedUser.id
+        })
+      });
+      
+      // Update local state
+      setChatUsers(prev => 
+        prev.map(u => 
+          u.id === selectedUser.id 
+            ? { ...u, unread_count: 0 }
+            : u
+        )
+      );
     } catch (error) {
-      console.error('Error loading students:', error);
+      console.error('Error marking as read:', error);
     }
   };
 
@@ -106,14 +174,10 @@ export default function Chat() {
     if (!selectedUser) return;
 
     try {
-      const userId = user?.role === 'student'
-        ? (selectedUser as Admin).id
-        : (selectedUser as Student).id;
-      const response = await authFetch(`${API_ENDPOINTS.MESSAGES}?${user?.role === 'student' ? 'admin_id' : 'student_id'}=${userId}`);
+      const response = await authFetch(`${API_ENDPOINTS.MESSAGES}?${user?.role === 'student' ? 'admin_id' : 'student_id'}=${selectedUser.id}`);
 
       if (response.ok) {
         const data = await response.json();
-        // Reverse the messages so newest is at the bottom
         setMessages(data.reverse());
       }
     } catch (error) {
@@ -161,9 +225,9 @@ export default function Chat() {
     formData.append('text', newMessage);
 
     if (user?.role === 'student') {
-      formData.append('admin_id', (selectedUser as Admin).id);
+      formData.append('admin_id', selectedUser.id);
     } else {
-      formData.append('student_id', (selectedUser as Student).id);
+      formData.append('student_id', selectedUser.id);
     }
 
     if (selectedFile) {
@@ -196,8 +260,8 @@ export default function Chat() {
     }
   };
 
-  const handleUserSelect = (user: Admin | Student) => {
-    setSelectedUser(user);
+  const handleUserSelect = (chatUser: ChatUser) => {
+    setSelectedUser(chatUser);
     setShowChat(true);
   };
 
@@ -229,56 +293,43 @@ export default function Chat() {
             {user?.role === 'student' ? 'Adminlar' : 'Studentlar'}
           </h2>
         </div>
-        <ScrollArea className="flex-1">
-          {user?.role === 'student' ? (
-            <div className="p-2">
-              {admins.map((admin) => (
-                <Button
-                  key={admin.id}
-                  variant="ghost"
-                  className={`w-full justify-start mb-2 h-auto p-3 ${(selectedUser as Admin)?.id === admin.id ? 'bg-accent' : ''
-                    }`}
-                  onClick={() => handleUserSelect(admin)}
-                >
-                  <Avatar className="h-10 w-10 mr-3">
-                    <AvatarImage src={admin.photo} />
-                    <AvatarFallback>
-                      {admin.first_name[0]}{admin.last_name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="text-left">
-                    <p className="font-medium">{admin.first_name} {admin.last_name}</p>
-                    <p className="text-sm text-muted-foreground">Admin</p>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          ) : (
-            <div className="p-2">
-              {students.map((student) => (
-                <Button
-                  key={student.id}
-                  variant="ghost"
-                  className={`w-full justify-start mb-2 h-auto p-3 ${(selectedUser as Student)?.id === student.id ? 'bg-accent' : ''
-                    }`}
-                  onClick={() => handleUserSelect(student)}
-                >
-                  <Avatar className="h-10 w-10 mr-3">
-                    <AvatarImage src={student.photo} />
-                    <AvatarFallback>
-                      {student.first_name[0]}{student.last_name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="text-left flex-1">
-                    <p className="font-medium">{student.first_name} {student.last_name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {student.direction || 'Yo\'nalish ko\'rsatilmagan'} • {student.course || 'Kurs ko\'rsatilmagan'}
-                    </p>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          )}
+        <ScrollArea className="flex-1" onScroll={handleScroll}>
+          <div className="p-2">
+            {chatUsers.map((chatUser) => (
+              <Button
+                key={chatUser.id}
+                variant="ghost"
+                className={`w-full justify-start mb-2 h-auto p-3 relative ${
+                  selectedUser?.id === chatUser.id ? 'bg-accent' : ''
+                } ${chatUser.role === 'admin' ? 'bg-red-500/10 hover:bg-red-500/20' : ''}`}
+                onClick={() => handleUserSelect(chatUser)}
+              >
+                <Avatar className="h-10 w-10 mr-3">
+                  <AvatarImage src={chatUser.photo} />
+                  <AvatarFallback>
+                    {chatUser.first_name[0]}{chatUser.last_name[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-left flex-1">
+                  <p className="font-medium">{chatUser.first_name} {chatUser.last_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {chatUser.role === 'admin' ? 'Admin' : 
+                      `${chatUser.direction || 'Yo\'nalish'} • ${chatUser.course || 'Kurs'}`}
+                  </p>
+                </div>
+                {chatUser.unread_count && chatUser.unread_count > 0 && (
+                  <Badge variant="destructive" className="ml-2">
+                    {chatUser.unread_count > 99 ? '99+' : chatUser.unread_count}
+                  </Badge>
+                )}
+              </Button>
+            ))}
+            {isLoadingMore && (
+              <div className="flex justify-center p-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
         </ScrollArea>
       </Card>
 
@@ -297,23 +348,17 @@ export default function Chat() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <Avatar className="h-10 w-10">
-                <AvatarImage src={user?.role === 'student' ? (selectedUser as Admin).photo : (selectedUser as Student).photo} />
+                <AvatarImage src={selectedUser.photo} />
                 <AvatarFallback>
-                  {user?.role === 'student'
-                    ? `${(selectedUser as Admin).first_name[0]}${(selectedUser as Admin).last_name[0]}`
-                    : `${(selectedUser as Student).first_name[0]}${(selectedUser as Student).last_name[0]}`
-                  }
+                  {selectedUser.first_name[0]}{selectedUser.last_name[0]}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-semibold">
-                  {user?.role === 'student'
-                    ? `${(selectedUser as Admin).first_name} ${(selectedUser as Admin).last_name}`
-                    : `${(selectedUser as Student).first_name} ${(selectedUser as Student).last_name}`
-                  }
+                  {selectedUser.first_name} {selectedUser.last_name}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {user?.role === 'student' ? 'Admin' : 'Student'}
+                  {selectedUser.role === 'admin' ? 'Admin' : 'Student'}
                 </p>
               </div>
             </div>

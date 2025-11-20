@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, User, BarChart3, Settings, Users, ScanLine, MessageSquare } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationBell } from '@/components/NotificationBell';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -61,7 +62,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <p className="text-sm text-sidebar-foreground/70">{user.role === 'student' ? 'Talaba' : 'Admin'}</p>
                 </div>
               </div>
-              <ThemeToggle />
+              <div className="flex items-center gap-2">
+                <NotificationBell />
+                <ThemeToggle />
+              </div>
             </div>
           </div>
 
@@ -102,7 +106,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content */}
       <main className={`${!isMobile ? 'ml-64' : 'mb-20'} min-h-screen`}>
         <div className="p-6">
-          <div className="flex justify-end mb-4 md:hidden">
+          <div className="flex justify-end gap-2 mb-4 md:hidden">
+            <NotificationBell />
             <ThemeToggle />
           </div>
           {children}
