@@ -24,4 +24,6 @@ export const API_ENDPOINTS = {
   MESSAGES: '/message/',
   GET_ADMINS: '/users/admins/',
   GET_CONVERSATIONS: '/message/conversations/',
+  MARK_AS_READ: '/message/mark-read/',
+  UNREAD_COUNT: '/message/unread-count/',
 };
