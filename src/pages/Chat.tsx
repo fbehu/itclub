@@ -11,7 +11,7 @@ import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface Message {
   id: string;
@@ -55,6 +55,8 @@ interface ChatUser {
 export default function Chat() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [chatUsers, setChatUsers] = useState<ChatUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -67,7 +69,6 @@ export default function Chat() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -80,6 +81,18 @@ export default function Chat() {
   useEffect(() => {
     loadUsers(1);
   }, [user]);
+
+  useEffect(() => {
+    // Check if we navigated from notifications with a selected user
+    const state = location.state as { selectedUserId?: number };
+    if (state?.selectedUserId && chatUsers.length > 0) {
+      const userToSelect = chatUsers.find(u => u.id === state.selectedUserId.toString());
+      if (userToSelect) {
+        setSelectedUser(userToSelect);
+        setShowChat(true);
+      }
+    }
+  }, [location.state, chatUsers]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -114,10 +127,17 @@ export default function Chat() {
           setHasMore(false);
         }
       } else if (user?.role === 'admin') {
-        const response = await authFetch(`${API_ENDPOINTS.GET_CONVERSATIONS}?page=${pageNum}`);
+        const response = await authFetch(`${API_ENDPOINTS.USERS_LIST}?page=${pageNum}`);
         if (response.ok) {
           const data = await response.json();
-          const users = data.results || [];
+          const users = (data.results || []).map((student: any) => ({
+            id: student.id,
+            first_name: student.first_name,
+            last_name: student.last_name,
+            photo: student.photo,
+            role: 'student' as const,
+            unread_count: student.unread_message_count || 0
+          }));
           
           if (pageNum === 1) {
             setChatUsers(users);
