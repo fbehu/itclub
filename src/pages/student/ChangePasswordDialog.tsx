@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
@@ -25,11 +25,13 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 interface ChangePasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  userId: string;
 }
 
 export default function ChangePasswordDialog({
   open,
   onOpenChange,
+  userId,
 }: ChangePasswordDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,7 +48,7 @@ export default function ChangePasswordDialog({
   const onSubmit = async (data: PasswordFormData) => {
     setIsSubmitting(true);
     try {
-      const response = await authFetch(API_ENDPOINTS.CHANGE_PASSWORD, {
+      const response = await authFetch(API_ENDPOINTS.CHANGE_PASSWORD(userId), {
         method: 'POST',
         body: JSON.stringify({
           old_password: data.old_password,
@@ -86,9 +88,8 @@ export default function ChangePasswordDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="old_password">Eski parol</Label>
-            <Input
+            <PasswordInput
               id="old_password"
-              type="password"
               {...register('old_password')}
               placeholder="Eski parolingizni kiriting"
             />
@@ -99,9 +100,8 @@ export default function ChangePasswordDialog({
 
           <div className="space-y-2">
             <Label htmlFor="new_password">Yangi parol</Label>
-            <Input
+            <PasswordInput
               id="new_password"
-              type="password"
               {...register('new_password')}
               placeholder="Yangi parolni kiriting"
             />
@@ -112,9 +112,8 @@ export default function ChangePasswordDialog({
 
           <div className="space-y-2">
             <Label htmlFor="confirm_password">Parolni tasdiqlang</Label>
-            <Input
+            <PasswordInput
               id="confirm_password"
-              type="password"
               {...register('confirm_password')}
               placeholder="Yangi parolni qayta kiriting"
             />

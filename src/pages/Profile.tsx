@@ -304,6 +304,7 @@ export default function Profile() {
           <ChangePasswordDialog
             open={passwordDialogOpen}
             onOpenChange={setPasswordDialogOpen}
+            userId={displayUser.id}
           />
         </>
       )}

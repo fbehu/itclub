@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
+import { PasswordInput } from '@/components/ui/password-input';
 import './Login.css';
 
 export default function Login() {
@@ -109,8 +110,7 @@ export default function Login() {
             disabled={isLoading}
           />
           <label htmlFor="password">Parol</label>
-          <input
-            type="password"
+          <PasswordInput
             id="password"
             placeholder="********"
             value={password}
