@@ -53,6 +53,7 @@ export default function ChangePasswordDialog({
         body: JSON.stringify({
           old_password: data.old_password,
           new_password: data.new_password,
+          confirm_password: data.confirm_password,
         }),
       });
 
