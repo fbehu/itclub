@@ -8,10 +8,10 @@ export const API_ENDPOINTS = {
   
   // User
   USER_ME: '/users/me/',
-  USER_PROFILE: '/users/profile/',
-  CHANGE_PASSWORD: '/users/change_password/',
+  USER_PROFILE: '/users/me/',
   USERS_LIST: '/users/users/',
   ADD_USER: '/users/add/',
+  CHANGE_PASSWORD: (userId: string) => `/users/users/${userId}/change-password/`,
 
   
   // Statistics
