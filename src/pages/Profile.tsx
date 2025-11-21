@@ -6,7 +6,10 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, User as UserIcon, Trophy, Coins, TrendingUp, Loader } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Phone, Mail, User as UserIcon, Trophy, Coins, TrendingUp, Loader, Edit, KeyRound } from 'lucide-react';
+import EditProfileDialog from '@/pages/student/EditProfileDialog';
+import ChangePasswordDialog from '@/pages/student/ChangePasswordDialog';
 
 interface ProfileUser {
   id: string;
@@ -42,6 +45,8 @@ export default function Profile() {
   const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -132,10 +137,57 @@ export default function Profile() {
 
   const displayUser = profileUser;
 
+  const handleProfileUpdate = () => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await authFetch(API_ENDPOINTS.USER_ME, {
+          method: 'GET',
+        });
+
+        if (!response.ok) {
+          throw new Error('Profil ma\'lumotlarini yuklashda xatolik');
+        }
+
+        const data: ProfileUser = await response.json();
+        setProfileUser(data);
+        
+        if (setUser) {
+          setUser(data);
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+      }
+    };
+
+    fetchUserProfile();
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-4 sm:space-y-6 animate-fade-in-up px-2 sm:px-0">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Profil</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Profil</h1>
+          {displayUser.role === 'student' && (
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setEditDialogOpen(true)}
+                size="sm"
+                variant="outline"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Tahrirlash
+              </Button>
+              <Button
+                onClick={() => setPasswordDialogOpen(true)}
+                size="sm"
+                variant="outline"
+              >
+                <KeyRound className="h-4 w-4 mr-2" />
+                Parolni o'zgartirish
+              </Button>
+            </div>
+          )}
+        </div>
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           {/* Left Side: Main Info */}
           <Card className={`glass-card-bg p-3 sm:p-4 border-none ${getNeonClass(displayUser.level)}`}>
@@ -235,6 +287,26 @@ export default function Profile() {
           </Card>
         </div>
       </div>
+
+      {displayUser.role === 'student' && (
+        <>
+          <EditProfileDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            currentData={{
+              first_name: displayUser.first_name,
+              last_name: displayUser.last_name,
+              username: displayUser.username,
+              photo: displayUser.photo,
+            }}
+            onSuccess={handleProfileUpdate}
+          />
+          <ChangePasswordDialog
+            open={passwordDialogOpen}
+            onOpenChange={setPasswordDialogOpen}
+          />
+        </>
+      )}
     </DashboardLayout>
   );
 }
