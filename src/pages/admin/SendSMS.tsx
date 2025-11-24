@@ -1,0 +1,334 @@
+import { useState, useEffect } from 'react';
+import { authFetch } from '@/lib/authFetch';
+import { API_ENDPOINTS } from '@/config/api';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Send } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+interface Student {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone_number?: string;
+}
+
+const messageTemplates = {
+  login_info: {
+    title: 'Login va parol haqida',
+    template: 'Hurmatli {name}, sizning login ma\'lumotlaringiz:\nLogin: {username}\nParol: {password}\n\nIT Club UBS',
+  },
+  absent: {
+    title: 'Darsga kelmagan',
+    template: 'Hurmatli {name}, siz {date} sanasidagi darsga kelmadingiz. Iltimos, keyingi darslarga qatnashing.\n\nIT Club UBS',
+  },
+  registered: {
+    title: 'Ro\'yxatdan o\'tdingiz',
+    template: 'Tabriklaymiz {name}! Siz IT Club UBS ga muvaffaqiyatli ro\'yxatdan o\'tdingiz. Xush kelibsiz!',
+  },
+  not_registered: {
+    title: 'Ro\'yxatdan o\'tolmadingiz',
+    template: 'Hurmatli {name}, afsuski, siz IT Club UBS ga ro\'yxatdan o\'tolmadingiz. Qo\'shimcha ma\'lumot uchun biz bilan bog\'laning.',
+  },
+};
+
+export default function SendSMS() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [message, setMessage] = useState('');
+  const [sendTime, setSendTime] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sentCount, setSentCount] = useState(0);
+  const [totalToSend, setTotalToSend] = useState(0);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadStudents();
+    
+    // Set default send time to now
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(now.getTime() - offset).toISOString().slice(0, 16);
+    setSendTime(localISOTime);
+  }, []);
+
+  const loadStudents = async () => {
+    setLoading(true);
+    try {
+      const response = await authFetch(API_ENDPOINTS.USERS_LIST);
+      if (response.ok) {
+        const data = await response.json();
+        setStudents(data.results || []);
+      }
+    } catch (error) {
+      console.error('Error loading students:', error);
+      toast({
+        title: 'Xatolik',
+        description: 'Talabalar ro\'yxatini yuklashda xatolik yuz berdi',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedStudents(new Set(students.map(s => s.id)));
+    } else {
+      setSelectedStudents(new Set());
+    }
+  };
+
+  const handleSelectStudent = (studentId: string, checked: boolean) => {
+    const newSelected = new Set(selectedStudents);
+    if (checked) {
+      newSelected.add(studentId);
+    } else {
+      newSelected.delete(studentId);
+    }
+    setSelectedStudents(newSelected);
+  };
+
+  const handleTemplateChange = (templateKey: string) => {
+    setSelectedTemplate(templateKey);
+    setMessage(messageTemplates[templateKey as keyof typeof messageTemplates].template);
+  };
+
+  const handleSendSMS = async () => {
+    if (selectedStudents.size === 0) {
+      toast({
+        title: 'Xatolik',
+        description: 'Kamida bitta talaba tanlang',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!message.trim()) {
+      toast({
+        title: 'Xatolik',
+        description: 'Xabar matnini kiriting',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!sendTime) {
+      toast({
+        title: 'Xatolik',
+        description: 'Yuborish vaqtini belgilang',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSending(true);
+    setSentCount(0);
+    setTotalToSend(selectedStudents.size);
+
+    const selectedStudentsList = students.filter(s => selectedStudents.has(s.id));
+    let successCount = 0;
+
+    for (const student of selectedStudentsList) {
+      try {
+        const personalizedMessage = message
+          .replace(/{name}/g, `${student.first_name} ${student.last_name}`)
+          .replace(/{username}/g, student.id)
+          .replace(/{date}/g, new Date().toLocaleDateString('uz-UZ'));
+
+        const response = await authFetch(API_ENDPOINTS.SEND_SMS, {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: student.id,
+            user_name: `${student.first_name} ${student.last_name}`,
+            phone_number: student.phone_number || '',
+            message: personalizedMessage,
+            send_time: new Date(sendTime).toISOString(),
+            status: 'pending',
+          }),
+        });
+
+        if (response.ok) {
+          successCount++;
+          setSentCount(successCount);
+        }
+      } catch (error) {
+        console.error(`Error sending SMS to ${student.first_name}:`, error);
+      }
+    }
+
+    setSending(false);
+    
+    toast({
+      title: 'Muvaffaqiyatli!',
+      description: `${successCount} ta talabaga SMS xabar yuborildi`,
+    });
+
+    // Reset form
+    setSelectedStudents(new Set());
+    setMessage('');
+    setSelectedTemplate('');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">SMS Yuborish</h1>
+        <p className="text-muted-foreground mt-2">Talabalarga SMS xabar yuborish</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Students Selection */}
+        <Card className="p-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-foreground">O'quvchilarni tanlang</h2>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="select-all"
+                  checked={selectedStudents.size === students.length && students.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <Label htmlFor="select-all" className="cursor-pointer">
+                  Barchasini tanlash
+                </Label>
+              </div>
+            </div>
+
+            <ScrollArea className="h-[400px] rounded-md border border-border p-4">
+              <div className="space-y-2">
+                {students.map((student) => (
+                  <div
+                    key={student.id}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <Checkbox
+                      id={`student-${student.id}`}
+                      checked={selectedStudents.has(student.id)}
+                      onCheckedChange={(checked) =>
+                        handleSelectStudent(student.id, checked as boolean)
+                      }
+                    />
+                    <Label
+                      htmlFor={`student-${student.id}`}
+                      className="flex-1 cursor-pointer"
+                    >
+                      <p className="font-medium text-foreground">
+                        {student.first_name} {student.last_name}
+                      </p>
+                      {student.phone_number && (
+                        <p className="text-sm text-muted-foreground">{student.phone_number}</p>
+                      )}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+
+            <div className="text-sm text-muted-foreground">
+              Tanlangan: {selectedStudents.size} / {students.length}
+            </div>
+          </div>
+        </Card>
+
+        {/* Message Template & Sending */}
+        <Card className="p-6">
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-foreground">Xabar shabloni</h2>
+
+            <div>
+              <Label htmlFor="template">Shablon tanlang</Label>
+              <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
+                <SelectTrigger id="template">
+                  <SelectValue placeholder="Shablon tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(messageTemplates).map(([key, template]) => (
+                    <SelectItem key={key} value={key}>
+                      {template.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="message">Xabar matni</Label>
+              <Textarea
+                id="message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Xabar matnini kiriting"
+                className="min-h-[200px]"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {'{name}'} - Talaba ismi, {'{username}'} - Login, {'{date}'} - Sana
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="send-time">Yuborish vaqti</Label>
+              <input
+                id="send-time"
+                type="datetime-local"
+                value={sendTime}
+                onChange={(e) => setSendTime(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+
+            <Button
+              onClick={handleSendSMS}
+              disabled={sending || selectedStudents.size === 0}
+              className="w-full"
+              size="lg"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              SMS Yuborish
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Sending Overlay */}
+      {sending && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <Card className="p-8 max-w-md w-full mx-4 text-center space-y-4">
+            <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
+            <h3 className="text-xl font-semibold text-foreground">
+              SMS xabarlar yuborilmoqda
+            </h3>
+            <p className="text-muted-foreground">
+              Iltimos, saytdan chiqmay turing
+            </p>
+            <div className="text-2xl font-bold text-primary">
+              {sentCount} / {totalToSend}
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
