@@ -13,6 +13,7 @@ import Settings from "./pages/Settings";
 import UserManagement from "./pages/admin/UserManagement";
 import AddUser from "./pages/admin/AddUser";
 import QRScannerPage from "./pages/admin/QRScanner";
+import SendSMS from "./pages/admin/SendSMS";
 import Chat from "./pages/Chat";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
@@ -88,6 +89,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <QRScannerPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/admin/send-sms" 
+                element={
+                  <ProtectedRoute>
+                    <SendSMS />
                   </ProtectedRoute>
                 } 
               />
