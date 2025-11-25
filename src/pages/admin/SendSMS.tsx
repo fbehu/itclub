@@ -207,7 +207,7 @@ export default function SendSMS() {
             phone_number: student.phone_number || '',
             message: personalizedMessage,
             send_time: new Date(sendTime).toISOString(),
-            status: 'pending',
+            status: 'waiting',
           }),
         });
 
