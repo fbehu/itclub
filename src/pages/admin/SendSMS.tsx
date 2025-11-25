@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send, Search } from 'lucide-react';
+import { Loader2, Send, Search, Users } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
@@ -78,14 +78,11 @@ export default function SendSMS() {
   const [sentCount, setSentCount] = useState(0);
   const [totalToSend, setTotalToSend] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    loadStudents();
+    loadAllStudents();
     
     // Set default send time to now
     const now = new Date();
@@ -94,28 +91,29 @@ export default function SendSMS() {
     setSendTime(localISOTime);
   }, []);
 
-  const loadStudents = async (page: number = 1, append: boolean = false) => {
-    if (page === 1) {
-      setLoading(true);
-    } else {
-      setLoadingMore(true);
-    }
+  const loadAllStudents = async () => {
+    setLoading(true);
     
     try {
-      const url = `${API_ENDPOINTS.USERS_LIST}?page=${page}`;
-      const response = await authFetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        const newStudents = data.results || [];
-        
-        if (append) {
-          setStudents(prev => [...prev, ...newStudents]);
+      let allStudents: Student[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const url = `${API_ENDPOINTS.USERS_LIST}?page=${page}`;
+        const response = await authFetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          const newStudents = data.results || [];
+          allStudents = [...allStudents, ...newStudents];
+          hasMore = !!data.next;
+          page++;
         } else {
-          setStudents(newStudents);
+          hasMore = false;
         }
-        
-        setHasMore(!!data.next);
       }
+      
+      setStudents(allStudents);
     } catch (error) {
       console.error('Error loading students:', error);
       toast({
@@ -125,24 +123,6 @@ export default function SendSMS() {
       });
     } finally {
       setLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
-  const loadMoreStudents = () => {
-    if (!loadingMore && hasMore) {
-      const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
-      loadStudents(nextPage, true);
-    }
-  };
-
-  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const target = event.currentTarget;
-    const bottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 100;
-    
-    if (bottom && hasMore && !loadingMore) {
-      loadMoreStudents();
     }
   };
 
@@ -270,143 +250,175 @@ export default function SendSMS() {
         <p className="text-muted-foreground mt-2">Talabalarga SMS xabar yuborish</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Students Selection */}
-        <Card className="p-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-foreground">O'quvchilarni tanlang</h2>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="select-all"
-                  checked={selectedStudents.size === filteredStudents.length && filteredStudents.length > 0}
-                  onCheckedChange={handleSelectAll}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar */}
+        <div className="lg:col-span-1">
+          <Card className="p-6 sticky top-6 space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Statistika
+              </h3>
+              
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between p-3 bg-muted rounded-lg">
+                  <span className="text-muted-foreground">Jami talabalar:</span>
+                  <span className="font-semibold text-foreground">{students.length}</span>
+                </div>
+                
+                <div className="flex justify-between p-3 bg-muted rounded-lg">
+                  <span className="text-muted-foreground">Filtered:</span>
+                  <span className="font-semibold text-foreground">{filteredStudents.length}</span>
+                </div>
+                
+                <div className="flex justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <span className="text-blue-700 dark:text-blue-300">Tanlangan:</span>
+                  <span className="font-semibold text-blue-700 dark:text-blue-300">{selectedStudents.size}</span>
+                </div>
+
+                {selectedStudents.size > 0 && (
+                  <div className="flex justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                    <span className="text-green-700 dark:text-green-300">Yuborish uchun tayyor:</span>
+                    <span className="font-semibold text-green-700 dark:text-green-300">{selectedStudents.size}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selectedStudents.size > 0 && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setSelectedStudents(new Set())}
+              >
+                Barchangi bekor qilish
+              </Button>
+            )}
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Students Selection */}
+          <Card className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-foreground">O'quvchilarni tanlang</h2>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="select-all"
+                    checked={selectedStudents.size === filteredStudents.length && filteredStudents.length > 0}
+                    onCheckedChange={handleSelectAll}
+                  />
+                  <Label htmlFor="select-all" className="cursor-pointer text-sm">
+                    Barchasini
+                  </Label>
+                </div>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Ism yoki telefon raqam bo'yicha qidirish..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
                 />
-                <Label htmlFor="select-all" className="cursor-pointer">
-                  Barchasini tanlash
-                </Label>
               </div>
-            </div>
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Ism yoki telefon raqam bo'yicha qidirish..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            <ScrollArea 
-              className="h-[400px] rounded-md border border-border p-4"
-              onScrollCapture={handleScroll}
-            >
-              <div className="space-y-2">
-                {filteredStudents.map((student) => (
-                  <div
-                    key={student.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
-                  >
-                    <Checkbox
-                      id={`student-${student.id}`}
-                      checked={selectedStudents.has(student.id)}
-                      onCheckedChange={(checked) =>
-                        handleSelectStudent(student.id, checked as boolean)
-                      }
-                    />
-                    <Label
-                      htmlFor={`student-${student.id}`}
-                      className="flex-1 cursor-pointer"
+              <ScrollArea 
+                className="h-[400px] rounded-md border border-border p-4"
+                ref={scrollAreaRef}
+              >
+                <div className="space-y-2">
+                  {filteredStudents.map((student) => (
+                    <div
+                      key={student.id}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
                     >
-                      <p className="font-medium text-foreground">
-                        {student.first_name} {student.last_name}
-                      </p>
-                      {student.phone_number && (
-                        <p className="text-sm text-muted-foreground">{student.phone_number}</p>
-                      )}
-                    </Label>
-                  </div>
-                ))}
-                
-                {loadingMore && (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                )}
-                
-                {!hasMore && filteredStudents.length > 0 && (
-                  <div className="text-center py-4 text-sm text-muted-foreground">
-                    Barcha talabalar yuklandi
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-
-            <div className="text-sm text-muted-foreground">
-              Tanlangan: {selectedStudents.size} / {filteredStudents.length}
-              {searchQuery && ` (${students.length} talabadan qidirildi)`}
-            </div>
-          </div>
-        </Card>
-
-        {/* Message Template & Sending */}
-        <Card className="p-6">
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">Xabar shabloni</h2>
-
-            <div>
-              <Label htmlFor="template">Shablon tanlang</Label>
-              <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
-                <SelectTrigger id="template">
-                  <SelectValue placeholder="Shablon tanlang" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(messageTemplates).map(([key, template]) => (
-                    <SelectItem key={key} value={key}>
-                      {template.title}
-                    </SelectItem>
+                      <Checkbox
+                        id={`student-${student.id}`}
+                        checked={selectedStudents.has(student.id)}
+                        onCheckedChange={(checked) =>
+                          handleSelectStudent(student.id, checked as boolean)
+                        }
+                      />
+                      <Label
+                        htmlFor={`student-${student.id}`}
+                        className="flex-1 cursor-pointer"
+                      >
+                        <p className="font-medium text-foreground">
+                          {student.first_name} {student.last_name}
+                        </p>
+                        {student.phone_number && (
+                          <p className="text-sm text-muted-foreground">{student.phone_number}</p>
+                        )}
+                      </Label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </ScrollArea>
             </div>
+          </Card>
 
-            <div>
-              <Label htmlFor="message">Xabar matni</Label>
-              <Textarea
-                id="message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Xabar matnini kiriting"
-                className="min-h-[200px]"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {'{name}'} - Talaba ismi, {'{username}'} - Login, {'{date}'} - Sana
-              </p>
+          {/* Message Template & Sending */}
+          <Card className="p-6">
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-foreground">Xabar shabloni</h2>
+
+              <div>
+                <Label htmlFor="template">Shablon tanlang</Label>
+                <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
+                  <SelectTrigger id="template">
+                    <SelectValue placeholder="Shablon tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(messageTemplates).map(([key, template]) => (
+                      <SelectItem key={key} value={key}>
+                        {template.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="message">Xabar matni</Label>
+                <Textarea
+                  id="message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Xabar matnini kiriting"
+                  className="min-h-[200px]"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {'{name}'} - Talaba ismi, {'{username}'} - Login, {'{date}'} - Sana
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="send-time">Yuborish vaqti</Label>
+                <input
+                  id="send-time"
+                  type="datetime-local"
+                  value={sendTime}
+                  onChange={(e) => setSendTime(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              <Button
+                onClick={handleSendSMS}
+                disabled={sending || selectedStudents.size === 0}
+                className="w-full"
+                size="lg"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                SMS Yuborish
+              </Button>
             </div>
-
-            <div>
-              <Label htmlFor="send-time">Yuborish vaqti</Label>
-              <input
-                id="send-time"
-                type="datetime-local"
-                value={sendTime}
-                onChange={(e) => setSendTime(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-
-            <Button
-              onClick={handleSendSMS}
-              disabled={sending || selectedStudents.size === 0}
-              className="w-full"
-              size="lg"
-            >
-              <Send className="mr-2 h-4 w-4" />
-              SMS Yuborish
-            </Button>
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
 
       {/* Sending Overlay */}
