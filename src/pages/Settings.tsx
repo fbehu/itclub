@@ -3,19 +3,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Bell, Lock, Globe, Moon } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Bell, Lock, Globe, Moon, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleSave = () => {
     toast({
       title: 'Saqlandi',
       description: 'Sozlamalar muvaffaqiyatli saqlandi',
     });
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
@@ -96,6 +116,43 @@ export default function Settings() {
                   {/* O'zgartirish */} Tez orada
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-destructive/20 bg-destructive/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <LogOut className="h-5 w-5" />
+                Akkauntdan chiqish
+              </CardTitle>
+              <CardDescription>Tizimdan chiqish va sessiyani yakunlash</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full sm:w-auto">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Chiqish
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Chiqishni tasdiqlang</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Siz tizimdan chiqmoqchisiz. Bu amalni bekor qilib bo'lmaydi. Davom etmoqchisiz?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleLogout}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Chiqish
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
 

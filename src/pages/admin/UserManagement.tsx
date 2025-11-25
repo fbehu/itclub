@@ -220,9 +220,9 @@ export default function UserManagement() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-foreground">Foydalanuvchilar</h1>
-          <Button onClick={() => navigate('/dashboard/admin/add-user')}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Yangi foydalanuvchi
+          <Button onClick={() => navigate('/dashboard/admin/add-user')} title="Foydalanuvchi qo'shish">
+            <UserPlus className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Yangi foydalanuvchi</span>
           </Button>
         </div>
 
@@ -403,21 +403,53 @@ export default function UserManagement() {
                   {users.map((student, index) => (
                     <Card key={student.id} className="p-4">
                       <div className="space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-sm font-semibold text-primary">#{(currentPage - 1) * itemsPerPage + index + 1}</span>
                             </div>
                             <h3 className="font-semibold text-base">{student.first_name} {student.last_name}</h3>
+                            <p className="text-sm text-muted-foreground">{student.username}</p>
+                            <p className="text-sm text-muted-foreground">{student.phone_number}</p>
                             <p className="text-sm text-muted-foreground">{student.course}</p>
                           </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 pt-2 border-t">
                           <Button 
                             variant="ghost" 
                             size="sm" 
                             onClick={() => setViewingUser(student)}
-                            className="flex-shrink-0"
+                            className="flex-1 min-w-0"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Ko'rish</span>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setChangingPasswordUser(student)}
+                            className="flex-1 min-w-0"
+                          >
+                            <KeyRound className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Parol</span>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleEdit(student)}
+                            className="flex-1 min-w-0"
+                          >
+                            <Pencil className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Tahrir</span>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setDeletingUserId(student.id)}
+                            className="flex-1 min-w-0"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+                            <span className="hidden sm:inline text-destructive">O'chirish</span>
                           </Button>
                         </div>
                       </div>

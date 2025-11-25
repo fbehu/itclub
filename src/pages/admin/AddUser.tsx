@@ -118,7 +118,7 @@ export default function AddUser() {
 
       toast({
         title: 'Muvaffaqiyatli',
-        description: 'Yangi foydalanuvchi qo\'shildi',
+        description: 'Foydalanuvchi qo\'shildi',
       });
 
       navigate('/dashboard/admin/users');
@@ -150,7 +150,7 @@ export default function AddUser() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-3xl font-bold text-foreground">Yangi foydalanuvchi qo'shish</h1>
+          <h1 className="text-2xl font-bold text-foreground">Foydalanuvchi qo'shish</h1>
         </div>
 
         <Card>
