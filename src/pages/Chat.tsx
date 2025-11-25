@@ -125,6 +125,7 @@ export default function Chat() {
             setChatUsers(prev => [...prev, ...adminsWithRole]);
           }
           setHasMore(false);
+          setPage(1);
         }
       } else if (user?.role === 'admin') {
         const response = await authFetch(`${API_ENDPOINTS.USERS_LIST}?page=${pageNum}`);
@@ -156,11 +157,8 @@ export default function Chat() {
     }
   };
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    const scrollPercentage = (target.scrollTop + target.clientHeight) / target.scrollHeight;
-    
-    if (scrollPercentage > 0.8 && hasMore && !isLoadingMore) {
+  const handleLoadMore = () => {
+    if (hasMore && !isLoadingMore) {
       loadUsers(page + 1);
     }
   };
@@ -313,7 +311,7 @@ export default function Chat() {
             {user?.role === 'student' ? 'Adminlar' : 'Studentlar'}
           </h2>
         </div>
-        <ScrollArea className="flex-1" onScroll={handleScroll}>
+        <ScrollArea className="flex-1" ref={scrollAreaRef}>
           <div className="p-2">
             {chatUsers.map((chatUser) => (
               <Button
@@ -344,13 +342,29 @@ export default function Chat() {
                 )}
               </Button>
             ))}
-            {isLoadingMore && (
-              <div className="flex justify-center p-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            )}
           </div>
         </ScrollArea>
+
+        {/* Load More Button */}
+        {hasMore && user?.role === 'admin' && (
+          <div className="p-4 border-t">
+            <Button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="w-full"
+              variant="outline"
+            >
+              {isLoadingMore ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Yuklashni kutmoqda...
+                </>
+              ) : (
+                'Yana yukla'
+              )}
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* Chat Area */}

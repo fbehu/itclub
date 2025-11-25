@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import DashboardLayout from '@/components/DashboardLayout';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Send, Search, Users } from 'lucide-react';
@@ -255,200 +256,202 @@ export default function SendSMS() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">SMS Yuborish</h1>
-        <p className="text-muted-foreground mt-2">Talabalarga SMS xabar yuborish</p>
-      </div>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">SMS Yuborish</h1>
+          <p className="text-muted-foreground mt-2">Talabalarga SMS xabar yuborish</p>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <Card className="p-6 sticky top-6 space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Statistika
-              </h3>
-              
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between p-3 bg-muted rounded-lg">
-                  <span className="text-muted-foreground">Jami talabalar:</span>
-                  <span className="font-semibold text-foreground">{students.length}</span>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <Card className="p-6 sticky top-6 space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Statistika
+                </h3>
                 
-                <div className="flex justify-between p-3 bg-muted rounded-lg">
-                  <span className="text-muted-foreground">Filtered:</span>
-                  <span className="font-semibold text-foreground">{filteredStudents.length}</span>
-                </div>
-                
-                <div className="flex justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <span className="text-blue-700 dark:text-blue-300">Tanlangan:</span>
-                  <span className="font-semibold text-blue-700 dark:text-blue-300">{selectedStudents.size}</span>
-                </div>
-
-                {selectedStudents.size > 0 && (
-                  <div className="flex justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
-                    <span className="text-green-700 dark:text-green-300">Yuborish uchun tayyor:</span>
-                    <span className="font-semibold text-green-700 dark:text-green-300">{selectedStudents.size}</span>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between p-3 bg-muted rounded-lg">
+                    <span className="text-muted-foreground">Jami talabalar:</span>
+                    <span className="font-semibold text-foreground">{students.length}</span>
                   </div>
-                )}
-              </div>
-            </div>
+                  
+                  <div className="flex justify-between p-3 bg-muted rounded-lg">
+                    <span className="text-muted-foreground">Filtered:</span>
+                    <span className="font-semibold text-foreground">{filteredStudents.length}</span>
+                  </div>
+                  
+                  <div className="flex justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <span className="text-blue-700 dark:text-blue-300">Tanlangan:</span>
+                    <span className="font-semibold text-blue-700 dark:text-blue-300">{selectedStudents.size}</span>
+                  </div>
 
-            {selectedStudents.size > 0 && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setSelectedStudents(new Set())}
-              >
-                Barchangi bekor qilish
-              </Button>
-            )}
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Students Selection */}
-          <Card className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-foreground">O'quvchilarni tanlang</h2>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="select-all"
-                    checked={selectedStudents.size === filteredStudents.length && filteredStudents.length > 0}
-                    onCheckedChange={handleSelectAll}
-                  />
-                  <Label htmlFor="select-all" className="cursor-pointer text-sm">
-                    Barchasini
-                  </Label>
-                </div>
-              </div>
-
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Ism yoki telefon raqam bo'yicha qidirish..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              <ScrollArea 
-                className="h-[400px] rounded-md border border-border p-4"
-                ref={scrollAreaRef}
-              >
-                <div className="space-y-2">
-                  {filteredStudents.map((student) => (
-                    <div
-                      key={student.id}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <Checkbox
-                        id={`student-${student.id}`}
-                        checked={selectedStudents.has(student.id)}
-                        onCheckedChange={(checked) =>
-                          handleSelectStudent(student.id, checked as boolean)
-                        }
-                      />
-                      <Label
-                        htmlFor={`student-${student.id}`}
-                        className="flex-1 cursor-pointer"
-                      >
-                        <p className="font-medium text-foreground">
-                          {student.first_name} {student.last_name}
-                        </p>
-                        {student.phone_number && (
-                          <p className="text-sm text-muted-foreground">{student.phone_number}</p>
-                        )}
-                      </Label>
+                  {selectedStudents.size > 0 && (
+                    <div className="flex justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                      <span className="text-green-700 dark:text-green-300">Yuborish uchun tayyor:</span>
+                      <span className="font-semibold text-green-700 dark:text-green-300">{selectedStudents.size}</span>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </ScrollArea>
-            </div>
-          </Card>
+              </div>
 
-          {/* Message Template & Sending */}
-          <Card className="p-6">
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-foreground">Xabar shabloni</h2>
+              {selectedStudents.size > 0 && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setSelectedStudents(new Set())}
+                >
+                  Barchangi bekor qilish
+                </Button>
+              )}
+            </Card>
+          </div>
 
-              <div>
-                <Label htmlFor="template">Shablon tanlang</Label>
-                <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
-                  <SelectTrigger id="template">
-                    <SelectValue placeholder="Shablon tanlang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(messageTemplates).map(([key, template]) => (
-                      <SelectItem key={key} value={key}>
-                        {template.title}
-                      </SelectItem>
+          {/* Main Content */}
+          <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Students Selection */}
+            <Card className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-foreground">O'quvchilarni tanlang</h2>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="select-all"
+                      checked={selectedStudents.size === filteredStudents.length && filteredStudents.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                    <Label htmlFor="select-all" className="cursor-pointer text-sm">
+                      Barchasini
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Ism yoki telefon raqam bo'yicha qidirish..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+
+                <ScrollArea 
+                  className="h-[400px] rounded-md border border-border p-4"
+                  ref={scrollAreaRef}
+                >
+                  <div className="space-y-2">
+                    {filteredStudents.map((student) => (
+                      <div
+                        key={student.id}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Checkbox
+                          id={`student-${student.id}`}
+                          checked={selectedStudents.has(student.id)}
+                          onCheckedChange={(checked) =>
+                            handleSelectStudent(student.id, checked as boolean)
+                          }
+                        />
+                        <Label
+                          htmlFor={`student-${student.id}`}
+                          className="flex-1 cursor-pointer"
+                        >
+                          <p className="font-medium text-foreground">
+                            {student.first_name} {student.last_name}
+                          </p>
+                          {student.phone_number && (
+                            <p className="text-sm text-muted-foreground">{student.phone_number}</p>
+                          )}
+                        </Label>
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </ScrollArea>
               </div>
+            </Card>
 
-              <div>
-                <Label htmlFor="message">Xabar matni</Label>
-                <Textarea
-                  id="message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Xabar matnini kiriting"
-                  className="min-h-[200px]"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {'{name}'} - Talaba ismi, {'{username}'} - Login, {'{date}'} - Sana
-                </p>
+            {/* Message Template & Sending */}
+            <Card className="p-6">
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-foreground">Xabar shabloni</h2>
+
+                <div>
+                  <Label htmlFor="template">Shablon tanlang</Label>
+                  <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
+                    <SelectTrigger id="template">
+                      <SelectValue placeholder="Shablon tanlang" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(messageTemplates).map(([key, template]) => (
+                        <SelectItem key={key} value={key}>
+                          {template.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="message">Xabar matni</Label>
+                  <Textarea
+                    id="message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Xabar matnini kiriting"
+                    className="min-h-[200px]"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {'{name}'} - Talaba ismi, {'{username}'} - Login, {'{date}'} - Sana
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="send-time">Yuborish vaqti</Label>
+                  <input
+                    id="send-time"
+                    type="datetime-local"
+                    value={sendTime}
+                    onChange={(e) => setSendTime(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSendSMS}
+                  disabled={sending || selectedStudents.size === 0}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  SMS Yuborish
+                </Button>
               </div>
-
-              <div>
-                <Label htmlFor="send-time">Yuborish vaqti</Label>
-                <input
-                  id="send-time"
-                  type="datetime-local"
-                  value={sendTime}
-                  onChange={(e) => setSendTime(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-
-              <Button
-                onClick={handleSendSMS}
-                disabled={sending || selectedStudents.size === 0}
-                className="w-full"
-                size="lg"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                SMS Yuborish
-              </Button>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
+
+        {/* Sending Overlay */}
+        {sending && (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+            <Card className="p-8 max-w-md w-full mx-4 text-center space-y-4">
+              <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
+              <h3 className="text-xl font-semibold text-foreground">
+                SMS xabarlar yuborilmoqda
+              </h3>
+              <p className="text-muted-foreground">
+                Iltimos, saytdan chiqmay turing
+              </p>
+              <div className="text-2xl font-bold text-primary">
+                {sentCount} / {totalToSend}
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
-
-      {/* Sending Overlay */}
-      {sending && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <Card className="p-8 max-w-md w-full mx-4 text-center space-y-4">
-            <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
-            <h3 className="text-xl font-semibold text-foreground">
-              SMS xabarlar yuborilmoqda
-            </h3>
-            <p className="text-muted-foreground">
-              Iltimos, saytdan chiqmay turing
-            </p>
-            <div className="text-2xl font-bold text-primary">
-              {sentCount} / {totalToSend}
-            </div>
-          </Card>
-        </div>
-      )}
-    </div>
+    </DashboardLayout>
   );
 }
