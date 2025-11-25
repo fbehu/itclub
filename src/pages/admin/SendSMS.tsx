@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { Button } from '@/components/ui/button';
@@ -6,8 +6,9 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, Search } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
@@ -45,6 +46,7 @@ const messageTemplates = {
 
 export default function SendSMS() {
   const [students, setStudents] = useState<Student[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [message, setMessage] = useState('');
@@ -53,6 +55,11 @@ export default function SendSMS() {
   const [sending, setSending] = useState(false);
   const [sentCount, setSentCount] = useState(0);
   const [totalToSend, setTotalToSend] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,13 +72,27 @@ export default function SendSMS() {
     setSendTime(localISOTime);
   }, []);
 
-  const loadStudents = async () => {
-    setLoading(true);
+  const loadStudents = async (page: number = 1, append: boolean = false) => {
+    if (page === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    
     try {
-      const response = await authFetch(API_ENDPOINTS.USERS_LIST);
+      const url = `${API_ENDPOINTS.USERS_LIST}?page=${page}`;
+      const response = await authFetch(url);
       if (response.ok) {
         const data = await response.json();
-        setStudents(data.results || []);
+        const newStudents = data.results || [];
+        
+        if (append) {
+          setStudents(prev => [...prev, ...newStudents]);
+        } else {
+          setStudents(newStudents);
+        }
+        
+        setHasMore(!!data.next);
       }
     } catch (error) {
       console.error('Error loading students:', error);
@@ -82,12 +103,40 @@ export default function SendSMS() {
       });
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
+  const loadMoreStudents = () => {
+    if (!loadingMore && hasMore) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      loadStudents(nextPage, true);
+    }
+  };
+
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    const bottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 100;
+    
+    if (bottom && hasMore && !loadingMore) {
+      loadMoreStudents();
+    }
+  };
+
+  useEffect(() => {
+    const filtered = students.filter(student => {
+      const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+      const phone = student.phone_number?.toLowerCase() || '';
+      const query = searchQuery.toLowerCase();
+      return fullName.includes(query) || phone.includes(query);
+    });
+    setFilteredStudents(filtered);
+  }, [students, searchQuery]);
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedStudents(new Set(students.map(s => s.id)));
+      setSelectedStudents(new Set(filteredStudents.map(s => s.id)));
     } else {
       setSelectedStudents(new Set());
     }
@@ -208,7 +257,7 @@ export default function SendSMS() {
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="select-all"
-                  checked={selectedStudents.size === students.length && students.length > 0}
+                  checked={selectedStudents.size === filteredStudents.length && filteredStudents.length > 0}
                   onCheckedChange={handleSelectAll}
                 />
                 <Label htmlFor="select-all" className="cursor-pointer">
@@ -217,9 +266,22 @@ export default function SendSMS() {
               </div>
             </div>
 
-            <ScrollArea className="h-[400px] rounded-md border border-border p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Ism yoki telefon raqam bo'yicha qidirish..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <ScrollArea 
+              className="h-[400px] rounded-md border border-border p-4"
+              onScrollCapture={handleScroll}
+            >
               <div className="space-y-2">
-                {students.map((student) => (
+                {filteredStudents.map((student) => (
                   <div
                     key={student.id}
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
@@ -244,11 +306,24 @@ export default function SendSMS() {
                     </Label>
                   </div>
                 ))}
+                
+                {loadingMore && (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                )}
+                
+                {!hasMore && filteredStudents.length > 0 && (
+                  <div className="text-center py-4 text-sm text-muted-foreground">
+                    Barcha talabalar yuklandi
+                  </div>
+                )}
               </div>
             </ScrollArea>
 
             <div className="text-sm text-muted-foreground">
-              Tanlangan: {selectedStudents.size} / {students.length}
+              Tanlangan: {selectedStudents.size} / {filteredStudents.length}
+              {searchQuery && ` (${students.length} talabadan qidirildi)`}
             </div>
           </div>
         </Card>
