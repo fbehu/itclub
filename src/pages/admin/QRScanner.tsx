@@ -245,7 +245,7 @@ export default function QRScannerPage() {
 
                   {/* Academic Info */}
                   <div className="space-y-4">
-                    <h3 className="text-xl font-semibold">O‘quv ma’lumotlari</h3>
+                    <h3 className="text-xl font-semibold">O'quv ma’lumotlari</h3>
 
                     <div className="flex items-center gap-3 text-lg">
                       <GraduationCap className="h-5 w-5 text-muted-foreground" />
@@ -254,7 +254,7 @@ export default function QRScannerPage() {
 
                     <div className="flex items-center gap-3 text-lg">
                       <GraduationCap className="h-5 w-5 text-muted-foreground" />
-                      <span><span className="font-medium">Yo‘nalish:</span> {scannedUser.direction}</span>
+                      <span><span className="font-medium">Yo'nalish:</span> {scannedUser.direction}</span>
                     </div>
 
                     <div className="flex items-center gap-3 text-lg">

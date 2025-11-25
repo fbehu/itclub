@@ -130,7 +130,7 @@ export default function AddUser() {
         variant: 'destructive',
       });
     } finally {
-      setIsSubmitting(false); // Xatolik bo‘lsa ham tugmani tiklaymiz
+      setIsSubmitting(false); // Xatolik bo'lsa ham tugmani tiklaymiz
     }
   };
 

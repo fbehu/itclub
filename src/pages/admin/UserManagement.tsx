@@ -117,11 +117,11 @@ export default function UserManagement() {
   const handleToggleActive = async (userId: string, currentStatus: boolean) => {
     try {
       const formData = new FormData();
-      formData.append("is_active", (!currentStatus).toString()); // booleanni stringga o‘tkazamiz
+      formData.append("is_active", (!currentStatus).toString()); // booleanni stringga o'tkazamiz
 
       const response = await authFetch(`/users/users/${userId}/`, {
         method: 'PATCH',
-        body: formData, // JSON o‘rniga FormData yuboramiz
+        body: formData, // JSON o'rniga FormData yuboramiz
       });
 
       if (!response.ok) {
@@ -155,22 +155,22 @@ export default function UserManagement() {
       });
 
       if (!response.ok) {
-        throw new Error('Foydalanuvchini o‘chirishda xatolik');
+        throw new Error('Foydalanuvchini o'chirishda xatolik');
       }
 
       // State-dan o'chirish
       setUsers(users.filter(u => u.id !== deletingUserId));
 
       toast({
-        title: 'O‘chirildi',
-        description: 'Foydalanuvchi muvaffaqiyatli o‘chirildi',
+        title: 'O'chirildi',
+        description: 'Foydalanuvchi muvaffaqiyatli o'chirildi',
       });
 
       setDeletingUserId(null);
     } catch (error) {
       toast({
         title: 'Xato',
-        description: error instanceof Error ? error.message : 'Foydalanuvchini o‘chirishda xatolik',
+        description: error instanceof Error ? error.message : 'Foydalanuvchini o'chirishda xatolik',
         variant: 'destructive',
       });
     }

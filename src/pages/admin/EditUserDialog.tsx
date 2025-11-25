@@ -95,12 +95,12 @@ export default function EditUserDialog({ user, open, onOpenChange, onSave }: Edi
       formData.append("direction", data.direction);
       formData.append("coins", String(data.coins));
 
-      // Rasm faylini qo‘shish (agar mavjud bo‘lsa)
+      // Rasm faylini qo'shish (agar mavjud bo'lsa)
       if (photoFile) {
         formData.append("photo", photoFile);
       }
 
-      // So‘rov yuborish
+      // So'rov yuborish
       const response = await authFetch(`/users/users/${user.id}/`, {
         method: "PATCH",
         body: formData, // JSON emas
