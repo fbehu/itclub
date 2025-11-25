@@ -55,36 +55,6 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Bildirishnomalar
-              </CardTitle>
-              <CardDescription>Bildirishnoma sozlamalarini boshqaring</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="email-notif" className="flex flex-col gap-1">
-                  <span>Email bildirishnomalari</span>
-                  <span className="font-normal text-sm text-muted-foreground">
-                    Yangiliklar haqida email olish
-                  </span>
-                </Label>
-                <Switch id="email-notif" />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="push-notif" className="flex flex-col gap-1">
-                  <span>Push bildirishnomalari</span>
-                  <span className="font-normal text-sm text-muted-foreground">
-                    Tizimdan push bildirishnomalar olish
-                  </span>
-                </Label>
-                <Switch id="push-notif" defaultChecked />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
                 <Lock className="h-5 w-5" />
                 Xavfsizlik
               </CardTitle>
@@ -98,7 +68,10 @@ export default function Settings() {
                     Qo'shimcha xavfsizlik qatlami
                   </span>
                 </Label>
-                <Switch id="two-factor" />
+                {/* <Switch id="two-factor" /> */}
+                <Button variant="outline" size="sm">
+                  {/* O'zgartirish */} Tez orada
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -120,7 +93,7 @@ export default function Settings() {
                   </span>
                 </Label>
                 <Button variant="outline" size="sm">
-                  O'zgartirish
+                  {/* O'zgartirish */} Tez orada
                 </Button>
               </div>
             </CardContent>
