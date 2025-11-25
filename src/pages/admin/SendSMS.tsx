@@ -30,8 +30,8 @@ const messageTemplates = {
     template:
       'Tabriklaymiz, {name}!\n' +
       'Siz University of Business and Science Student Union tarkibidagi IT Clubga muvaffaqiyatli ro\'yxatdan o\'tdingiz.\n' +
-      'Klub Prezidenti — Bozorov Asliddin, Prezident o\'rinbosarlari — Karimov Ro\'zmuhammad, Mirzabayev Jasur, Nurmatjonov Muhammadmuso sizni klub safida ko\'rganidan mamnun.\n\n' +
-      'IT Club — UBS\n' +
+      'Klub Prezidenti - Bozorov Asliddin, Prezident o\'rinbosarlari - Karimov Ro\'zmuhammad, Mirzabayev Jasur, Nurmatjonov Muhammadmuso sizni klub safida ko\'rganidan mamnun.\n\n' +
+      'IT Club - UBS\n' +
       'Aloqa: +998 90 074 87 37\n' +
       'Telegram: t.me/Cyber31_13'
   },
@@ -42,7 +42,7 @@ const messageTemplates = {
       'Hurmatli {name},\n' +
       'Afsuski, siz University of Business and Science Student Union tarkibidagi IT Clubga ro\'yxatdan o\'tolmadingiz.\n' +
       'Qo\'shimcha ma\'lumot yoki qayta ariza uchun biz bilan bog\'lanishingiz mumkin.\n\n' +
-      'IT Club — UBS\n' +
+      'IT Club - UBS\n' +
       'Prezident: Bozorov Asliddin\n' +
       'Prezident o\'rinbosarlari: R. Karimov, J. Mirzabayev, M. Nurmatjonov\n' +
       'Aloqa: +998 90 074 87 37\n' +
@@ -56,7 +56,7 @@ const messageTemplates = {
       'Sizning platformaga kirish ma\'lumotlaringiz quyidagicha:\n' +
       'Login: {username}\n' +
       'Parol: {password}\n\n' +
-      'IT Club — UBS\n' +
+      'IT Club - UBS\n' +
       'Aloqa: +998 90 074 87 37\n' +
       'Telegram: t.me/Cyber31_13'
   },
@@ -66,7 +66,7 @@ const messageTemplates = {
     template:
       'Hurmatli {name},\n' +
       'Siz {date} sanasidagi darsga kelmadingiz. Iltimos, keyingi darslarga qatnashing.\n\n' +
-      'IT Club — UBS'
+      'IT Club - UBS'
   }
 };
 
