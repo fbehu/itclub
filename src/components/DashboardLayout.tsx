@@ -1,9 +1,9 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, User, BarChart3, Settings, Users, ScanLine, MessageSquare, Bell, Mail } from 'lucide-react';
+import { LogOut, User, BarChart3, Settings, Users, ScanLine, MessageSquare, Bell, Mail, Menu, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -17,6 +17,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleLogout = () => {
     logout();
@@ -50,9 +51,31 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
       {!isMobile && (
-        <aside className="fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border animate-fade-in">
-          <div className="p-6 border-b border-sidebar-border">
+        <aside 
+          className={`fixed left-0 top-0 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 animate-fade-in ${
+            sidebarOpen ? 'w-64' : 'w-16'
+          }`}
+        >
+          <div className="p-4 border-b border-sidebar-border">
             <div className="flex items-center justify-between mb-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="text-sidebar-foreground"
+              >
+                {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+              
+              {sidebarOpen && (
+                <div className="flex items-center gap-2">
+                  <NotificationBell />
+                  <ThemeToggle />
+                </div>
+              )}
+            </div>
+            
+            {sidebarOpen && (
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={user.photo} />
@@ -65,11 +88,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <p className="text-sm text-sidebar-foreground/70">{user.role === 'student' ? 'Talaba' : 'Admin'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <NotificationBell />
-                <ThemeToggle />
-              </div>
-            </div>
+            )}
           </div>
 
           <nav className="p-4 space-y-2">
@@ -79,15 +98,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Button
                   key={item.path}
                   variant={isActive(item.path) ? 'default' : 'ghost'}
-                  className={`w-full justify-start ${
+                  className={`w-full ${sidebarOpen ? 'justify-start' : 'justify-center'} ${
                     isActive(item.path) 
                       ? 'bg-sidebar-primary text-sidebar-primary-foreground' 
                       : 'text-sidebar-foreground hover:bg-sidebar-accent'
                   }`}
                   onClick={() => navigate(item.path)}
+                  title={!sidebarOpen ? item.label : undefined}
                 >
-                  <Icon className="mr-2 h-4 w-4" />
-                  {item.label}
+                  <Icon className={`h-4 w-4 ${sidebarOpen ? 'mr-2' : ''}`} />
+                  {sidebarOpen && item.label}
                 </Button>
               );
             })}
@@ -96,18 +116,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="absolute bottom-6 left-4 right-4">
             <Button
               variant="ghost"
-              className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+              className={`w-full ${sidebarOpen ? 'justify-start' : 'justify-center'} text-sidebar-foreground hover:bg-sidebar-accent`}
               onClick={handleLogout}
+              title={!sidebarOpen ? 'Chiqish' : undefined}
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              Chiqish
+              <LogOut className={`h-4 w-4 ${sidebarOpen ? 'mr-2' : ''}`} />
+              {sidebarOpen && 'Chiqish'}
             </Button>
           </div>
         </aside>
       )}
 
       {/* Main Content */}
-      <main className={`${!isMobile ? 'ml-64' : 'mb-20'} min-h-screen`}>
+      <main className={`${!isMobile ? (sidebarOpen ? 'ml-64' : 'ml-16') : 'mb-20'} transition-all duration-300 min-h-screen`}>
         <div className="p-6">
           <div className="flex justify-end gap-2 mb-4 md:hidden">
             <NotificationBell />
