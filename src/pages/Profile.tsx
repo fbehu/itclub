@@ -167,7 +167,7 @@ export default function Profile() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Profil</h1>
           </div>
-          {displayUser.role === 'student' && (
+          {displayUser && displayUser.role === 'student' && (
             <div className="flex flex-wrap gap-2">
               <Button
                 onClick={() => setEditDialogOpen(true)}
@@ -190,6 +190,7 @@ export default function Profile() {
         </div>
 
         {/* Content Grid */}
+        {displayUser && (
         <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
           {/* Main Info Card */}
           <Card className={`border-none ${getNeonClass(displayUser.level)}`}>
@@ -304,10 +305,11 @@ export default function Profile() {
             </CardContent>
           </Card>
         </div>
+        )}
       </div>
 
       {/* Dialogs */}
-      {displayUser.role === 'student' && (
+      {displayUser && displayUser.role === 'student' && (
         <>
           <EditProfileDialog
             open={editDialogOpen}
