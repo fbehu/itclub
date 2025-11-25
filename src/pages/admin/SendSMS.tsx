@@ -20,6 +20,7 @@ import {
 
 interface Student {
   id: string;
+  uuid?: string;
   first_name: string;
   last_name: string;
   phone_number?: string;
@@ -52,7 +53,7 @@ const messageTemplates = {
       'Login: {username}\n' +
       'Parol: {password}\n\n' +
       'Aloqa: +998 90 074 87 37\n' +
-      'Telegram: t.me/Cyber31_13' +
+      'Telegram: t.me/Cyber31_13\n' +
       'IT Club - UBS\n'
   },
 
@@ -196,9 +197,19 @@ export default function SendSMS() {
 
     for (const student of selectedStudentsList) {
       try {
+        // Filter phone number: remove +998 prefix, keep only digits
+        const phonePassword = (student.phone_number || '')
+          .replace(/\D/g, '') // Remove all non-digits
+          .replace(/^998/, ''); // Remove country code if present
+        
+        // Format username: ITC + padded index
+        const studentIndex = students.findIndex(s => s.id === student.id) + 1;
+        const username = `ITC${String(studentIndex).padStart(3, '0')}`;
+
         const personalizedMessage = message
           .replace(/{name}/g, `${student.first_name} ${student.last_name}`)
-          .replace(/{username}/g, student.id)
+          .replace(/{username}/g, student.uuid || username)
+          .replace(/{password}/g, phonePassword)
           .replace(/{date}/g, new Date().toLocaleDateString('uz-UZ'));
 
         const response = await authFetch(API_ENDPOINTS.SEND_SMS, {
