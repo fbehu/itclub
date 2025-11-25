@@ -66,6 +66,7 @@ export default function Chat() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -103,7 +104,7 @@ export default function Chat() {
     }
   }, [selectedUser]);
 
-  const loadUsers = async (pageNum: number) => {
+  const loadUsers = async (pageNum: number, search: string = '') => {
     if (isLoadingMore) return;
     
     try {
@@ -128,7 +129,8 @@ export default function Chat() {
           setPage(1);
         }
       } else if (user?.role === 'admin') {
-        const response = await authFetch(`${API_ENDPOINTS.USERS_LIST}?page=${pageNum}`);
+        const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+        const response = await authFetch(`${API_ENDPOINTS.USERS_LIST}?page=${pageNum}${searchParam}`);
         if (response.ok) {
           const data = await response.json();
           const users = (data.results || []).map((student: any) => ({
@@ -159,7 +161,7 @@ export default function Chat() {
 
   const handleLoadMore = () => {
     if (hasMore && !isLoadingMore) {
-      loadUsers(page + 1);
+      loadUsers(page + 1, searchQuery);
     }
   };
 
@@ -293,6 +295,12 @@ export default function Chat() {
     navigate(-1); // 1 sahifa orqaga qaytadi
   };
 
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    setPage(1);
+    loadUsers(1, value);
+  };
+
   return (
     <div className="flex h-screen w-full bg-background">
       {/* Users List Sidebar */}
@@ -311,6 +319,16 @@ export default function Chat() {
             {user?.role === 'student' ? 'Adminlar' : 'Studentlar'}
           </h2>
         </div>
+
+        <div className="p-4 border-b">
+          <Input
+            placeholder="Qidirish..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full"
+          />
+        </div>
+
         <ScrollArea className="flex-1" ref={scrollAreaRef}>
           <div className="p-2">
             {chatUsers.map((chatUser) => (
@@ -496,7 +514,7 @@ export default function Chat() {
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <p>Suhbat boshlash uchun foydalanuvchini tanlang</p>
+            <p>Suhbat boshlash uchun foydalanuchini tanlang</p>
           </div>
         )}
       </Card>
