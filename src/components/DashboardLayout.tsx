@@ -45,6 +45,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const getCurrentPageTitle = () => {
+    const currentItem = navItems.find(item => isActive(item.path));
+    return currentItem?.label || 'Dashboard';
+  };
+
   if (!user) return null;
 
   return (
@@ -66,13 +71,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               >
                 {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
-              
-              {sidebarOpen && (
-                <div className="flex items-center gap-2">
-                  <NotificationBell />
-                  <ThemeToggle />
-                </div>
-              )}
             </div>
             
             {sidebarOpen && (
@@ -127,44 +125,70 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </aside>
       )}
 
-      {/* Main Content */}
-      <main className={`${!isMobile ? (sidebarOpen ? 'ml-64' : 'ml-16') : 'mb-20'} transition-all duration-300 min-h-screen`}>
-        <div className="p-6">
-          <div className="flex justify-end gap-2 mb-4 md:hidden">
+      {/* Top Navbar (Desktop) */}
+      {!isMobile && (
+        <div className={`fixed top-0 right-0 h-16 bg-background border-b border-border transition-all duration-300 ${
+          sidebarOpen ? 'left-64' : 'left-16'
+        } z-40 flex items-center justify-between px-6`}>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground">{getCurrentPageTitle()}</h2>
+          </div>
+          <div className="flex items-center gap-4">
             <NotificationBell />
             <ThemeToggle />
           </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main className={`${
+        !isMobile 
+          ? (sidebarOpen ? 'ml-64 mt-16' : 'ml-16 mt-16') 
+          : 'mb-20'
+      } transition-all duration-300 min-h-screen`}>
+        <div className="p-6">
           {children}
         </div>
       </main>
 
+      {/* Mobile Top Navbar */}
+      {isMobile && (
+        <div className="fixed top-0 left-0 right-0 h-16 bg-background border-b border-border z-40 flex items-center justify-between px-4">
+          <h2 className="text-lg font-semibold text-foreground">{getCurrentPageTitle()}</h2>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <ThemeToggle />
+          </div>
+        </div>
+      )}
+
       {/* Mobile Bottom Navigation */}
       {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-sidebar border-t border-sidebar-border animate-slide-in-right">
-          <div className="flex justify-around items-center h-20 px-4">
+        <nav className="fixed bottom-0 left-0 right-0 bg-sidebar border-t border-sidebar-border animate-slide-in-right h-16">
+          <div className="flex justify-around items-center h-full px-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
+                  className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all ${
                     isActive(item.path)
                       ? 'bg-sidebar-primary text-sidebar-primary-foreground scale-110'
                       : 'text-sidebar-foreground'
                   }`}
+                  title={item.label}
                 >
                   <Icon className="h-6 w-6" />
-                  <span className="text-xs font-medium">{item.label}</span>
                 </button>
               );
             })}
             <button
               onClick={handleLogout}
-              className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-sidebar-foreground"
+              className="flex flex-col items-center justify-center p-3 rounded-lg text-sidebar-foreground"
+              title="Chiqish"
             >
               <LogOut className="h-6 w-6" />
-              <span className="text-xs font-medium">Logout</span>
             </button>
           </div>
         </nav>
