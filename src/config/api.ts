@@ -29,4 +29,13 @@ export const API_ENDPOINTS = {
   
   // SMS
   SEND_SMS: '/messages/',
+  
+  // Groups
+  GROUPS: '/groups/',
+  GROUP_DETAIL: (groupId: string) => `/groups/${groupId}/`,
+  GROUP_STUDENTS: (groupId: string) => `/groups/${groupId}/students/`,
+  
+  // Attendance
+  ATTENDANCE: '/attendance/',
+  ATTENDANCE_BY_GROUP: (groupId: string) => `/attendance/?group_id=${groupId}`,
 };

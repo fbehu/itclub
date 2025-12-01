@@ -14,6 +14,8 @@ import UserManagement from "./pages/admin/UserManagement";
 import AddUser from "./pages/admin/AddUser";
 import QRScannerPage from "./pages/admin/QRScanner";
 import SendSMS from "./pages/admin/SendSMS";
+import Groups from "./pages/admin/Groups";
+import Attendance from "./pages/admin/Attendance";
 import Chat from "./pages/Chat";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
@@ -89,6 +91,22 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <QRScannerPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/admin/groups" 
+                element={
+                  <ProtectedRoute>
+                    <Groups />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/admin/attendance" 
+                element={
+                  <ProtectedRoute>
+                    <Attendance />
                   </ProtectedRoute>
                 } 
               />

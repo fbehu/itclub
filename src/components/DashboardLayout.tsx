@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, User, BarChart3, Settings, Users, ScanLine, MessageSquare, Bell, Mail, Menu, X, MoreHorizontal } from 'lucide-react';
+import { LogOut, User, BarChart3, Settings, Users, ScanLine, MessageSquare, Bell, Mail, Menu, X, MoreHorizontal, ClipboardList, UsersRound } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -29,6 +29,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ? [
         { path: '/dashboard/admin/users', label: 'Users', icon: Users },
         { path: '/dashboard/admin/qr-scanner', label: 'Scanner', icon: ScanLine },
+        { path: '/dashboard/admin/groups', label: 'Guruhlar', icon: UsersRound },
+        { path: '/dashboard/admin/attendance', label: 'Davomat', icon: ClipboardList },
         { path: '/dashboard/admin/send-sms', label: 'SMS', icon: Mail },
         { path: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
         { path: '/dashboard/notifications', label: 'Notifications', icon: Bell },
