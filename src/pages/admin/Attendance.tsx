@@ -12,6 +12,7 @@ import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import DashboardLayout from '@/components/DashboardLayout';
 
 interface Group {
   id: string;
@@ -155,7 +156,8 @@ export default function Attendance() {
   const presentCount = Object.values(attendance).filter(v => v).length;
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-6">
+    <DashboardLayout>
+      <div className="container mx-auto p-4 sm:p-6 space-y-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Davomat</h1>
         <p className="text-muted-foreground mt-1">O'quvchilar davomatini boshqarish</p>
@@ -271,6 +273,7 @@ export default function Attendance() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

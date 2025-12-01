@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
@@ -14,29 +13,18 @@ interface CreateGroupDialogProps {
   onSuccess: () => void;
 }
 
-const DAYS = [
-  { value: 'monday', label: 'Dushanba' },
-  { value: 'tuesday', label: 'Seshanba' },
-  { value: 'wednesday', label: 'Chorshanba' },
-  { value: 'thursday', label: 'Payshanba' },
-  { value: 'friday', label: 'Juma' },
-  { value: 'saturday', label: 'Shanba' },
-  { value: 'sunday', label: 'Yakshanba' }
-];
-
 export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroupDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    semester: '',
-    class_days: [] as string[],
+    smena: '',
     start_time: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.semester || formData.class_days.length === 0 || !formData.start_time) {
+    if (!formData.name || !formData.smena || !formData.start_time) {
       toast.error('Barcha maydonlarni to\'ldiring');
       return;
     }
@@ -50,7 +38,7 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
 
       if (response.ok) {
         toast.success('Guruh yaratildi');
-        setFormData({ name: '', semester: '', class_days: [], start_time: '' });
+        setFormData({ name: '', smena: '', start_time: '' });
         onOpenChange(false);
         onSuccess();
       } else {
@@ -63,15 +51,6 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleDay = (day: string) => {
-    setFormData(prev => ({
-      ...prev,
-      class_days: prev.class_days.includes(day)
-        ? prev.class_days.filter(d => d !== day)
-        : [...prev.class_days, day]
-    }));
   };
 
   return (
@@ -93,31 +72,13 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="semester">Semestr *</Label>
+            <Label htmlFor="smena">Smena *</Label>
             <Input
-              id="semester"
-              value={formData.semester}
-              onChange={(e) => setFormData(prev => ({ ...prev, semester: e.target.value }))}
-              placeholder="Masalan: 2024-2025 Bahor"
+              id="smena"
+              value={formData.smena}
+              onChange={(e) => setFormData(prev => ({ ...prev, smena: e.target.value }))}
+              placeholder="Masalan: Tong / Kechki"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Dars kunlari *</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {DAYS.map(day => (
-                <div key={day.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={day.value}
-                    checked={formData.class_days.includes(day.value)}
-                    onCheckedChange={() => toggleDay(day.value)}
-                  />
-                  <Label htmlFor={day.value} className="cursor-pointer">
-                    {day.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="space-y-2">

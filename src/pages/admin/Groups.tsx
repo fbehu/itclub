@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
+import DashboardLayout from '@/components/DashboardLayout';
 import { CreateGroupDialog } from './groups/CreateGroupDialog';
 import { EditGroupDialog } from './groups/EditGroupDialog';
 import { AddStudentsDialog } from './groups/AddStudentsDialog';
@@ -13,8 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface Group {
   id: string;
   name: string;
-  semester: string;
-  class_days: string[];
+  smena: string;
   start_time: string;
   student_count: number;
   created_at: string;
@@ -69,19 +69,6 @@ export default function Groups() {
     }
   };
 
-  const getDaysText = (days: string[]) => {
-    const dayMap: Record<string, string> = {
-      monday: 'Dush',
-      tuesday: 'Sesh',
-      wednesday: 'Chor',
-      thursday: 'Pay',
-      friday: 'Juma',
-      saturday: 'Shan',
-      sunday: 'Yak'
-    };
-    return days.map(d => dayMap[d] || d).join(', ');
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -91,7 +78,8 @@ export default function Groups() {
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-6">
+    <DashboardLayout>
+      <div className="container mx-auto p-4 sm:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Guruhlar</h1>
@@ -144,12 +132,8 @@ export default function Groups() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Semestr:</span>
-                  <span className="font-medium">{group.semester}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Dars kunlari:</span>
-                  <span className="font-medium">{getDaysText(group.class_days)}</span>
+                  <span className="text-muted-foreground">Smena:</span>
+                  <span className="font-medium">{group.smena}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Boshlanish vaqti:</span>
@@ -216,6 +200,7 @@ export default function Groups() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
