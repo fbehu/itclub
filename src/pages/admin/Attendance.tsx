@@ -43,7 +43,7 @@ interface AttendanceResponse {
   records: AttendanceRecord[];
 }
 
-export default function Attendance() {
+export default function AdminAttendance() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
