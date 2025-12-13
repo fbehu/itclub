@@ -37,5 +37,6 @@ export const API_ENDPOINTS = {
   
   // Attendance
   ATTENDANCE: '/attendance/',
-  ATTENDANCE_BY_GROUP: (groupId: string) => `/attendance/?group_id=${groupId}`,
+  ATTENDANCE_BY_GROUP: (groupId: string) => `/attendance/group/${groupId}/`,
+  MY_ATTENDANCE: '/attendance/my/',
 };

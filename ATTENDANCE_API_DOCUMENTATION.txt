@@ -1,0 +1,293 @@
+================================================================================
+                        DAVOMAT (ATTENDANCE) API DOKUMENTATSIYASI
+================================================================================
+
+Bu fayl davomat tizimi uchun backend API endpointlarini tavsiflaydi.
+
+================================================================================
+1. ADMIN: GURUH BO'YICHA DAVOMAT MA'LUMOTLARINI OLISH
+================================================================================
+
+Endpoint: GET /api/attendance/group/{group_id}/
+Authorization: Bearer Token (Admin only)
+
+Tavsif:
+- Bugungi sana uchun guruh davomatini qaytaradi
+- Backend avtomatik ravishda bugungi sanani aniqlaydi
+- Agar davomat allaqachon qilingan bo'lsa, is_editable=false bo'ladi
+
+Request:
+GET /api/attendance/group/5/
+
+Response (Davomat qilinmagan bo'lsa):
+{
+    "date": "2025-12-13",
+    "group_id": 5,
+    "group_name": "Python Beginners",
+    "is_editable": true,
+    "records": []
+}
+
+Response (Davomat allaqachon qilingan bo'lsa):
+{
+    "date": "2025-12-13",
+    "group_id": 5,
+    "group_name": "Python Beginners",
+    "is_editable": false,
+    "records": [
+        {
+            "student_id": "uuid-1",
+            "status": "present"
+        },
+        {
+            "student_id": "uuid-2",
+            "status": "absent"
+        },
+        {
+            "student_id": "uuid-3",
+            "status": "excused"
+        }
+    ]
+}
+
+Status kodlari:
+- 200: Muvaffaqiyatli
+- 401: Autentifikatsiya xatosi
+- 403: Ruxsat berilmagan (admin emas)
+- 404: Guruh topilmadi
+
+
+================================================================================
+2. ADMIN: DAVOMAT SAQLASH
+================================================================================
+
+Endpoint: POST /api/attendance/
+Authorization: Bearer Token (Admin only)
+
+Tavsif:
+- Bugungi sana uchun davomat saqlaydi
+- Backend avtomatik ravishda bugungi sanani qo'yadi
+- Faqat bir marta saqlash mumkin (takror saqlash 400 xato qaytaradi)
+
+Request:
+POST /api/attendance/
+Content-Type: application/json
+
+{
+    "group_id": 5,
+    "records": [
+        {
+            "student_id": "uuid-1",
+            "status": "present"
+        },
+        {
+            "student_id": "uuid-2", 
+            "status": "absent"
+        },
+        {
+            "student_id": "uuid-3",
+            "status": "excused"
+        }
+    ]
+}
+
+Status qiymatlari:
+- "present"  - Keldi (✅)
+- "absent"   - Kelmadi (❌)
+- "excused"  - Sababli (🟨)
+
+Response (Muvaffaqiyatli):
+{
+    "success": true,
+    "message": "Davomat muvaffaqiyatli saqlandi",
+    "date": "2025-12-13",
+    "group_id": 5,
+    "total_students": 3,
+    "present": 1,
+    "absent": 1,
+    "excused": 1
+}
+
+Response (Allaqachon saqlangan):
+{
+    "success": false,
+    "detail": "Bugungi davomat allaqachon saqlangan. O'zgartirish mumkin emas."
+}
+
+Status kodlari:
+- 201: Muvaffaqiyatli yaratildi
+- 400: Xato (davomat allaqachon saqlangan yoki noto'g'ri ma'lumot)
+- 401: Autentifikatsiya xatosi
+- 403: Ruxsat berilmagan (admin emas)
+
+
+================================================================================
+3. STUDENT: O'ZINING DAVOMATINI KO'RISH
+================================================================================
+
+Endpoint: GET /api/attendance/my/
+Authorization: Bearer Token (Student)
+
+Query Parameters:
+- start_date: Boshlanish sanasi (YYYY-MM-DD format)
+- end_date: Tugash sanasi (YYYY-MM-DD format)
+
+Tavsif:
+- Joriy foydalanuvchining davomatini qaytaradi
+- Oylik statistikani ham qaytaradi
+
+Request:
+GET /api/attendance/my/?start_date=2025-12-01&end_date=2025-12-31
+
+Response:
+{
+    "records": [
+        {
+            "date": "2025-12-02",
+            "status": "present",
+            "group_name": "Python Beginners"
+        },
+        {
+            "date": "2025-12-04",
+            "status": "absent",
+            "group_name": "Python Beginners"
+        },
+        {
+            "date": "2025-12-06",
+            "status": "excused",
+            "group_name": "Python Beginners"
+        },
+        {
+            "date": "2025-12-09",
+            "status": "present",
+            "group_name": "Python Beginners"
+        },
+        {
+            "date": "2025-12-11",
+            "status": "present",
+            "group_name": "Python Beginners"
+        },
+        {
+            "date": "2025-12-13",
+            "status": "present",
+            "group_name": "Python Beginners"
+        }
+    ],
+    "stats": {
+        "total_days": 6,
+        "present": 4,
+        "absent": 1,
+        "excused": 1,
+        "percentage": 67
+    }
+}
+
+Stats hisoblash formulasi:
+- percentage = round((present / total_days) * 100)
+- Sababli (excused) ham "keldi" deb hisoblanishi mumkin (bu biznes logikaga bog'liq)
+
+Status kodlari:
+- 200: Muvaffaqiyatli
+- 401: Autentifikatsiya xatosi
+
+
+================================================================================
+4. GURUH O'QUVCHILARINI OLISH (MAVJUD ENDPOINT)
+================================================================================
+
+Endpoint: GET /api/groups/{group_id}/students/
+Authorization: Bearer Token (Admin only)
+
+Tavsif:
+- Guruhga tegishli barcha o'quvchilarni qaytaradi
+
+Response:
+{
+    "results": [
+        {
+            "id": "uuid-1",
+            "first_name": "Alisher",
+            "last_name": "Karimov",
+            "username": "ITC001",
+            "course": "kurs-1",
+            "level": "beginner",
+            "coins": 150
+        },
+        {
+            "id": "uuid-2",
+            "first_name": "Nodira",
+            "last_name": "Ahmadova",
+            "username": "ITC002",
+            "course": "kurs-1",
+            "level": "intermediate",
+            "coins": 200
+        }
+    ]
+}
+
+
+================================================================================
+                              MODEL STRUKTURALARI
+================================================================================
+
+Attendance Model:
+{
+    id: integer (auto),
+    group_id: integer (FK to Group),
+    student_id: uuid (FK to User),
+    date: date,
+    status: enum('present', 'absent', 'excused'),
+    created_at: datetime,
+    created_by: uuid (FK to User - kim davomat qildi)
+}
+
+Unique constraint: (group_id, student_id, date) - bir o'quvchi uchun bir kunda faqat bitta yozuv
+
+
+================================================================================
+                              BIZNES QOIDALARI
+================================================================================
+
+1. Davomat faqat BUGUNGI KUN uchun qilinadi
+   - Kecha yoki ertaga uchun davomat qilib bo'lmaydi
+   - Backend har doim server vaqtini ishlatadi
+
+2. Bir guruh uchun bir kunda faqat BIR MARTA davomat qilinadi
+   - Agar davomat allaqachon saqlangan bo'lsa, tahrirlash mumkin emas
+   - is_editable=false bo'lganda frontend saqlash tugmasini o'chiradi
+
+3. Status turlari:
+   - present (Keldi) - O'quvchi darsga kelgan
+   - absent (Kelmadi) - O'quvchi darsga kelmagan
+   - excused (Sababli) - O'quvchi sababli kelmagan (kasallik, oilaviy sabab va h.k.)
+
+4. O'quvchi faqat O'ZINING davomatini ko'ra oladi
+   - Boshqa o'quvchilarning davomatini ko'ra olmaydi
+
+5. Admin barcha guruhlar va o'quvchilar davomatini ko'ra oladi va boshqara oladi
+
+
+================================================================================
+                              API_ENDPOINTS (config/api.ts)
+================================================================================
+
+Frontendda qo'shilishi kerak bo'lgan endpointlar:
+
+ATTENDANCE: `${API_BASE_URL}/attendance/`
+ATTENDANCE_BY_GROUP: (groupId: string) => `${API_BASE_URL}/attendance/group/${groupId}/`
+MY_ATTENDANCE: `${API_BASE_URL}/attendance/my/`
+
+
+================================================================================
+                              XATOLIK XABARLARI
+================================================================================
+
+Uzbek tilida xatolik xabarlari:
+
+- 400 (Allaqachon saqlangan): "Bugungi davomat allaqachon saqlangan. O'zgartirish mumkin emas."
+- 400 (Noto'g'ri status): "Noto'g'ri davomat holati. Faqat 'present', 'absent' yoki 'excused' qabul qilinadi."
+- 403 (Ruxsat yo'q): "Bu amalni bajarish uchun admin huquqlari talab qilinadi."
+- 404 (Guruh topilmadi): "Guruh topilmadi."
+- 404 (O'quvchi topilmadi): "O'quvchi topilmadi."
+
+================================================================================

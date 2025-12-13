@@ -1,22 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { CalendarIcon, Save } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Users, Calendar, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { uz } from 'date-fns/locale';
 import DashboardLayout from '@/components/DashboardLayout';
 
 interface Group {
-  id: string;
+  id: number;
   name: string;
+  smena: string;
+  start_time: string;
 }
 
 interface Student {
@@ -24,21 +24,37 @@ interface Student {
   first_name: string;
   last_name: string;
   username: string;
+  course: string;
+  level: string;
+  coins: number;
 }
+
+type AttendanceStatus = 'present' | 'absent' | 'excused';
 
 interface AttendanceRecord {
   student_id: string;
-  present: boolean;
+  status: AttendanceStatus;
+}
+
+interface AttendanceResponse {
+  date: string;
+  group_id: number;
+  is_editable: boolean;
+  records: AttendanceRecord[];
 }
 
 export default function Attendance() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
-  const [date, setDate] = useState<Date>(new Date());
-  const [attendance, setAttendance] = useState<Record<string, boolean>>({});
+  const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
   const [loading, setLoading] = useState(false);
+  const [loadingGroups, setLoadingGroups] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isEditable, setIsEditable] = useState(true);
+  const [attendanceDate, setAttendanceDate] = useState<string>('');
+  const [hasExistingAttendance, setHasExistingAttendance] = useState(false);
 
   useEffect(() => {
     loadGroups();
@@ -46,60 +62,70 @@ export default function Attendance() {
 
   useEffect(() => {
     if (selectedGroupId) {
-      loadGroupStudents();
-      loadAttendance();
+      const group = groups.find(g => g.id.toString() === selectedGroupId);
+      setSelectedGroup(group || null);
+      loadGroupData();
+    } else {
+      setSelectedGroup(null);
+      setStudents([]);
+      setAttendance({});
+      setHasExistingAttendance(false);
     }
-  }, [selectedGroupId, date]);
+  }, [selectedGroupId]);
 
   const loadGroups = async () => {
     try {
+      setLoadingGroups(true);
       const response = await authFetch(API_ENDPOINTS.GROUPS);
       const data = await response.json();
       setGroups(data.results || data);
     } catch (error) {
       console.error('Error loading groups:', error);
       toast.error('Guruhlarni yuklashda xatolik');
+    } finally {
+      setLoadingGroups(false);
     }
   };
 
-  const loadGroupStudents = async () => {
+  const loadGroupData = async () => {
     try {
       setLoading(true);
-      const response = await authFetch(API_ENDPOINTS.GROUP_STUDENTS(selectedGroupId));
-      const data = await response.json();
-      setStudents(data.results || data);
       
-      // Initialize all students as absent by default
-      const initialAttendance: Record<string, boolean> = {};
-      (data.results || data).forEach((student: Student) => {
-        initialAttendance[student.id] = false;
-      });
-      setAttendance(initialAttendance);
+      // Load students and attendance status together
+      const [studentsRes, attendanceRes] = await Promise.all([
+        authFetch(API_ENDPOINTS.GROUP_STUDENTS(selectedGroupId)),
+        authFetch(API_ENDPOINTS.ATTENDANCE_BY_GROUP(selectedGroupId))
+      ]);
+      
+      const studentsData = await studentsRes.json();
+      setStudents(studentsData.results || studentsData);
+      
+      const attendanceData: AttendanceResponse = await attendanceRes.json();
+      setAttendanceDate(attendanceData.date);
+      setIsEditable(attendanceData.is_editable);
+      setHasExistingAttendance(attendanceData.records && attendanceData.records.length > 0);
+      
+      // Initialize attendance
+      const attendanceMap: Record<string, AttendanceStatus> = {};
+      const studentsList = studentsData.results || studentsData;
+      
+      if (attendanceData.records && attendanceData.records.length > 0) {
+        attendanceData.records.forEach((record: AttendanceRecord) => {
+          attendanceMap[record.student_id] = record.status;
+        });
+      } else {
+        // Initialize all as absent if no existing records
+        studentsList.forEach((student: Student) => {
+          attendanceMap[student.id] = 'absent';
+        });
+      }
+      
+      setAttendance(attendanceMap);
     } catch (error) {
-      console.error('Error loading students:', error);
-      toast.error('O\'quvchilarni yuklashda xatolik');
+      console.error('Error loading group data:', error);
+      toast.error('Ma\'lumotlarni yuklashda xatolik');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadAttendance = async () => {
-    try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      const response = await authFetch(
-        `${API_ENDPOINTS.ATTENDANCE_BY_GROUP(selectedGroupId)}&date=${formattedDate}`
-      );
-      const data = await response.json();
-      
-      if (data.results && data.results.length > 0) {
-        const attendanceMap: Record<string, boolean> = {};
-        data.results.forEach((record: AttendanceRecord) => {
-          attendanceMap[record.student_id] = record.present;
-        });
-        setAttendance(attendanceMap);
-      }
-    } catch (error) {
-      console.error('Error loading attendance:', error);
     }
   };
 
@@ -109,25 +135,33 @@ export default function Attendance() {
       return;
     }
 
+    if (!isEditable) {
+      toast.error('Bugungi davomat allaqachon saqlangan');
+      return;
+    }
+
     try {
       setSaving(true);
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      const records = Object.entries(attendance).map(([student_id, present]) => ({
+      const records = Object.entries(attendance).map(([student_id, status]) => ({
         student_id,
-        present,
-        group_id: selectedGroupId,
-        date: formattedDate
+        status
       }));
 
       const response = await authFetch(API_ENDPOINTS.ATTENDANCE, {
         method: 'POST',
-        body: JSON.stringify({ records })
+        body: JSON.stringify({ 
+          group_id: parseInt(selectedGroupId),
+          records 
+        })
       });
 
       if (response.ok) {
-        toast.success('Davomat saqlandi');
+        toast.success('Davomat muvaffaqiyatli saqlandi');
+        setIsEditable(false);
+        setHasExistingAttendance(true);
       } else {
-        toast.error('Davomatni saqlashda xatolik');
+        const errorData = await response.json();
+        toast.error(errorData.detail || 'Davomatni saqlashda xatolik');
       }
     } catch (error) {
       console.error('Error saving attendance:', error);
@@ -137,142 +171,262 @@ export default function Attendance() {
     }
   };
 
-  const toggleAttendance = (studentId: string) => {
+  const setStudentStatus = (studentId: string, status: AttendanceStatus) => {
+    if (!isEditable) return;
     setAttendance(prev => ({
       ...prev,
-      [studentId]: !prev[studentId]
+      [studentId]: status
     }));
   };
 
-  const toggleAll = () => {
-    const allPresent = Object.values(attendance).every(v => v);
-    const newAttendance: Record<string, boolean> = {};
-    students.forEach(student => {
-      newAttendance[student.id] = !allPresent;
+  const getStatusCounts = () => {
+    const counts = { present: 0, absent: 0, excused: 0 };
+    Object.values(attendance).forEach(status => {
+      counts[status]++;
     });
-    setAttendance(newAttendance);
+    return counts;
   };
 
-  const presentCount = Object.values(attendance).filter(v => v).length;
+  const counts = getStatusCounts();
 
   return (
     <DashboardLayout>
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Davomat</h1>
-        <p className="text-muted-foreground mt-1">O'quvchilar davomatini boshqarish</p>
-      </div>
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Davomat</h1>
+          <p className="text-muted-foreground mt-1">
+            {format(new Date(), "d-MMMM, yyyy (EEEE)", { locale: uz })}
+          </p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Davomat belgilash</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Guruh</label>
+        {/* Group Selection Card */}
+        <Card className="border-2 border-dashed border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users className="w-5 h-5 text-primary" />
+              Guruhni tanlang
+            </CardTitle>
+            <CardDescription>
+              Davomat qilish uchun avval guruhni tanlang
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingGroups ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Guruhlar yuklanmoqda...
+              </div>
+            ) : (
               <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Guruhni tanlang" />
+                <SelectTrigger className="w-full max-w-md">
+                  <SelectValue placeholder="Guruhni tanlang..." />
                 </SelectTrigger>
                 <SelectContent>
                   {groups.map(group => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name}
+                    <SelectItem key={group.id} value={group.id.toString()}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{group.name}</span>
+                        {group.smena && (
+                          <Badge variant="secondary" className="text-xs">
+                            {group.smena}
+                          </Badge>
+                        )}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sana</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
+        {/* Attendance Section */}
+        {selectedGroupId && (
+          <Card>
+            <CardHeader className="border-b">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    {selectedGroup?.name} - Davomat
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    {attendanceDate && format(new Date(attendanceDate), "d-MMMM, yyyy", { locale: uz })}
+                    {!isEditable && hasExistingAttendance && (
+                      <Badge variant="secondary" className="ml-2">
+                        Saqlangan
+                      </Badge>
                     )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, 'PPP') : <span>Sanani tanlang</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(newDate) => newDate && setDate(newDate)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          {selectedGroupId && students.length > 0 && (
-            <>
-              <div className="flex items-center justify-between py-2">
-                <div className="text-sm text-muted-foreground">
-                  Kelgan: {presentCount} / {students.length}
+                  </CardDescription>
                 </div>
-                <Button size="sm" variant="outline" onClick={toggleAll}>
-                  Hammasini {Object.values(attendance).every(v => v) ? 'bekor qilish' : 'belgilash'}
-                </Button>
+                
+                {/* Stats */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span className="text-muted-foreground">Keldi:</span>
+                    <span className="font-semibold text-green-600">{counts.present}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <span className="text-muted-foreground">Kelmadi:</span>
+                    <span className="font-semibold text-red-600">{counts.absent}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <span className="text-muted-foreground">Sababli:</span>
+                    <span className="font-semibold text-yellow-600">{counts.excused}</span>
+                  </div>
+                </div>
               </div>
-
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Ism</TableHead>
-                      <TableHead>Username</TableHead>
-                      <TableHead className="text-center w-24">Keldi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8">
-                          Yuklanmoqda...
-                        </TableCell>
+            </CardHeader>
+            
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : students.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  Bu guruhda o'quvchilar yo'q
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="w-14 text-center font-semibold">#</TableHead>
+                        <TableHead className="font-semibold">Ism Familya</TableHead>
+                        <TableHead className="font-semibold">Username</TableHead>
+                        <TableHead className="font-semibold hidden sm:table-cell">Kurs</TableHead>
+                        <TableHead className="font-semibold hidden md:table-cell">Daraja</TableHead>
+                        <TableHead className="font-semibold hidden md:table-cell text-center">Tangalar</TableHead>
+                        <TableHead className="text-center font-semibold w-40">Davomat</TableHead>
                       </TableRow>
-                    ) : (
-                      students.map((student, index) => (
-                        <TableRow key={student.id}>
-                          <TableCell>{index + 1}</TableCell>
+                    </TableHeader>
+                    <TableBody>
+                      {students.map((student, index) => (
+                        <TableRow 
+                          key={student.id}
+                          className={`
+                            transition-colors
+                            ${attendance[student.id] === 'present' ? 'bg-green-50 dark:bg-green-950/20' : ''}
+                            ${attendance[student.id] === 'absent' ? 'bg-red-50 dark:bg-red-950/20' : ''}
+                            ${attendance[student.id] === 'excused' ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}
+                          `}
+                        >
+                          <TableCell className="text-center font-medium text-muted-foreground">
+                            {index + 1}
+                          </TableCell>
                           <TableCell className="font-medium">
                             {student.first_name} {student.last_name}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {student.username}
                           </TableCell>
-                          <TableCell className="text-center">
-                            <Checkbox
-                              checked={attendance[student.id] || false}
-                              onCheckedChange={() => toggleAttendance(student.id)}
-                            />
+                          <TableCell className="hidden sm:table-cell">
+                            <Badge variant="outline">{student.course || '-'}</Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge variant="secondary">{student.level || '-'}</Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-center">
+                            <span className="font-medium text-yellow-600">
+                              🪙 {student.coins || 0}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                size="sm"
+                                variant={attendance[student.id] === 'present' ? 'default' : 'outline'}
+                                className={`h-8 w-8 p-0 ${
+                                  attendance[student.id] === 'present' 
+                                    ? 'bg-green-500 hover:bg-green-600 text-white' 
+                                    : 'hover:bg-green-100 hover:text-green-600 hover:border-green-300'
+                                } ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                onClick={() => setStudentStatus(student.id, 'present')}
+                                disabled={!isEditable}
+                                title="Keldi"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={attendance[student.id] === 'absent' ? 'default' : 'outline'}
+                                className={`h-8 w-8 p-0 ${
+                                  attendance[student.id] === 'absent' 
+                                    ? 'bg-red-500 hover:bg-red-600 text-white' 
+                                    : 'hover:bg-red-100 hover:text-red-600 hover:border-red-300'
+                                } ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                onClick={() => setStudentStatus(student.id, 'absent')}
+                                disabled={!isEditable}
+                                title="Kelmadi"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={attendance[student.id] === 'excused' ? 'default' : 'outline'}
+                                className={`h-8 w-8 p-0 ${
+                                  attendance[student.id] === 'excused' 
+                                    ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
+                                    : 'hover:bg-yellow-100 hover:text-yellow-600 hover:border-yellow-300'
+                                } ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                onClick={() => setStudentStatus(student.id, 'excused')}
+                                disabled={!isEditable}
+                                title="Sababli"
+                              >
+                                <Clock className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
 
-              <div className="flex justify-end">
-                <Button onClick={handleSaveAttendance} disabled={saving}>
-                  <Save className="w-4 h-4 mr-2" />
-                  {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+            {/* Save Button */}
+            {students.length > 0 && isEditable && (
+              <div className="border-t p-4 flex justify-end">
+                <Button 
+                  onClick={handleSaveAttendance} 
+                  disabled={saving}
+                  size="lg"
+                  className="min-w-32"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saqlanmoqda...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Saqlash
+                    </>
+                  )}
                 </Button>
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            )}
+
+            {/* Already saved message */}
+            {!isEditable && hasExistingAttendance && (
+              <div className="border-t p-4">
+                <div className="bg-muted/50 rounded-lg p-4 text-center">
+                  <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Bugungi davomat allaqachon saqlangan. O'zgartirish mumkin emas.
+                  </p>
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
