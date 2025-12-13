@@ -15,7 +15,8 @@ import AddUser from "./pages/admin/AddUser";
 import QRScannerPage from "./pages/admin/QRScanner";
 import SendSMS from "./pages/admin/SendSMS";
 import Groups from "./pages/admin/Groups";
-import Attendance from "./pages/admin/Attendance";
+import AdminAttendance from "./pages/admin/Attendance";
+import StudentAttendance from "./pages/student/Attendance";
 import Chat from "./pages/Chat";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
@@ -106,7 +107,15 @@ const App = () => (
                 path="/dashboard/admin/attendance" 
                 element={
                   <ProtectedRoute>
-                    <Attendance />
+                    <AdminAttendance />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/attendance" 
+                element={
+                  <ProtectedRoute>
+                    <StudentAttendance />
                   </ProtectedRoute>
                 } 
               />

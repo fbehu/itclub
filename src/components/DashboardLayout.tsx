@@ -39,6 +39,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         { path: '/dashboard/settings', label: 'Settings', icon: Settings },
       ]
     : [
+        { path: '/dashboard/attendance', label: 'Davomat', icon: ClipboardList },
         { path: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
         { path: '/dashboard/notifications', label: 'Notifications', icon: Bell },
         { path: '/dashboard/profile', label: 'Profile', icon: User },
