@@ -16,7 +16,10 @@ import QRScannerPage from "./pages/admin/QRScanner";
 import SendSMS from "./pages/admin/SendSMS";
 import Groups from "./pages/admin/Groups";
 import AdminAttendance from "./pages/admin/Attendance";
+import AdminSystemUpdates from "./pages/admin/SystemUpdates";
 import StudentAttendance from "./pages/student/Attendance";
+import StudentSystemUpdates from "./pages/student/SystemUpdates";
+import TeacherGroups from "./pages/teacher/Groups";
 import Chat from "./pages/Chat";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
@@ -71,6 +74,7 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              {/* Admin Routes */}
               <Route 
                 path="/dashboard/admin/users" 
                 element={
@@ -112,10 +116,10 @@ const App = () => (
                 } 
               />
               <Route 
-                path="/dashboard/attendance" 
+                path="/dashboard/admin/system-updates" 
                 element={
                   <ProtectedRoute>
-                    <StudentAttendance />
+                    <AdminSystemUpdates />
                   </ProtectedRoute>
                 } 
               />
@@ -127,6 +131,57 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              {/* Teacher Routes */}
+              <Route 
+                path="/dashboard/teacher/groups" 
+                element={
+                  <ProtectedRoute>
+                    <TeacherGroups />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/teacher/attendance" 
+                element={
+                  <ProtectedRoute>
+                    <AdminAttendance />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/teacher/qr-scanner" 
+                element={
+                  <ProtectedRoute>
+                    <QRScannerPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/teacher/system-updates" 
+                element={
+                  <ProtectedRoute>
+                    <AdminSystemUpdates />
+                  </ProtectedRoute>
+                } 
+              />
+              {/* Student Routes */}
+              <Route 
+                path="/dashboard/attendance" 
+                element={
+                  <ProtectedRoute>
+                    <StudentAttendance />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/system-updates" 
+                element={
+                  <ProtectedRoute>
+                    <StudentSystemUpdates />
+                  </ProtectedRoute>
+                } 
+              />
+              {/* Shared Routes */}
               <Route 
                 path="/dashboard/chat" 
                 element={

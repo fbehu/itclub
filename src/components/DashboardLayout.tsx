@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, User, BarChart3, Settings, Users, ScanLine, MessageSquare, Bell, Mail, Menu, X, MoreHorizontal, ClipboardList, UsersRound } from 'lucide-react';
+import { LogOut, User, BarChart3, Settings, Users, ScanLine, MessageSquare, Bell, Mail, Menu, X, MoreHorizontal, ClipboardList, UsersRound, Megaphone } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -25,28 +25,47 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     navigate('/');
   };
 
-  const navItems = user?.role === 'admin' 
-    ? [
+  const getNavItems = () => {
+    if (user?.role === 'admin') {
+      return [
         { path: '/dashboard/admin/users', label: 'Users', icon: Users },
         { path: '/dashboard/admin/qr-scanner', label: 'Scanner', icon: ScanLine },
         { path: '/dashboard/admin/groups', label: 'Guruhlar', icon: UsersRound },
         { path: '/dashboard/admin/attendance', label: 'Davomat', icon: ClipboardList },
         { path: '/dashboard/admin/send-sms', label: 'SMS', icon: Mail },
-        { path: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
-        { path: '/dashboard/notifications', label: 'Notifications', icon: Bell },
-        { path: '/dashboard/profile', label: 'Profile', icon: User },
-        { path: '/dashboard/statistics', label: 'Stats', icon: BarChart3 },
-        { path: '/dashboard/settings', label: 'Settings', icon: Settings },
-      ]
-    : [
-        { path: '/dashboard/attendance', label: 'Davomat', icon: ClipboardList },
+        { path: '/dashboard/admin/system-updates', label: 'Yangiliklar', icon: Megaphone },
         { path: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
         { path: '/dashboard/notifications', label: 'Notifications', icon: Bell },
         { path: '/dashboard/profile', label: 'Profile', icon: User },
         { path: '/dashboard/statistics', label: 'Stats', icon: BarChart3 },
         { path: '/dashboard/settings', label: 'Settings', icon: Settings },
       ];
+    } else if (user?.role === 'teacher') {
+      return [
+        { path: '/dashboard/teacher/qr-scanner', label: 'Scanner', icon: ScanLine },
+        { path: '/dashboard/teacher/groups', label: 'Guruhlar', icon: UsersRound },
+        { path: '/dashboard/teacher/attendance', label: 'Davomat', icon: ClipboardList },
+        { path: '/dashboard/teacher/system-updates', label: 'Yangiliklar', icon: Megaphone },
+        { path: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
+        { path: '/dashboard/notifications', label: 'Notifications', icon: Bell },
+        { path: '/dashboard/profile', label: 'Profile', icon: User },
+        { path: '/dashboard/statistics', label: 'Stats', icon: BarChart3 },
+        { path: '/dashboard/settings', label: 'Settings', icon: Settings },
+      ];
+    } else {
+      return [
+        { path: '/dashboard/attendance', label: 'Davomat', icon: ClipboardList },
+        { path: '/dashboard/system-updates', label: 'Yangiliklar', icon: Megaphone },
+        { path: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
+        { path: '/dashboard/notifications', label: 'Notifications', icon: Bell },
+        { path: '/dashboard/profile', label: 'Profile', icon: User },
+        { path: '/dashboard/statistics', label: 'Stats', icon: BarChart3 },
+        { path: '/dashboard/settings', label: 'Settings', icon: Settings },
+      ];
+    }
+  };
 
+  const navItems = getNavItems();
   const isActive = (path: string) => location.pathname === path;
 
   const getCurrentPageTitle = () => {
@@ -54,7 +73,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return currentItem?.label || 'Dashboard';
   };
 
-  const isSettingsPage = location.pathname === '/dashboard/settings';
+  const getRoleLabel = () => {
+    if (user?.role === 'admin') return 'Admin';
+    if (user?.role === 'teacher') return "O'qituvchi";
+    return 'Talaba';
+  };
 
   if (!user) return null;
 
@@ -89,7 +112,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Avatar>
                 <div>
                   <p className="font-semibold text-sidebar-foreground">{user.first_name || ''}</p>
-                  <p className="text-sm text-sidebar-foreground/70">{user.role === 'student' ? 'Talaba' : 'Admin'}</p>
+                  <p className="text-sm text-sidebar-foreground/70">{getRoleLabel()}</p>
                 </div>
               </div>
             )}
