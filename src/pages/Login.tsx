@@ -29,10 +29,13 @@ export default function Login() {
           if (response.ok) {
             const user = await response.json();
             setUser(user);
+            // Redirect based on role
             if (user.role === 'admin') {
-              navigate('/dashboard');
+              navigate('/dashboard/admin/users');
+            } else if (user.role === 'teacher') {
+              navigate('/dashboard/teacher/groups');
             } else {
-              navigate('/dashboard');
+              navigate('/dashboard/attendance');
             }
           }
         } catch (err) {
@@ -63,7 +66,21 @@ export default function Login() {
           title: 'Muvaffaqiyatli!',
           description: 'Tizimga kirdingiz',
         });
-        navigate('/dashboard');
+        
+        // Get user from localStorage to determine redirect
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          if (userData.role === 'admin') {
+            navigate('/dashboard/admin/users');
+          } else if (userData.role === 'teacher') {
+            navigate('/dashboard/teacher/groups');
+          } else {
+            navigate('/dashboard/attendance');
+          }
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         toast({
           title: 'Xato',

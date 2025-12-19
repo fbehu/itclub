@@ -6,7 +6,7 @@ export interface User {
   id: string;
   username: string;
   password?: string;
-  role: 'student' | 'admin';
+  role: 'student' | 'admin' | 'teacher';
   first_name: string;
   last_name: string;
   uuid?: string;
