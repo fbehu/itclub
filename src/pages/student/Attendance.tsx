@@ -3,10 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronLeft, ChevronRight, Calendar, CheckCircle2, XCircle, Clock, Loader2, TrendingUp } from 'lucide-react';
-import { authFetch } from '@/lib/authFetch';
-import { API_ENDPOINTS } from '@/config/api';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
+import { ChevronLeft, ChevronRight, Calendar, CheckCircle2, XCircle, Clock, TrendingUp } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, parseISO } from 'date-fns';
 import { uz } from 'date-fns/locale';
 import DashboardLayout from '@/components/DashboardLayout';
 
@@ -26,37 +24,65 @@ interface AttendanceStats {
   percentage: number;
 }
 
+// Mock data for demonstration
+const generateMockAttendance = (month: Date): AttendanceRecord[] => {
+  const records: AttendanceRecord[] = [];
+  const days = eachDayOfInterval({
+    start: startOfMonth(month),
+    end: endOfMonth(month)
+  });
+  
+  const statuses: AttendanceStatus[] = ['present', 'absent', 'excused'];
+  const today = new Date();
+  
+  days.forEach((day) => {
+    // Skip weekends and future dates
+    const dayOfWeek = day.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6 || day > today) return;
+    
+    // Random attendance with higher chance of present
+    const random = Math.random();
+    let status: AttendanceStatus;
+    if (random < 0.75) status = 'present';
+    else if (random < 0.9) status = 'absent';
+    else status = 'excused';
+    
+    records.push({
+      date: format(day, 'yyyy-MM-dd'),
+      status,
+      group_name: 'IT Club - Web Development'
+    });
+  });
+  
+  return records;
+};
+
+const calculateStats = (records: AttendanceRecord[]): AttendanceStats => {
+  const present = records.filter(r => r.status === 'present').length;
+  const absent = records.filter(r => r.status === 'absent').length;
+  const excused = records.filter(r => r.status === 'excused').length;
+  const total = records.length;
+  
+  return {
+    total_days: total,
+    present,
+    absent,
+    excused,
+    percentage: total > 0 ? Math.round((present / total) * 100) : 0
+  };
+};
+
 export default function StudentAttendance() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadAttendance();
+    // Load mock attendance data
+    const mockData = generateMockAttendance(currentMonth);
+    setAttendance(mockData);
+    setStats(calculateStats(mockData));
   }, [currentMonth]);
-
-  const loadAttendance = async () => {
-    try {
-      setLoading(true);
-      const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-      const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-      
-      const response = await authFetch(
-        `${API_ENDPOINTS.MY_ATTENDANCE}?start_date=${startDate}&end_date=${endDate}`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        setAttendance(data.records || []);
-        setStats(data.stats || null);
-      }
-    } catch (error) {
-      console.error('Error loading attendance:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const goToPreviousMonth = () => {
     setCurrentMonth(prev => subMonths(prev, 1));
@@ -67,11 +93,6 @@ export default function StudentAttendance() {
     if (nextMonth <= new Date()) {
       setCurrentMonth(nextMonth);
     }
-  };
-
-  const getStatusForDate = (date: Date): AttendanceStatus | null => {
-    const record = attendance.find(r => isSameDay(parseISO(r.date), date));
-    return record?.status || null;
   };
 
   const getStatusIcon = (status: AttendanceStatus) => {
@@ -95,13 +116,6 @@ export default function StudentAttendance() {
         return <Badge className="bg-yellow-500 hover:bg-yellow-600">Sababli</Badge>;
     }
   };
-
-  const daysInMonth = eachDayOfInterval({
-    start: startOfMonth(currentMonth),
-    end: endOfMonth(currentMonth)
-  });
-
-  const attendedDays = daysInMonth.filter(day => getStatusForDate(day) !== null);
 
   return (
     <DashboardLayout>
@@ -202,11 +216,7 @@ export default function StudentAttendance() {
           </CardHeader>
           
           <CardContent className="p-0">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : attendedDays.length === 0 ? (
+            {attendance.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>Bu oyda davomat ma'lumotlari yo'q</p>
