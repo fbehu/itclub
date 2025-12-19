@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, User as UserIcon, Coins, Loader, Edit, KeyRound } from 'lucide-react';
+import { Phone, Mail, User as UserIcon, Coins, Loader, Edit, KeyRound, Award, ChevronRight, Calendar } from 'lucide-react';
 import EditProfileDialog from '@/pages/student/EditProfileDialog';
 import ChangePasswordDialog from '@/pages/student/ChangePasswordDialog';
 
@@ -31,6 +31,40 @@ interface ProfileUser {
   updated_at?: string;
 }
 
+interface Certificate {
+  id: string;
+  name: string;
+  issuer: string;
+  date: string;
+  image?: string;
+  description?: string;
+}
+
+// Mock certificates data
+const mockCertificates: Certificate[] = [
+  {
+    id: '1',
+    name: 'Web Development Fundamentals',
+    issuer: 'IT Club Academy',
+    date: '2024-06-15',
+    description: 'HTML, CSS va JavaScript asoslarini muvaffaqiyatli o\'zlashtirganlik uchun'
+  },
+  {
+    id: '2',
+    name: 'React.js Professional',
+    issuer: 'IT Club Academy',
+    date: '2024-09-20',
+    description: 'React.js framework bo\'yicha professional darajaga erishganlik uchun'
+  },
+  {
+    id: '3',
+    name: 'Hackathon Winner 2024',
+    issuer: 'IT Club Uzbekistan',
+    date: '2024-11-10',
+    description: 'IT Club Hackathon 2024 musobaqasida g\'olib bo\'lganlik uchun'
+  }
+];
+
 const getNeonClass = (level?: string) => {
   if (level === 'beginner') return 'level-bg-beginner';
   if (level === 'intermediate') return 'level-bg-intermediate';
@@ -45,6 +79,8 @@ export default function Profile() {
   const [error, setError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [showCertificates, setShowCertificates] = useState(false);
+  const [certificates] = useState<Certificate[]>(mockCertificates);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -157,6 +193,15 @@ export default function Profile() {
     };
 
     fetchUserProfile();
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('uz-UZ', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
   };
 
   return (
@@ -305,6 +350,70 @@ export default function Profile() {
             </CardContent>
           </Card>
         </div>
+        )}
+
+        {/* Certificates Section - Only for students */}
+        {displayUser && displayUser.role === 'student' && (
+          <Card className={`border-none ${getNeonClass(displayUser.level)}`}>
+            <CardHeader className="pb-3 sm:pb-4">
+              <button
+                onClick={() => setShowCertificates(!showCertificates)}
+                className="w-full flex items-center justify-between"
+              >
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                  <Award className="h-5 w-5 text-yellow-500" />
+                  Sertifikatlarim
+                  <Badge variant="secondary" className="ml-2">{certificates.length}</Badge>
+                </CardTitle>
+                <ChevronRight className={`h-5 w-5 transition-transform ${showCertificates ? 'rotate-90' : ''}`} />
+              </button>
+            </CardHeader>
+            
+            {showCertificates && (
+              <CardContent className="pt-0">
+                {certificates.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Award className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Hozircha sertifikatlar yo'q</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {certificates.map((cert) => (
+                      <Card 
+                        key={cert.id} 
+                        className="bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-200/50 dark:border-yellow-900/50 hover:shadow-lg transition-shadow cursor-pointer"
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-yellow-500/20 rounded-lg flex-shrink-0">
+                              <Award className="h-6 w-6 text-yellow-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-sm text-foreground truncate">
+                                {cert.name}
+                              </h4>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {cert.issuer}
+                              </p>
+                              <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(cert.date)}
+                              </div>
+                              {cert.description && (
+                                <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                                  {cert.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
         )}
       </div>
 
