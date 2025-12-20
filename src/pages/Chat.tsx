@@ -128,7 +128,7 @@ export default function Chat() {
           setHasMore(false);
           setPage(1);
         }
-      } else if (user?.role === 'admin') {
+      } else if (user?.role === 'admin' || user?.role === 'teacher') {
         const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
         const response = await authFetch(`${API_ENDPOINTS.USERS_LIST}?page=${pageNum}${searchParam}`);
         if (response.ok) {
@@ -316,7 +316,7 @@ export default function Chat() {
           </Button>
     
           <h2 className="font-semibold text-lg">
-            {user?.role === 'student' ? 'Adminlar' : 'Studentlar'}
+            {user?.role === 'student' ? 'Adminlar' : 'O\'quvchilar'}
           </h2>
         </div>
 
@@ -364,7 +364,7 @@ export default function Chat() {
         </ScrollArea>
 
         {/* Load More Button */}
-        {hasMore && user?.role === 'admin' && (
+        {hasMore && (user?.role === 'admin' || user?.role === 'teacher') && (
           <div className="p-4 border-t">
             <Button
               onClick={handleLoadMore}

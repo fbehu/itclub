@@ -14,7 +14,7 @@ import ChangePasswordDialog from '@/pages/student/ChangePasswordDialog';
 interface ProfileUser {
   id: string;
   username: string;
-  role: 'student' | 'admin';
+  role: 'student' | 'admin' | 'teacher';
   first_name: string;
   last_name: string;
   uuid?: string;
@@ -212,7 +212,7 @@ export default function Profile() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Profil</h1>
           </div>
-          {displayUser && displayUser.role === 'student' && (
+          {displayUser && (displayUser.role === 'student' || displayUser.role === 'teacher') && (
             <div className="flex flex-wrap gap-2">
               <Button
                 onClick={() => setEditDialogOpen(true)}
@@ -258,7 +258,7 @@ export default function Profile() {
                   <p className="text-xs sm:text-sm text-muted-foreground break-all">@{displayUser.username}</p>
                   <div className="mt-2">
                     <Badge variant="secondary" className="text-xs sm:text-sm">
-                      {displayUser.role === 'student' ? 'Talaba' : 'Admin'}
+                      {displayUser.role === 'student' ? 'Talaba' : displayUser.role === 'teacher' ? 'O\'qituvchi' : 'Admin'}
                     </Badge>
                   </div>
                 </div>
@@ -353,7 +353,7 @@ export default function Profile() {
         )}
 
         {/* Certificates Section - Only for students */}
-        {displayUser && displayUser.role === 'student' && (
+        {displayUser && (displayUser.role === 'student' || displayUser.role === 'teacher') && (
           <Card className={`border-none ${getNeonClass(displayUser.level)}`}>
             <CardHeader className="pb-3 sm:pb-4">
               <button
@@ -418,7 +418,7 @@ export default function Profile() {
       </div>
 
       {/* Dialogs */}
-      {displayUser && displayUser.role === 'student' && (
+      {displayUser && (displayUser.role === 'student' || displayUser.role === 'teacher') && (
         <>
           <EditProfileDialog
             open={editDialogOpen}
