@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Edit, Trash2, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import DashboardLayout from '@/components/DashboardLayout';
 import { CreateGroupDialog } from './groups/CreateGroupDialog';
 import { EditGroupDialog } from './groups/EditGroupDialog';
-import { AddStudentsDialog } from './groups/AddStudentsDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface Group {
@@ -21,11 +21,11 @@ interface Group {
 }
 
 export default function Groups() {
+  const navigate = useNavigate();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [addStudentsDialogOpen, setAddStudentsDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
 
@@ -146,13 +146,11 @@ export default function Groups() {
                 <Button
                   variant="outline"
                   className="w-full mt-2"
-                  onClick={() => {
-                    setSelectedGroup(group);
-                    setAddStudentsDialogOpen(true);
-                  }}
+                  onClick={() => navigate(`/dashboard/admin/groups/${group.id}`)}
                 >
                   <Users className="w-4 h-4 mr-2" />
                   O'quvchilarni boshqarish
+                  <ChevronRight className="w-4 h-4 ml-auto" />
                 </Button>
               </CardContent>
             </Card>
@@ -167,21 +165,12 @@ export default function Groups() {
       />
 
       {selectedGroup && (
-        <>
-          <EditGroupDialog
-            open={editDialogOpen}
-            onOpenChange={setEditDialogOpen}
-            group={selectedGroup}
-            onSuccess={loadGroups}
-          />
-
-          <AddStudentsDialog
-            open={addStudentsDialogOpen}
-            onOpenChange={setAddStudentsDialogOpen}
-            group={selectedGroup}
-            onSuccess={loadGroups}
-          />
-        </>
+        <EditGroupDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          group={selectedGroup}
+          onSuccess={loadGroups}
+        />
       )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
