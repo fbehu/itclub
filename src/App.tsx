@@ -15,11 +15,13 @@ import AddUser from "./pages/admin/AddUser";
 import QRScannerPage from "./pages/admin/QRScanner";
 import SendSMS from "./pages/admin/SendSMS";
 import Groups from "./pages/admin/Groups";
+import GroupDetail from "./pages/admin/groups/GroupDetail";
 import AdminAttendance from "./pages/admin/Attendance";
 import AdminSystemUpdates from "./pages/admin/SystemUpdates";
 import StudentAttendance from "./pages/student/Attendance";
 import StudentSystemUpdates from "./pages/student/SystemUpdates";
 import TeacherGroups from "./pages/teacher/Groups";
+import TeacherGroupDetail from "./pages/teacher/groups/GroupDetail";
 import Chat from "./pages/Chat";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
@@ -108,6 +110,14 @@ const App = () => (
                 } 
               />
               <Route 
+                path="/dashboard/admin/groups/:groupId" 
+                element={
+                  <ProtectedRoute>
+                    <GroupDetail />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/dashboard/admin/attendance" 
                 element={
                   <ProtectedRoute>
@@ -137,6 +147,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <TeacherGroups />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/teacher/groups/:groupId" 
+                element={
+                  <ProtectedRoute>
+                    <TeacherGroupDetail />
                   </ProtectedRoute>
                 } 
               />
