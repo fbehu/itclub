@@ -83,7 +83,7 @@ export default function GroupDetail() {
       
       if (studentsRes.ok) {
         const studentsData = await studentsRes.json();
-        setStudents(studentsData.results || studentsData);
+        setStudents(studentsData.students || studentsData.results || studentsData);
       }
     } catch (error) {
       console.error('Error loading group data:', error);
