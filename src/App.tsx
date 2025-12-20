@@ -157,6 +157,30 @@ const App = () => (
                 } 
               />
               <Route 
+                path="/dashboard/teacher/chat" 
+                element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/teacher/notifications" 
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/teacher/profile" 
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/dashboard/teacher/system-updates" 
                 element={
                   <ProtectedRoute>

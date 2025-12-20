@@ -46,9 +46,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         { path: '/dashboard/teacher/groups', label: 'Guruhlar', icon: UsersRound },
         { path: '/dashboard/teacher/attendance', label: 'Davomat', icon: ClipboardList },
         { path: '/dashboard/teacher/system-updates', label: 'Yangiliklar', icon: Megaphone },
-        { path: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
-        { path: '/dashboard/notifications', label: 'Notifications', icon: Bell },
-        { path: '/dashboard/profile', label: 'Profile', icon: User },
+        { path: '/dashboard/teacher/chat', label: 'Chat', icon: MessageSquare },
+        { path: '/dashboard/teacher/notifications', label: 'Notifications', icon: Bell },
+        { path: '/dashboard/teacher/profile', label: 'Profile', icon: User },
         { path: '/dashboard/statistics', label: 'Stats', icon: BarChart3 },
         { path: '/dashboard/settings', label: 'Settings', icon: Settings },
       ];
