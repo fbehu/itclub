@@ -46,8 +46,8 @@ export default function Statistics() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in relative">
-        <h1 className="text-3xl font-bold">  .</h1>
+      <div className="space-y-6 animate-fade-in">
+        <h1 className="text-3xl font-bold">Statistika</h1>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -139,17 +139,6 @@ export default function Statistics() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Loading Overlay (scoped to this page only) */}
-        <div className="absolute inset-0 bg-gray-500/70 backdrop-blur-sm flex items-center justify-center z-30 pointer-events-auto rounded-md">
-          <div className="text-center space-y-4">
-            <div className="animate-spin">
-              <div className="h-16 w-16 border-4 border-gray-300 border-t-white rounded-full mx-auto"></div>
-            </div>
-            <h2 className="text-2xl font-bold text-white">TEZ ORADA ISHGA TUSHADI</h2>
-            <p className="text-gray-100 text-sm">Statistika qo'shimchasi tez orada faolash oladi...</p>
-          </div>
-        </div>
       </div>
     </DashboardLayout>
   );

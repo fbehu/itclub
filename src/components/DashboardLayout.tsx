@@ -7,6 +7,7 @@ import { LogOut, User, BarChart3, Settings, Users, ScanLine, MessageSquare, Bell
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from '@/components/NotificationBell';
+import { WinterEffectsWrapper } from '@/components/WinterEffectsWrapper';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -84,6 +85,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Winter Effects */}
+      <WinterEffectsWrapper />
+
       {/* Desktop Sidebar */}
       {!isMobile && (
         <aside 

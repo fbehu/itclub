@@ -5,7 +5,8 @@ import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { PasswordInput } from '@/components/ui/password-input';
-import { SnowEffect, FireworksEffect, SantaHat, WinterGreeting, SnowmanDecoration, ChristmasTree } from '@/components/WinterEffects';
+import { WinterEffectsWrapper } from '@/components/WinterEffectsWrapper';
+import { SantaHat, WinterGreeting } from '@/components/WinterEffects';
 import './Login.css';
 
 export default function Login() {
@@ -103,11 +104,8 @@ export default function Login() {
   return (
     <div className="login-page">
       {/* Winter Effects */}
-      <SnowEffect />
-      <FireworksEffect />
+      <WinterEffectsWrapper />
       <WinterGreeting />
-      <SnowmanDecoration />
-      <ChristmasTree />
 
       <div className="background winter-bg">
         <div className="shape shape-1"></div>
