@@ -331,7 +331,7 @@ export function WinterGreeting() {
           🎉 Yangi Yil Muborak! 🎉
         </h2>
         <p className="text-xs opacity-90">
-          2025-yil sizga omad keltirsin!
+          2026-yil sizga omad keltirsin!
         </p>
       </div>
     </div>
