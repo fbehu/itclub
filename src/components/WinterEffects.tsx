@@ -241,9 +241,9 @@ export function SantaHat({ className = '' }: { className?: string }) {
     <div 
       className={`absolute z-10 ${className}`}
       style={{ 
-        top: '-20px', 
-        right: '-15px',
-        transform: 'rotate(15deg)'
+        top: '-30px', 
+        right: '-10px',
+        transform: 'rotate(17deg)'
       }}
     >
       <svg width="55" height="50" viewBox="0 0 70 60" fill="none" xmlns="http://www.w3.org/2000/svg">
