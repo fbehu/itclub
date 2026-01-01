@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { PasswordInput } from '@/components/ui/password-input';
+import { SnowEffect, FireworksEffect, SantaHat, WinterGreeting, SnowmanDecoration, ChristmasTree } from '@/components/WinterEffects';
 import './Login.css';
 
 export default function Login() {
@@ -101,7 +102,14 @@ export default function Login() {
 
   return (
     <div className="login-page">
-      <div className="background">
+      {/* Winter Effects */}
+      <SnowEffect />
+      <FireworksEffect />
+      <WinterGreeting />
+      <SnowmanDecoration />
+      <ChristmasTree />
+
+      <div className="background winter-bg">
         <div className="shape shape-1"></div>
         <div className="shape shape-2"></div>
         <div className="shape shape-3"></div>
@@ -109,11 +117,17 @@ export default function Login() {
         <div className="shape shape-5"></div>
       </div>
 
-      <div className="login-card">
-        <img className="logo-placeholder" src="./../ubslogo.png" alt="Logo" />
+      <div className="login-card winter-card">
+        <div className="logo-container">
+          <img className="logo-placeholder" src="./../ubslogo.png" alt="Logo" />
+          <SantaHat />
+        </div>
         
         <div className="login-header">
-          <h3>University of Business and Science<br />Tashkent branch</h3>
+          <h3>
+            <span className="winter-emoji">❄️</span> University of Business and Science <span className="winter-emoji">❄️</span>
+            <br />Tashkent branch
+          </h3>
         </div>
         <form className="login-form" onSubmit={handleSubmit}>
           <label htmlFor="usernameOrPhone">Username yoki Telefon</label>
