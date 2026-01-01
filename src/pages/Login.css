@@ -25,6 +25,25 @@
   z-index: 1;
 }
 
+/* Winter Background */
+.background.winter-bg {
+  background: linear-gradient(135deg, #0a1628 0%, #1a365d 40%, #2d3748 70%, #0d2137 100%);
+}
+
+.background.winter-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(147, 197, 253, 0.1) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(30, 64, 175, 0.1) 0%, transparent 60%);
+  pointer-events: none;
+}
+
 /* Animated Shapes */
 .shape {
   position: absolute;
@@ -127,11 +146,37 @@
   }
 }
 
+/* Winter Card Styles */
+.login-card.winter-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.4),
+    0 0 60px rgba(59, 130, 246, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.logo-container {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
 .logo-placeholder {
   max-width: 150px;
   height: auto;
-  margin: 0 auto 20px;
+  margin: 0 auto;
   display: block;
+}
+
+.winter-emoji {
+  display: inline-block;
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
 }
 
 .login-header h3 {
