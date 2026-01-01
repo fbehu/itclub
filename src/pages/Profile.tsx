@@ -353,7 +353,7 @@ export default function Profile() {
         )}
 
         {/* Certificates Section - Only for students */}
-        {displayUser && (displayUser.role === 'student' || displayUser.role === 'teacher') && (
+        {displayUser && displayUser.role === 'student' && (
           <Card className={`border-none ${getNeonClass(displayUser.level)}`}>
             <CardHeader className="pb-3 sm:pb-4">
               <button

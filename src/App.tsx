@@ -18,10 +18,12 @@ import Groups from "./pages/admin/Groups";
 import GroupDetail from "./pages/admin/groups/GroupDetail";
 import AdminAttendance from "./pages/admin/Attendance";
 import AdminSystemUpdates from "./pages/admin/SystemUpdates";
+import AdminCertificates from "./pages/admin/Certificates";
 import StudentAttendance from "./pages/student/Attendance";
 import StudentSystemUpdates from "./pages/student/SystemUpdates";
 import TeacherGroups from "./pages/teacher/Groups";
 import TeacherGroupDetail from "./pages/teacher/groups/GroupDetail";
+import TeacherSystemUpdates from "./pages/teacher/SystemUpdates";
 import Chat from "./pages/Chat";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
@@ -141,6 +143,14 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/dashboard/admin/certificates" 
+                element={
+                  <ProtectedRoute>
+                    <AdminCertificates />
+                  </ProtectedRoute>
+                } 
+              />
               {/* Teacher Routes */}
               <Route 
                 path="/dashboard/teacher/groups" 
@@ -202,7 +212,7 @@ const App = () => (
                 path="/dashboard/teacher/system-updates" 
                 element={
                   <ProtectedRoute>
-                    <AdminSystemUpdates />
+                    <TeacherSystemUpdates />
                   </ProtectedRoute>
                 } 
               />
