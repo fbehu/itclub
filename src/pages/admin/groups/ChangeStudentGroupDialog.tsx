@@ -3,23 +3,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
-import { Loader2, ArrowRight } from 'lucide-react';
 
 interface Student {
   id: string;
   first_name: string;
   last_name: string;
-  username: string;
 }
 
 interface Group {
   id: string;
   name: string;
-  smena: string;
-  start_time: string;
 }
 
 interface ChangeStudentGroupDialogProps {
@@ -30,177 +27,134 @@ interface ChangeStudentGroupDialogProps {
   onSuccess: () => void;
 }
 
-export function ChangeStudentGroupDialog({ 
-  open, 
-  onOpenChange, 
-  student, 
+export function ChangeStudentGroupDialog({
+  open,
+  onOpenChange,
+  student,
   currentGroupId,
-  onSuccess 
+  onSuccess,
 }: ChangeStudentGroupDialogProps) {
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
-  const [currentGroup, setCurrentGroup] = useState<Group | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isTransferring, setIsTransferring] = useState(false);
 
   useEffect(() => {
     if (open) {
       loadGroups();
-      setSelectedGroupId('');
     }
   }, [open]);
 
   const loadGroups = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const response = await authFetch(API_ENDPOINTS.GROUPS);
-      const data = await response.json();
-      const allGroups = data.results || data;
-      
-      // Find current group
-      const current = allGroups.find((g: Group) => g.id === currentGroupId);
-      setCurrentGroup(current || null);
-      
-      // Filter out current group
-      const otherGroups = allGroups.filter((g: Group) => g.id !== currentGroupId);
-      setGroups(otherGroups);
+      if (response.ok) {
+        const data = await response.json();
+        const groupsList = Array.isArray(data) ? data : data.results || [];
+        // Filter out current group
+        const filtered = groupsList.filter((g: Group) => g.id !== currentGroupId);
+        setGroups(filtered);
+      }
     } catch (error) {
       console.error('Error loading groups:', error);
       toast.error('Guruhlarni yuklashda xatolik');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleSave = async () => {
+  const handleTransfer = async () => {
     if (!selectedGroupId) {
-      toast.error('Guruhni tanlang');
+      toast.error('Yangi guruhni tanlang');
       return;
     }
 
+    setIsTransferring(true);
     try {
-      setSaving(true);
-      
-      // First, get students of new group
-      const newGroupStudentsRes = await authFetch(API_ENDPOINTS.GROUP_STUDENTS(selectedGroupId));
-      const newGroupStudentsData = await newGroupStudentsRes.json();
-      const newGroupStudents = newGroupStudentsData.results || newGroupStudentsData;
-      const newGroupStudentIds = newGroupStudents.map((s: Student) => s.id);
-      
-      // Add student to new group
-      const addResponse = await authFetch(API_ENDPOINTS.GROUP_STUDENTS(selectedGroupId), {
+      const response = await authFetch(`${API_ENDPOINTS.GROUP_DETAIL(currentGroupId)}transfer-student/`, {
         method: 'POST',
-        body: JSON.stringify({ student_ids: [...newGroupStudentIds, student.id] })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: student.id,
+          target_group_id: selectedGroupId,
+        }),
       });
 
-      if (!addResponse.ok) {
-        toast.error('O\'quvchini yangi guruhga qo\'shishda xatolik');
-        return;
+      if (!response.ok) {
+        throw new Error('O\'quvchini o\'tkazishda xatolik');
       }
 
-      // Get current group students and remove this student
-      const currentGroupStudentsRes = await authFetch(API_ENDPOINTS.GROUP_STUDENTS(currentGroupId));
-      const currentGroupStudentsData = await currentGroupStudentsRes.json();
-      const currentGroupStudents = currentGroupStudentsData.results || currentGroupStudentsData;
-      const updatedCurrentGroupIds = currentGroupStudents
-        .map((s: Student) => s.id)
-        .filter((id: string) => id !== student.id);
-      
-      const removeResponse = await authFetch(API_ENDPOINTS.GROUP_STUDENTS(currentGroupId), {
-        method: 'POST',
-        body: JSON.stringify({ student_ids: updatedCurrentGroupIds })
-      });
-
-      if (removeResponse.ok) {
-        const newGroup = groups.find(g => g.id === selectedGroupId);
-        toast.success(`O'quvchi "${newGroup?.name}" guruhiga ko'chirildi`);
-        onOpenChange(false);
-        onSuccess();
-      } else {
-        toast.error('O\'quvchini eski guruhdan o\'chirishda xatolik');
-      }
+      toast.success('O\'quvchi muvaffaqiyatli o\'tkazildi');
+      onSuccess();
+      onOpenChange(false);
+      setSelectedGroupId('');
     } catch (error) {
-      console.error('Error changing group:', error);
-      toast.error('Guruhni o\'zgartirishda xatolik');
+      console.error('Error transferring student:', error);
+      toast.error(error instanceof Error ? error.message : 'O\'quvchini o\'tkazishda xatolik');
     } finally {
-      setSaving(false);
+      setIsTransferring(false);
     }
   };
 
-  const selectedGroup = groups.find(g => g.id === selectedGroupId);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Guruhni o'zgartirish</DialogTitle>
+          <DialogTitle>O'quvchini boshqa guruhga o'tkazish</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="p-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground">O'quvchi</p>
-            <p className="font-semibold">{student.first_name} {student.last_name}</p>
-            <p className="text-sm text-muted-foreground">@{student.username}</p>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
-
-          {currentGroup && (
-            <div className="flex items-center gap-4">
-              <div className="flex-1 p-3 border rounded-lg">
-                <p className="text-xs text-muted-foreground">Hozirgi guruh</p>
-                <p className="font-medium">{currentGroup.name}</p>
-              </div>
-              <ArrowRight className="w-5 h-5 text-muted-foreground" />
-              <div className="flex-1 p-3 border rounded-lg border-primary">
-                <p className="text-xs text-muted-foreground">Yangi guruh</p>
-                <p className="font-medium">{selectedGroup?.name || 'Tanlang'}</p>
-              </div>
+        ) : (
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-base font-semibold">
+                {student.first_name} {student.last_name}
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Bu o'quvchini yangi guruhga o'tkazmoqchisiz
+              </p>
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Label>Yangi guruhni tanlang</Label>
-            {loading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin" />
-              </div>
-            ) : (
-              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Guruhni tanlang" />
-                </SelectTrigger>
-                <SelectContent>
-                  {groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      <div>
-                        <span className="font-medium">{group.name}</span>
-                        <span className="text-muted-foreground ml-2">
-                          ({group.smena}, {group.start_time})
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {groups.length === 0 && !loading && (
-              <p className="text-sm text-muted-foreground">Boshqa guruhlar mavjud emas</p>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="target-group">Yangi guruhni tanlang</Label>
+              {groups.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">Boshqa guruhlar topilmadi</p>
+              ) : (
+                <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                  <SelectTrigger id="target-group">
+                    <SelectValue placeholder="Guruhni tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isTransferring}
+          >
             Bekor qilish
           </Button>
-          <Button onClick={handleSave} disabled={saving || !selectedGroupId}>
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Yuklanmoqda...
-              </>
-            ) : (
-              'Ko\'chirish'
-            )}
+          <Button
+            onClick={handleTransfer}
+            disabled={isTransferring || !selectedGroupId || groups.length === 0}
+          >
+            {isTransferring && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            O'tkazish
           </Button>
         </DialogFooter>
       </DialogContent>

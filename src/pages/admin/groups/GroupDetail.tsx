@@ -101,12 +101,17 @@ export default function GroupDetail() {
     if (!selectedStudent || !groupId) return;
     
     try {
-      const response = await authFetch(`${API_ENDPOINTS.GROUP_STUDENTS(groupId)}${selectedStudent.id}/`, {
+      const response = await authFetch(`${API_ENDPOINTS.GROUP_DETAIL(groupId)}students/`, {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: selectedStudent.id
+        })
       });
       
       if (response.ok) {
-        toast.success('O\'quvchi guruhdan o\'chirildi');
+        const data = await response.json();
+        toast.success(data.message || 'O\'quvchi guruhdan o\'chirildi');
         loadGroupData();
         setDeleteDialogOpen(false);
         setSelectedStudent(null);
