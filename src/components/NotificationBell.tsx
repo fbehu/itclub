@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, X } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -50,7 +50,7 @@ const playNotificationSound = () => {
 export function NotificationBell() {
   const [messages, setMessages] = useState<UnreadMessage[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const previousCountRef = useRef(0);
+  const previousMessageCountRef = useRef(0);
   const navigate = useNavigate();
 
   const loadUnreadMessages = useCallback(async () => {
@@ -62,11 +62,11 @@ export function NotificationBell() {
         const messagesList = Array.isArray(data) ? data : [];
         
         // Play sound if new messages arrived
-        if (messagesList.length > previousCountRef.current && previousCountRef.current >= 0) {
+        if (messagesList.length > previousMessageCountRef.current && previousMessageCountRef.current >= 0) {
           playNotificationSound();
         }
         
-        previousCountRef.current = messagesList.length;
+        previousMessageCountRef.current = messagesList.length;
         setMessages(messagesList);
       }
     } catch (error) {
@@ -76,7 +76,9 @@ export function NotificationBell() {
 
   useEffect(() => {
     loadUnreadMessages();
-    const interval = setInterval(loadUnreadMessages, 5000);
+    const interval = setInterval(() => {
+      loadUnreadMessages();
+    }, 5000);
     return () => clearInterval(interval);
   }, [loadUnreadMessages]);
 
@@ -129,85 +131,88 @@ export function NotificationBell() {
     return <Badge variant="secondary" className="text-xs">Talaba</Badge>;
   };
 
+  const totalNotifications = messages.length;
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          {messages.length > 0 && (
+          {totalNotifications > 0 && (
             <Badge 
               variant="destructive" 
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs animate-pulse"
             >
-              {messages.length > 99 ? '99+' : messages.length}
+              {totalNotifications > 99 ? '99+' : totalNotifications}
             </Badge>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between p-3 border-b">
-          <h4 className="font-semibold text-sm">Yangi xabarlar</h4>
-          {messages.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {messages.length} ta
-            </Badge>
-          )}
-        </div>
-        
-        {messages.length === 0 ? (
+      <PopoverContent className="w-96 p-0" align="end">
+        {totalNotifications === 0 ? (
           <div className="p-6 text-center text-muted-foreground text-sm">
             <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>Yangi xabarlar yo'q</p>
           </div>
         ) : (
-          <ScrollArea className="max-h-80">
-            <div className="divide-y">
-              {messages.map((msg) => (
-                <button
-                  key={msg.id}
-                  onClick={() => handleMessageClick(msg)}
-                  className="w-full p-3 text-left hover:bg-muted/50 transition-colors flex items-start gap-3"
-                >
-                  <Avatar className="h-10 w-10 flex-shrink-0">
-                    <AvatarImage src={msg.sender_photo || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {msg.sender_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm truncate">
-                        {msg.sender_name}
-                      </span>
-                      {getRoleBadge(msg.sender_role)}
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {msg.message}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatTime(msg.created_at)}
-                    </p>
-                  </div>
-                </button>
-              ))}
+          <>
+            <div className="border-b p-3">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                Xabarlar
+                <Badge variant="destructive" className="text-xs">
+                  {messages.length}
+                </Badge>
+              </h3>
             </div>
-          </ScrollArea>
-        )}
-        
-        {messages.length > 0 && (
-          <div className="p-2 border-t">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full text-xs"
-              onClick={() => {
-                navigate('/dashboard/notifications');
-                setIsOpen(false);
-              }}
-            >
-              Barcha xabarlarni ko'rish
-            </Button>
-          </div>
+            <ScrollArea className="max-h-80">
+              <div className="divide-y">
+                {messages.map((msg) => (
+                  <button
+                    key={msg.id}
+                    onClick={() => handleMessageClick(msg)}
+                    className="w-full p-3 text-left hover:bg-muted/50 transition-colors flex items-start gap-3"
+                  >
+                    <Avatar className="h-10 w-10 flex-shrink-0">
+                      <AvatarImage src={msg.sender_photo || undefined} />
+                      <AvatarFallback className="text-xs">
+                        {msg.sender_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm truncate">
+                          {msg.sender_name}
+                        </span>
+                        {getRoleBadge(msg.sender_role)}
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {msg.message}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatTime(msg.created_at)}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+
+            {messages.length > 0 && (
+              <div className="border-t p-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full text-xs"
+                  onClick={() => {
+                    navigate('/dashboard/chat');
+                    setIsOpen(false);
+                  }}
+                >
+                  Barcha xabarlar
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </PopoverContent>
     </Popover>

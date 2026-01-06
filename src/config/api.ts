@@ -39,4 +39,7 @@ export const API_ENDPOINTS = {
   ATTENDANCE: '/attendance/',
   ATTENDANCE_BY_GROUP: (groupId: string) => `/attendance/group/${groupId}/`,
   MY_ATTENDANCE: '/attendance/my/',
+  
+  // News/System Updates
+  NEWS: '/news/',
 };

@@ -1,108 +1,83 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Megaphone, Calendar, Sparkles, Wrench, Bug, Bell } from 'lucide-react';
+import { Megaphone, Calendar, Loader2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { format } from 'date-fns';
 import { uz } from 'date-fns/locale';
+import { authFetch } from '@/lib/authFetch';
+import { API_ENDPOINTS } from '@/config/api';
+import { useToast } from '@/hooks/use-toast';
 
 type UpdateType = 'feature' | 'improvement' | 'bugfix' | 'announcement';
 
 interface SystemUpdate {
-  id: string;
+  id: number;
   title: string;
   description: string;
   type: UpdateType;
+  status: 'new' | 'old';
   created_at: string;
-  is_active: boolean;
 }
 
-// Mock data for demonstration
-const mockUpdates: SystemUpdate[] = [
-  {
-    id: '1',
-    title: 'Yangi davomat tizimi',
-    description: 'Endi o\'quvchilar va o\'qituvchilar uchun davomat tizimi ishga tushdi. Guruh bo\'yicha davomat qilish imkoniyati mavjud. O\'z davomatingizni profil sahifasidan kuzatib borishingiz mumkin.',
-    type: 'feature',
-    created_at: '2024-12-18T10:00:00Z',
-    is_active: true
-  },
-  {
-    id: '2',
-    title: 'Xabarlar bo\'limiga yangiliklar',
-    description: 'Yangi xabar kelganda ovozli bildirishnoma va real-time yangilanish qo\'shildi. Endi xabarlarni o\'tkazib yubormaslik osonroq!',
-    type: 'improvement',
-    created_at: '2024-12-17T14:30:00Z',
-    is_active: true
-  },
-  {
-    id: '3',
-    title: 'Profil sahifasida sertifikatlar',
-    description: 'O\'quvchilar endi o\'z profilida olgan sertifikatlarini ko\'rishlari mumkin. Sertifikatlarim bo\'limini bosib, barcha yutuqlaringizni ko\'ring.',
-    type: 'feature',
-    created_at: '2024-12-16T09:00:00Z',
-    is_active: true
-  },
-  {
-    id: '4',
-    title: 'Chat xatosi tuzatildi',
-    description: 'Ba\'zi foydalanuvchilarda xabar yuborishda kuzatilgan xatolik tuzatildi.',
-    type: 'bugfix',
-    created_at: '2024-12-15T16:00:00Z',
-    is_active: true
-  },
-  {
-    id: '5',
-    title: 'Yangi yil bayram kunlari',
-    description: 'Hurmatli o\'quvchilar! 31-dekabr va 1-yanvar kunlari ta\'til bo\'ladi. Barchaga bayram muborak!',
-    type: 'announcement',
-    created_at: '2024-12-14T11:00:00Z',
-    is_active: true
-  }
-];
-
 export default function StudentSystemUpdates() {
-  const [updates] = useState<SystemUpdate[]>(mockUpdates);
+  const { toast } = useToast();
+  const [updates, setUpdates] = useState<SystemUpdate[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
-  const getTypeIcon = (type: UpdateType) => {
-    switch (type) {
-      case 'feature':
-        return <Sparkles className="h-5 w-5 text-green-500" />;
-      case 'improvement':
-        return <Wrench className="h-5 w-5 text-blue-500" />;
-      case 'bugfix':
-        return <Bug className="h-5 w-5 text-orange-500" />;
-      case 'announcement':
-        return <Bell className="h-5 w-5 text-purple-500" />;
+  useEffect(() => {
+    fetchUpdates();
+  }, []);
+
+  const fetchUpdates = async () => {
+    setIsLoadingData(true);
+    try {
+      const response = await authFetch(API_ENDPOINTS.NEWS);
+      if (response.ok) {
+        const data = await response.json();
+        let updatesList = Array.isArray(data) ? data : data.results || [];
+        // Sort by status: 'new' first, then 'old'
+        updatesList = updatesList.sort((a, b) => {
+          if (a.status === 'new' && b.status === 'old') return -1;
+          if (a.status === 'old' && b.status === 'new') return 1;
+          return 0;
+        });
+        setUpdates(updatesList);
+      }
+    } catch (error) {
+      console.error('Error fetching updates:', error);
+      toast({
+        title: 'Xatolik',
+        description: 'Yangiliklar yuklashda xatolik',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoadingData(false);
     }
   };
 
   const getTypeBadge = (type: UpdateType) => {
     switch (type) {
       case 'feature':
-        return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-200">Yangi funksiya</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600">Yangi funksiya</Badge>;
       case 'improvement':
-        return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200">Yaxshilash</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Yaxshilash</Badge>;
       case 'bugfix':
-        return <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-200">Xato tuzatish</Badge>;
+        return <Badge className="bg-orange-500 hover:bg-orange-600">Xato tuzatish</Badge>;
       case 'announcement':
-        return <Badge className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-200">E'lon</Badge>;
+        return <Badge className="bg-purple-500 hover:bg-purple-600">E'lon</Badge>;
     }
   };
 
-  const getCardBg = (type: UpdateType) => {
-    switch (type) {
-      case 'feature':
-        return 'bg-gradient-to-br from-green-500/5 to-green-500/0 border-green-200/50 dark:border-green-900/50';
-      case 'improvement':
-        return 'bg-gradient-to-br from-blue-500/5 to-blue-500/0 border-blue-200/50 dark:border-blue-900/50';
-      case 'bugfix':
-        return 'bg-gradient-to-br from-orange-500/5 to-orange-500/0 border-orange-200/50 dark:border-orange-900/50';
-      case 'announcement':
-        return 'bg-gradient-to-br from-purple-500/5 to-purple-500/0 border-purple-200/50 dark:border-purple-900/50';
-    }
-  };
+  if (isLoadingData) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -113,53 +88,54 @@ export default function StudentSystemUpdates() {
             <Megaphone className="h-7 w-7 text-primary" />
             Tizim yangiliklari
           </h1>
-          <p className="text-muted-foreground mt-1">Tizimga qo'shilgan yangiliklar va o'zgarishlar</p>
+          <p className="text-muted-foreground mt-1">Yangi xususiyatlar va o'zgarishlar</p>
         </div>
 
-        {/* Updates Timeline */}
-        <div className="space-y-4">
-          {updates.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Hozircha yangiliklar yo'q</p>
-              </CardContent>
-            </Card>
-          ) : (
-            updates.map((update, index) => (
-              <Card 
-                key={update.id} 
-                className={`transition-all hover:shadow-md ${getCardBg(update.type)}`}
-                style={{
-                  animation: `slideUpFade 0.4s ease-out ${index * 0.1}s both`
-                }}
+        {/* Updates Grid */}
+        {updates.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Megaphone className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-medium text-muted-foreground">Yangiliklar topilmadi</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {updates.map((update) => (
+              <Card
+                key={update.id}
+                className={`overflow-hidden hover:shadow-lg transition-shadow ${
+                  update.status === 'new' ? 'border-primary/50 bg-primary/5' : ''
+                }`}
               >
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 bg-background rounded-lg shadow-sm flex-shrink-0">
-                      {getTypeIcon(update.type)}
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg line-clamp-2">
+                        {update.title}
+                      </CardTitle>
+                      {update.status === 'new' && (
+                        <Badge variant="destructive" className="mt-2">
+                          Yangi
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-foreground">
-                          {update.title}
-                        </h3>
-                        {getTypeBadge(update.type)}
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {update.description}
-                      </p>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(update.created_at), "d MMMM, yyyy", { locale: uz })}
-                      </div>
-                    </div>
+                    {getTypeBadge(update.type)}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {update.description}
+                  </p>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    {format(new Date(update.created_at), 'd MMM, yyyy', { locale: uz })}
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
