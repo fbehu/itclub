@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Search, Plus, Edit, Trash2, Clock, Users, Calendar } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ArrowLeft, Search, Plus, Edit, Trash2, Clock, Users, Calendar, User, Phone, GraduationCap } from 'lucide-react';
 import { toast } from 'sonner';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
@@ -29,13 +30,25 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
+interface Teacher {
+  id: string;
+  first_name: string;
+  last_name: string;
+  username: string;
+  photo?: string;
+  phone_number?: string;
+  direction?: string;
+  tg_username?: string;
+}
+
 interface Group {
   id: string;
   name: string;
   smena: string;
   start_time: string;
-  student_count: number;
+  teacher?: Teacher;
   created_at: string;
+  updated_at?: string;
 }
 
 interface Student {
@@ -44,7 +57,15 @@ interface Student {
   last_name: string;
   username: string;
   direction: string;
-  phone?: string;
+  phone_number?: string;
+  photo?: string;
+}
+
+interface StudentsResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Student[];
 }
 
 export default function GroupDetail() {
@@ -53,12 +74,14 @@ export default function GroupDetail() {
   
   const [group, setGroup] = useState<Group | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
+  const [totalStudents, setTotalStudents] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Pagination
+  // Pagination - 20 items per page from API
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
   
   // Dialogs
   const [addStudentsDialogOpen, setAddStudentsDialogOpen] = useState(false);
@@ -66,42 +89,60 @@ export default function GroupDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
-  const loadGroupData = async () => {
+  // Load group info only (fast)
+  const loadGroupInfo = async () => {
     if (!groupId) return;
     
     try {
       setLoading(true);
-      const [groupRes, studentsRes] = await Promise.all([
-        authFetch(API_ENDPOINTS.GROUP_DETAIL(groupId)),
-        authFetch(API_ENDPOINTS.GROUP_STUDENTS(groupId))
-      ]);
+      const response = await authFetch(API_ENDPOINTS.GROUP_DETAIL(groupId));
       
-      if (groupRes.ok) {
-        const groupData = await groupRes.json();
-        setGroup(groupData);
-      }
-      
-      if (studentsRes.ok) {
-        const studentsData = await studentsRes.json();
-        setStudents(studentsData.students || studentsData.results || studentsData);
+      if (response.ok) {
+        const data = await response.json();
+        setGroup(data);
       }
     } catch (error) {
-      console.error('Error loading group data:', error);
-      toast.error('Ma\'lumotlarni yuklashda xatolik');
+      console.error('Error loading group info:', error);
+      toast.error('Guruh ma\'lumotlarini yuklashda xatolik');
     } finally {
       setLoading(false);
     }
   };
 
+  // Load students with pagination from API
+  const loadStudents = async (page: number = 1) => {
+    if (!groupId) return;
+    
+    try {
+      setLoadingStudents(true);
+      const response = await authFetch(`${API_ENDPOINTS.GROUP_STUDENTS(groupId)}?page=${page}`);
+      
+      if (response.ok) {
+        const data: StudentsResponse = await response.json();
+        setStudents(data.results || []);
+        setTotalStudents(data.count || 0);
+      }
+    } catch (error) {
+      console.error('Error loading students:', error);
+      toast.error('O\'quvchilarni yuklashda xatolik');
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
   useEffect(() => {
-    loadGroupData();
+    loadGroupInfo();
   }, [groupId]);
+
+  useEffect(() => {
+    loadStudents(currentPage);
+  }, [groupId, currentPage]);
 
   const handleRemoveStudent = async () => {
     if (!selectedStudent || !groupId) return;
     
     try {
-      const response = await authFetch(`${API_ENDPOINTS.GROUP_DETAIL(groupId)}students/`, {
+      const response = await authFetch(`${API_ENDPOINTS.GROUP_STUDENTS(groupId)}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -110,9 +151,9 @@ export default function GroupDetail() {
       });
       
       if (response.ok) {
-        const data = await response.json();
-        toast.success(data.message || 'O\'quvchi guruhdan o\'chirildi');
-        loadGroupData();
+        toast.success('O\'quvchi guruhdan o\'chirildi');
+        loadStudents(currentPage);
+        loadGroupInfo();
         setDeleteDialogOpen(false);
         setSelectedStudent(null);
       } else {
@@ -124,19 +165,20 @@ export default function GroupDetail() {
     }
   };
 
-  // Filter students
+  // Filter students locally (search within current page)
   const filteredStudents = students.filter(student =>
     student.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Pagination
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
-  const paginatedStudents = filteredStudents.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Calculate total pages from API count
+  const totalPages = Math.ceil(totalStudents / itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSearchQuery(''); // Reset search when changing page
+  };
 
   if (loading) {
     return (
@@ -190,14 +232,14 @@ export default function GroupDetail() {
             <CardTitle className="text-lg">Guruh ma'lumotlari</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Users className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">O'quvchilar</p>
-                  <p className="font-semibold">{students.length} ta</p>
+                  <p className="font-semibold">{totalStudents} ta</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -228,6 +270,44 @@ export default function GroupDetail() {
                 </div>
               </div>
             </div>
+
+            {/* Teacher Info */}
+            {group.teacher && (
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">O'qituvchi</h3>
+                <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                  <Avatar className="w-14 h-14">
+                    <AvatarImage src={group.teacher.photo || undefined} />
+                    <AvatarFallback className="text-lg">
+                      {group.teacher.first_name[0]}{group.teacher.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">{group.teacher.first_name} {group.teacher.last_name}</p>
+                        <p className="text-sm text-muted-foreground">@{group.teacher.username}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Telefon</p>
+                        <p className="font-medium">{group.teacher.phone_number || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Yo'nalish</p>
+                        <p className="font-medium">{group.teacher.direction || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -235,23 +315,29 @@ export default function GroupDetail() {
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <CardTitle className="text-lg">O'quvchilar ro'yxati</CardTitle>
+              <div>
+                <CardTitle className="text-lg">O'quvchilar ro'yxati</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Jami: {totalStudents} ta o'quvchi
+                </p>
+              </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   placeholder="Qidirish..."
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {students.length === 0 ? (
+            {loadingStudents ? (
+              <div className="text-center py-12">
+                <div className="text-lg text-muted-foreground">O'quvchilar yuklanmoqda...</div>
+              </div>
+            ) : students.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-lg font-medium text-muted-foreground">O'quvchilar topilmadi</p>
@@ -264,26 +350,36 @@ export default function GroupDetail() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-12">#</TableHead>
-                        <TableHead>Ism Familiya</TableHead>
+                        <TableHead>O'quvchi</TableHead>
                         <TableHead>Username</TableHead>
+                        <TableHead>Telefon</TableHead>
                         <TableHead>Yo'nalish</TableHead>
                         <TableHead className="text-right">Amallar</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedStudents.map((student, index) => (
+                      {filteredStudents.map((student, index) => (
                         <TableRow key={student.id}>
                           <TableCell className="font-medium">
                             {(currentPage - 1) * itemsPerPage + index + 1}
                           </TableCell>
                           <TableCell>
-                            <div className="font-medium">
-                              {student.first_name} {student.last_name}
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-8 h-8">
+                                <AvatarImage src={student.photo || undefined} />
+                                <AvatarFallback className="text-xs">
+                                  {student.first_name[0]}{student.last_name[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="font-medium">
+                                {student.first_name} {student.last_name}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">@{student.username}</Badge>
                           </TableCell>
+                          <TableCell>{student.phone_number || '-'}</TableCell>
                           <TableCell>{student.direction || '-'}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
@@ -294,6 +390,7 @@ export default function GroupDetail() {
                                   setSelectedStudent(student);
                                   setChangeGroupDialogOpen(true);
                                 }}
+                                title="Guruhni o'zgartirish"
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -304,6 +401,7 @@ export default function GroupDetail() {
                                   setSelectedStudent(student);
                                   setDeleteDialogOpen(true);
                                 }}
+                                title="Guruhdan o'chirish"
                               >
                                 <Trash2 className="w-4 h-4 text-destructive" />
                               </Button>
@@ -322,24 +420,36 @@ export default function GroupDetail() {
                       <PaginationContent>
                         <PaginationItem>
                           <PaginationPrevious
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                             className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                           />
                         </PaginationItem>
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              onClick={() => setCurrentPage(page)}
-                              isActive={currentPage === page}
-                              className="cursor-pointer"
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ))}
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let page: number;
+                          if (totalPages <= 5) {
+                            page = i + 1;
+                          } else if (currentPage <= 3) {
+                            page = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            page = totalPages - 4 + i;
+                          } else {
+                            page = currentPage - 2 + i;
+                          }
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                onClick={() => handlePageChange(page)}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        })}
                         <PaginationItem>
                           <PaginationNext
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                             className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                           />
                         </PaginationItem>
@@ -360,7 +470,10 @@ export default function GroupDetail() {
         groupId={groupId!}
         groupName={group.name}
         existingStudentIds={students.map(s => s.id)}
-        onSuccess={loadGroupData}
+        onSuccess={() => {
+          loadStudents(currentPage);
+          loadGroupInfo();
+        }}
       />
 
       {/* Change Group Dialog */}
@@ -371,7 +484,8 @@ export default function GroupDetail() {
           student={selectedStudent}
           currentGroupId={groupId!}
           onSuccess={() => {
-            loadGroupData();
+            loadStudents(currentPage);
+            loadGroupInfo();
             setSelectedStudent(null);
           }}
         />
