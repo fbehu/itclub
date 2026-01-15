@@ -3,15 +3,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+interface Teacher {
+  id: string;
+  first_name: string;
+  last_name: string;
+  username: string;
+  photo?: string;
+  direction?: string;
+}
 
 interface Group {
   id: string;
   name: string;
   smena: string;
   start_time: string;
+  teacher?: Teacher;
 }
 
 interface EditGroupDialogProps {
@@ -23,26 +35,52 @@ interface EditGroupDialogProps {
 
 export function EditGroupDialog({ open, onOpenChange, group, onSuccess }: EditGroupDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     smena: '',
-    start_time: ''
+    start_time: '',
+    teacher_id: ''
   });
+
+  useEffect(() => {
+    if (open) {
+      loadTeachers();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (group) {
       setFormData({
         name: group.name,
         smena: group.smena,
-        start_time: group.start_time
+        start_time: group.start_time,
+        teacher_id: group.teacher?.id || ''
       });
     }
   }, [group]);
 
+  const loadTeachers = async () => {
+    try {
+      setLoadingTeachers(true);
+      const response = await authFetch(`${API_ENDPOINTS.USERS_LIST}?role=teacher`);
+      if (response.ok) {
+        const data = await response.json();
+        setTeachers(data.results || data);
+      }
+    } catch (error) {
+      console.error('Error loading teachers:', error);
+      toast.error('O\'qituvchilarni yuklashda xatolik');
+    } finally {
+      setLoadingTeachers(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.smena || !formData.start_time) {
+    if (!formData.name || !formData.smena || !formData.start_time || !formData.teacher_id) {
       toast.error('Barcha maydonlarni to\'ldiring');
       return;
     }
@@ -70,6 +108,8 @@ export function EditGroupDialog({ open, onOpenChange, group, onSuccess }: EditGr
     }
   };
 
+  const selectedTeacher = teachers.find(t => t.id === formData.teacher_id);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -89,13 +129,62 @@ export function EditGroupDialog({ open, onOpenChange, group, onSuccess }: EditGr
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="teacher">O'qituvchi *</Label>
+            <Select 
+              value={formData.teacher_id} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, teacher_id: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingTeachers ? "Yuklanmoqda..." : "O'qituvchini tanlang"}>
+                  {selectedTeacher && (
+                    <div className="flex items-center gap-2">
+                      <Avatar className="w-6 h-6">
+                        <AvatarImage src={selectedTeacher.photo || undefined} />
+                        <AvatarFallback className="text-xs">
+                          {selectedTeacher.first_name[0]}{selectedTeacher.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{selectedTeacher.first_name} {selectedTeacher.last_name}</span>
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {teachers.map((teacher) => (
+                  <SelectItem key={teacher.id} value={teacher.id}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="w-6 h-6">
+                        <AvatarImage src={teacher.photo || undefined} />
+                        <AvatarFallback className="text-xs">
+                          {teacher.first_name[0]}{teacher.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span>{teacher.first_name} {teacher.last_name}</span>
+                        <span className="text-xs text-muted-foreground">{teacher.direction || teacher.username}</span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="smena">Smena *</Label>
-            <Input
-              id="smena"
-              value={formData.smena}
-              onChange={(e) => setFormData(prev => ({ ...prev, smena: e.target.value }))}
-              placeholder="Masalan: Tong / Kechki"
-            />
+            <Select 
+              value={formData.smena} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, smena: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Smenani tanlang" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Tong">Tong</SelectItem>
+                <SelectItem value="Kun">Kun</SelectItem>
+                <SelectItem value="Kechki">Kechki</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
