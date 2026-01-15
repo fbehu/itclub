@@ -1,0 +1,213 @@
+# DARS REJA (LESSON PLAN) - BACKEND API DOKUMENTATSIYASI
+
+## Database Schema
+
+### 1. lesson_plans (Dars rejalar)
+```sql
+CREATE TABLE lesson_plans (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,           -- Dars reja nomi (masalan: "Backend Development")
+    start_month DATE NOT NULL,            -- Boshlanish oyi (2026-01-01 formatda)
+    end_month DATE NOT NULL,              -- Tugash oyi (2026-03-01 formatda)
+    created_by UUID REFERENCES users(id), -- Kim yaratgan (admin)
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 2. lesson_plan_groups (Dars reja - Guruh bog'lanishi)
+```sql
+CREATE TABLE lesson_plan_groups (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    lesson_plan_id UUID REFERENCES lesson_plans(id) ON DELETE CASCADE,
+    group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(lesson_plan_id, group_id)
+);
+```
+
+### 3. daily_lessons (Kunlik darslar)
+```sql
+CREATE TABLE daily_lessons (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    lesson_plan_id UUID REFERENCES lesson_plans(id) ON DELETE CASCADE,
+    date DATE NOT NULL,                   -- Dars sanasi (2026-01-15)
+    topic VARCHAR(500) NOT NULL,          -- Mavzu nomi
+    description TEXT,                      -- HTML formatda to'liq tavsif
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(lesson_plan_id, date)          -- Bir kundа bir dars
+);
+```
+
+### 4. lesson_files (Dars fayllari)
+```sql
+CREATE TABLE lesson_files (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    daily_lesson_id UUID REFERENCES daily_lessons(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    file_url TEXT NOT NULL,               -- S3/Storage URL
+    file_type VARCHAR(50),                -- pdf, image, document, archive
+    file_size INTEGER,                    -- Bytes
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## API Endpoints
+
+### Dars Rejalar (Lesson Plans)
+
+#### GET /api/lesson-plans/
+Barcha dars rejalarni olish (admin uchun)
+```json
+Response:
+{
+    "count": 10,
+    "results": [
+        {
+            "id": "uuid",
+            "name": "Backend Development",
+            "start_month": "2026-01",
+            "end_month": "2026-03",
+            "groups": [
+                {"id": "uuid", "name": "Savodxonlik 1"}
+            ],
+            "lessons_count": 25,
+            "created_at": "2026-01-10T10:00:00Z"
+        }
+    ]
+}
+```
+
+#### POST /api/lesson-plans/
+Yangi dars reja yaratish
+```json
+Request:
+{
+    "name": "Backend Development",
+    "start_month": "2026-01",
+    "end_month": "2026-03",
+    "group_ids": ["uuid1", "uuid2"]  // ixtiyoriy
+}
+```
+
+#### GET /api/lesson-plans/{id}/
+Bitta dars reja ma'lumotlari
+
+#### PUT /api/lesson-plans/{id}/
+Dars rejani yangilash
+
+#### DELETE /api/lesson-plans/{id}/
+Dars rejani o'chirish
+
+---
+
+### Kunlik Darslar (Daily Lessons)
+
+#### GET /api/lesson-plans/{plan_id}/lessons/
+Dars rejadagi barcha darslar
+```json
+Response:
+{
+    "results": [
+        {
+            "id": "uuid",
+            "date": "2026-01-15",
+            "day": 15,
+            "topic": "Python asoslari",
+            "description": "<h3>Kirish</h3><p>...</p>",
+            "files": [
+                {"name": "file.pdf", "url": "...", "type": "pdf"}
+            ]
+        }
+    ]
+}
+```
+
+#### GET /api/lesson-plans/{plan_id}/lessons/?month=2026-01
+Faqat ma'lum oy uchun darslar
+
+#### POST /api/lesson-plans/{plan_id}/lessons/
+Yangi dars qo'shish
+```json
+Request:
+{
+    "date": "2026-01-15",
+    "topic": "Python asoslari",
+    "description": "<h3>Kirish</h3><p>...</p>"
+}
+```
+
+#### GET /api/lesson-plans/{plan_id}/lessons/{lesson_id}/
+Bitta dars to'liq ma'lumotlari
+
+#### PUT /api/lesson-plans/{plan_id}/lessons/{lesson_id}/
+Darsni yangilash
+
+#### DELETE /api/lesson-plans/{plan_id}/lessons/{lesson_id}/
+Darsni o'chirish
+
+---
+
+### Dars Fayllari
+
+#### POST /api/lessons/{lesson_id}/files/
+Fayl yuklash (multipart/form-data)
+
+#### DELETE /api/lessons/{lesson_id}/files/{file_id}/
+Faylni o'chirish
+
+---
+
+### O'qituvchi uchun (Teacher Endpoints)
+
+#### GET /api/groups/{group_id}/today-lesson/
+Bugungi dars (guruh uchun)
+```json
+Response:
+{
+    "id": "uuid",
+    "topic": "Python asoslari",
+    "description": "<h3>...</h3>",
+    "plan_name": "Backend Development",
+    "files": [...]
+}
+// Agar bugun dars yo'q bo'lsa: 404 yoki null
+```
+
+#### GET /api/teacher/lessons/{lesson_id}/
+O'qituvchi uchun to'liq dars ma'lumoti
+
+---
+
+### O'quvchi uchun (Student Endpoints)
+
+#### GET /api/student/today-topic/
+Bugungi mavzu (faqat topic, to'liq ma'lumot emas)
+```json
+Response:
+{
+    "topic": "Python asoslari",
+    "plan_name": "Backend Development"
+}
+// Agar bugun dars yo'q bo'lsa: null
+```
+
+---
+
+## Muhim Eslatmalar
+
+1. **HTML Content**: `description` maydoni HTML formatda saqlanadi (rasmlar, jadvallar, kod bloklari)
+
+2. **Fayl saqlash**: Fayllar alohida storage (S3, Supabase Storage) da saqlanadi, bazada faqat URL
+
+3. **Oylar**: start_month va end_month "YYYY-MM" formatda frontend'dan keladi, backend "YYYY-MM-01" qilib saqlaydi
+
+4. **Permissions**:
+   - Admin: Hamma amalni bajara oladi
+   - Teacher: Faqat o'z guruhlariga tegishli darslarni ko'ra oladi
+   - Student: Faqat bugungi mavzu nomini ko'radi
+
+5. **Pagination**: Darslar uchun pagination kerak emas (bir oyda max 31 kun)
