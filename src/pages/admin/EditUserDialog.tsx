@@ -446,8 +446,8 @@ export default function EditUserDialog({ user, open, onOpenChange, onSave }: Edi
                       ✓ {selectedGroup.name} ({selectedGroup.smena}, {selectedGroup.start_time})
                     </p>
                   )}
-                  {form.formState.errors.group && 'group' in form.formState.errors && (
-                    <p className="text-sm text-destructive">{form.formState.errors.group?.message}</p>
+                  {(form.formState.errors as any).group && (
+                    <p className="text-sm text-destructive">{(form.formState.errors as any).group?.message}</p>
                   )}
                 </div>
 
@@ -468,8 +468,8 @@ export default function EditUserDialog({ user, open, onOpenChange, onSave }: Edi
                       <SelectItem value="other">Boshqa</SelectItem>
                     </SelectContent>
                   </Select>
-                  {form.formState.errors.social && 'social' in form.formState.errors && (
-                    <p className="text-sm text-destructive">{form.formState.errors.social?.message}</p>
+                  {(form.formState.errors as any).social && (
+                    <p className="text-sm text-destructive">{(form.formState.errors as any).social?.message}</p>
                   )}
                 </div>
               </div>
@@ -506,8 +506,8 @@ export default function EditUserDialog({ user, open, onOpenChange, onSave }: Edi
                     />
                   </div>
                 </div>
-                {form.formState.errors.father && 'father' in form.formState.errors && (
-                  <p className="text-sm text-destructive">{form.formState.errors.father?.message}</p>
+                {(form.formState.errors as any).father && (
+                  <p className="text-sm text-destructive">{(form.formState.errors as any).father?.message}</p>
                 )}
                 <p className="text-xs text-muted-foreground">
                   💡 Kamida bitta telefon raqam kiritilishi shart
