@@ -13,33 +13,42 @@ const SeasonContext = createContext<SeasonContextType | undefined>(undefined);
 const SEASON_STORAGE_KEY = 'itclub_season';
 const DEFAULT_SEASON: Season = 'default';
 
+const SEASON_CLASSES = ['season-winter', 'season-spring', 'season-summer', 'season-autumn'];
+
 export const SeasonProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [season, setSeasonState] = useState<Season>(DEFAULT_SEASON);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // localStorage dan season ni o'qish
+  const applySeasonClass = (s: Season) => {
+    const root = document.documentElement;
+    SEASON_CLASSES.forEach(cls => root.classList.remove(cls));
+    if (s !== 'default') {
+      root.classList.add(`season-${s}`);
+    }
+  };
+
   useEffect(() => {
     const storedSeason = localStorage.getItem(SEASON_STORAGE_KEY);
     if (storedSeason && ['winter', 'spring', 'summer', 'autumn', 'default'].includes(storedSeason)) {
       setSeasonState(storedSeason as Season);
+      applySeasonClass(storedSeason as Season);
     } else {
       setSeasonState(DEFAULT_SEASON);
+      applySeasonClass(DEFAULT_SEASON);
     }
     setIsLoaded(true);
   }, []);
 
-  // Season o'zgarganda localStorage ga saqlash
   const setSeason = (newSeason: Season) => {
     setSeasonState(newSeason);
     localStorage.setItem(SEASON_STORAGE_KEY, newSeason);
+    applySeasonClass(newSeason);
   };
 
   const resetToDefault = () => {
-    setSeasonState(DEFAULT_SEASON);
-    localStorage.setItem(SEASON_STORAGE_KEY, DEFAULT_SEASON);
+    setSeason(DEFAULT_SEASON);
   };
 
-  // Yuklash tugamaguncha render qilmaymiz
   if (!isLoaded) {
     return <>{children}</>;
   }
