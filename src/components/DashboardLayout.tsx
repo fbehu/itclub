@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, User, BarChart3, Settings, Users, ScanLine, MessageSquare, Bell, Mail, Menu, X, MoreHorizontal, ClipboardList, UsersRound, Megaphone, Award } from 'lucide-react';
+import { LogOut, User, BarChart3, Settings, Users, ScanLine, MessageSquare, Bell, Mail, Menu, X, MoreHorizontal, ClipboardList, UsersRound, Megaphone, Award, Home, CreditCard, BookOpen, FileText, ShoppingCart, Store, Share2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -29,40 +29,44 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const getNavItems = () => {
     if (user?.role === 'admin') {
       return [
-        { path: '/dashboard/admin/users', label: 'Users', icon: Users },
-        { path: '/dashboard/admin/qr-scanner', label: 'Scanner', icon: ScanLine },
-        { path: '/dashboard/admin/groups', label: 'Guruhlar', icon: UsersRound },
+        { path: '/dashboard/admin/users', label: 'Foydalanuvchilar', icon: Users },
         { path: '/dashboard/admin/attendance', label: 'Davomat', icon: ClipboardList },
+        { path: '/dashboard/admin/groups', label: 'Guruhlar', icon: UsersRound },
+  { path: '/dashboard/admin/referral', label: 'Takliflar', icon: Share2 },
+        { path: '/dashboard/admin/courses', label: 'Kurslar', icon: BookOpen },
+        { path: '/dashboard/admin/payments', label: 'To\'lovlar', icon: CreditCard },
+        { path: '/dashboard/admin/rooms', label: 'Xonalar', icon: Home },
         { path: '/dashboard/admin/send-sms', label: 'SMS', icon: Mail },
         { path: '/dashboard/admin/system-updates', label: 'Yangiliklar', icon: Megaphone },
         { path: '/dashboard/admin/certificates', label: 'Sertifikatlar', icon: Award },
-        { path: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
-        { path: '/dashboard/notifications', label: 'Notifications', icon: Bell },
-        { path: '/dashboard/profile', label: 'Profile', icon: User },
-        { path: '/dashboard/statistics', label: 'Stats', icon: BarChart3 },
-        { path: '/dashboard/settings', label: 'Settings', icon: Settings },
+  { path: '/dashboard/chat', label: 'Suhbat', icon: MessageSquare },
+  { path: '/dashboard/notifications', label: 'Bildirishnomalar', icon: Bell },
+        { path: '/dashboard/profile', label: 'Profil', icon: User },
+  { path: '/dashboard/statistics', label: 'Statistika', icon: BarChart3 },
+  { path: '/dashboard/settings', label: 'Sozlamalar', icon: Settings },
       ];
     } else if (user?.role === 'teacher') {
       return [
-        { path: '/dashboard/teacher/qr-scanner', label: 'Scanner', icon: ScanLine },
         { path: '/dashboard/teacher/groups', label: 'Guruhlar', icon: UsersRound },
         { path: '/dashboard/teacher/attendance', label: 'Davomat', icon: ClipboardList },
+        { path: '/dashboard/teacher/marketplace', label: 'Kurslar', icon: Store },
         { path: '/dashboard/teacher/system-updates', label: 'Yangiliklar', icon: Megaphone },
-        { path: '/dashboard/teacher/chat', label: 'Chat', icon: MessageSquare },
-        { path: '/dashboard/teacher/notifications', label: 'Notifications', icon: Bell },
-        { path: '/dashboard/teacher/profile', label: 'Profile', icon: User },
-        { path: '/dashboard/statistics', label: 'Stats', icon: BarChart3 },
-        { path: '/dashboard/settings', label: 'Settings', icon: Settings },
+        { path: '/dashboard/chat', label: 'Suhbat', icon: MessageSquare },
+        { path: '/dashboard/notifications', label: 'Bildirishnomalar', icon: Bell },
+        { path: '/dashboard/profile', label: 'Profil', icon: User },
+  { path: '/dashboard/statistics', label: 'Statistika', icon: BarChart3 },
+  { path: '/dashboard/settings', label: 'Sozlamalar', icon: Settings },
       ];
     } else {
       return [
         { path: '/dashboard/attendance', label: 'Davomat', icon: ClipboardList },
         { path: '/dashboard/system-updates', label: 'Yangiliklar', icon: Megaphone },
-        { path: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
-        { path: '/dashboard/notifications', label: 'Notifications', icon: Bell },
-        { path: '/dashboard/profile', label: 'Profile', icon: User },
-        { path: '/dashboard/statistics', label: 'Stats', icon: BarChart3 },
-        { path: '/dashboard/settings', label: 'Settings', icon: Settings },
+        { path: '/dashboard/chat', label: 'Suhbat', icon: MessageSquare },
+        { path: '/dashboard/referral', label: 'Taklif Qilish', icon: Share2 },
+        { path: '/dashboard/profile', label: 'Profil', icon: User },
+  { path: '/dashboard/settings', label: 'Sozlamalar', icon: Settings },
+  { path: '/dashboard/statistics', label: 'Statistika', icon: BarChart3 },
+  { path: '/dashboard/notifications', label: 'Bildirishnomalar', icon: Bell },
       ];
     }
   };
@@ -72,7 +76,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const getCurrentPageTitle = () => {
     const currentItem = navItems.find(item => isActive(item.path));
-    return currentItem?.label || 'Dashboard';
+  return currentItem?.label || 'Bosh sahifa';
   };
 
   const getRoleLabel = () => {
@@ -91,11 +95,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Desktop Sidebar */}
       {!isMobile && (
         <aside 
-          className={`fixed left-0 top-0 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 animate-fade-in ${
+          className={`fixed left-0 top-0 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 animate-fade-in z-30 ${
             sidebarOpen ? 'w-64' : 'w-16'
-          }`}
+          } flex flex-col`}
         >
-          <div className="p-4 border-b border-sidebar-border">
+          <div className="p-4 border-b border-sidebar-border flex-shrink-0">
             <div className="flex items-center justify-between mb-4">
               <Button
                 variant="ghost"
@@ -123,7 +127,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             )}
           </div>
 
-          <nav className="p-4 space-y-2">
+          <nav className="flex-1 overflow-y-auto p-4 space-y-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -145,7 +149,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             })}
           </nav>
 
-          <div className="absolute bottom-6 left-4 right-4">
+          <div className="border-t border-sidebar-border p-4 flex-shrink-0">
             <Button
               variant="ghost"
               className={`w-full ${sidebarOpen ? 'justify-start' : 'justify-center'} text-sidebar-foreground hover:bg-sidebar-accent`}
@@ -202,12 +206,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Backdrop when menu is open */}
           {mobileMoreOpen && (
             <div 
-              className="fixed inset-0 bg-black/20 z-30"
+              className="fixed inset-0 bg-black/20 z-40"
               onClick={() => setMobileMoreOpen(false)}
             />
           )}
 
-          <nav className={`fixed left-0 right-0 bg-sidebar border-t border-sidebar-border z-40 transition-all duration-300 ${
+          <nav className={`fixed left-0 right-0 bg-sidebar border-t border-sidebar-border z-50 transition-all duration-300 ${
             mobileMoreOpen ? 'bottom-0 h-auto max-h-96 overflow-y-auto' : 'bottom-0 h-16'
           }`}>
             {!mobileMoreOpen ? (

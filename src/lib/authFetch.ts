@@ -35,6 +35,13 @@ export async function authFetch(
       throw new Error('Session expired. Please login again.');
     }
 
+    // 503 Service Unavailable - Maintenance mode
+    if (response.status === 503) {
+      console.warn('🔧 System is in maintenance mode');
+      // Response'ni qaytaramiz, frontend maintenance banner'ni ko'rsatadi
+      return response;
+    }
+
     if (response.status === 500) {
       console.error('Server error. Please try again later.');
     }

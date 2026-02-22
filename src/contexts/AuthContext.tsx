@@ -6,21 +6,25 @@ export interface User {
   id: string;
   username: string;
   password?: string;
-  role: 'student' | 'admin' | 'teacher';
+  role: 'student' | 'admin' | 'teacher' | null;
   first_name: string;
   last_name: string;
-  uuid?: string;
-  image_qrkod?: string;
   phone_number: string;
+  email?: string;
+  parent_phone_number?: {father?: string, mother?: string} | string | null;
   tg_username?: string;
-  level?: string;
-  course?: string;
-  direction?: string;
-  photo?: string;
-  coins?: number;
+  level?: string | null;
+  social?: string | null;
+  invite_code?: string | null;
+  group?: { id: string; name: string } | string;
+  teaching_groups?: Array<{ id: number; name: string }>;
+  student_groups?: Array<{ id: number; name: string }>;
+  photo?: string | null;
+  coins?: number | null;
   is_active?: boolean;
   created_at?: string;
   updated_at?: string;
+  unread_message_count?: number;
 }
 
 interface LoginError {
@@ -33,7 +37,7 @@ interface AuthContextType {
   user: User | null;
   users: User[];
   setUser: (user: User | null) => void;
-  login: (usernameOrPhone: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (usernameOrPhone: string, password: string) => Promise<{ success: boolean; error?: string; status?: string; data?: any }>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => void;
   addUser: (user: User) => void;
@@ -81,18 +85,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: data.role || 'student',
         first_name: data.first_name || '',
         last_name: data.last_name || '',
-        uuid: data.uuid,
-        image_qrkod: data.image_qrkod,
         phone_number: data.phone_number || '',
+        email: data.email,
+        parent_phone_number: data.parent_phone_number,
         tg_username: data.tg_username,
         level: data.level,
-        course: data.course,
-        direction: data.direction,
+        group: data.group,
+        teaching_groups: data.teaching_groups,
+        student_groups: data.student_groups,
         photo: data.photo,
+        social: data.social,
+        invite_code: data.invite_code,
         coins: data.coins,
         is_active: data.is_active,
         created_at: data.created_at,
         updated_at: data.updated_at,
+        unread_message_count: data.unread_message_count,
       };
       setUser(userData);
       localStorage.setItem('currentUser', JSON.stringify(userData));
@@ -120,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchCurrentUser();
   }, []);
 
-  const login = async (usernameOrPhone: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (usernameOrPhone: string, password: string): Promise<{ success: boolean; error?: string; status?: string; data?: any }> => {
     setIsLoading(true);
     try {
       const response = await authFetch(API_ENDPOINTS.LOGIN, {
@@ -132,7 +140,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!response.ok) {
-        const errorData: LoginError = await response.json();
+        // Agar response maintenance statusida javob qaytarsa
+        const errorData: any = await response.json();
+        
+        if (errorData.status === 'maintenance' || errorData.status === 'degraded') {
+          return { 
+            success: false, 
+            error: errorData.message || 'Tizim ta\'mirlash jarayonida',
+            status: errorData.status,
+            data: {
+              status: errorData.status,
+              status_display: errorData.status === 'maintenance' ? 'Ta\'mirlash Jarayonida' : 'Kesilgan Xizmatlar',
+              message: errorData.message || 'Sayt hozir ishlamayapti',
+              updated_at: errorData.updated_at || new Date().toISOString(),
+            }
+          };
+        }
+        
         let errorMessage = 'Tizimga kirishda xatolik yuz berdi';
         if (errorData.detail) {
           errorMessage = errorData.detail;
@@ -161,18 +185,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: data.user.role || 'student',
         first_name: data.user.first_name || '',
         last_name: data.user.last_name || '',
-        uuid: data.user.uuid,
-        image_qrkod: data.user.image_qrkod,
         phone_number: data.user.phone_number || '',
+        email: data.user.email,
+        parent_phone_number: data.user.parent_phone_number,
         tg_username: data.user.tg_username,
         level: data.user.level,
-        course: data.user.course,
-        direction: data.user.direction,
+        group: data.user.group,
+        teaching_groups: data.user.teaching_groups,
+        student_groups: data.user.student_groups,
         photo: data.user.photo,
+        social: data.user.social,
+        invite_code: data.user.invite_code,
         coins: data.user.coins,
         is_active: data.user.is_active,
         created_at: data.user.created_at,
         updated_at: data.user.updated_at,
+        unread_message_count: data.user.unread_message_count,
       };
       setUser(userData);
       localStorage.setItem('currentUser', JSON.stringify(userData));

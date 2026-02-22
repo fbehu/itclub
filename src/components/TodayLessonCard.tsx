@@ -18,7 +18,7 @@ const demoTodayLesson = {
 
 export function TodayLessonCard({ groupId, userRole }: TodayLessonCardProps) {
   const navigate = useNavigate();
-  const todayLesson = demoTodayLesson; // In real app, fetch from API
+  const todayLesson = demoTodayLesson; 
 
   if (!todayLesson) return null;
 
@@ -26,7 +26,6 @@ export function TodayLessonCard({ groupId, userRole }: TodayLessonCardProps) {
     if (userRole === 'teacher') {
       navigate(`/teacher/lesson/${todayLesson.id}`);
     }
-    // Students don't navigate, just see the topic
   };
 
   return (

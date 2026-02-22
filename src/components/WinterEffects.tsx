@@ -6,22 +6,8 @@ const Snowflake = ({ style }: { style: React.CSSProperties }) => (
     className="fixed pointer-events-none z-50 text-white opacity-80"
     style={style}
   >
-    ❄
   </div>
 );
-
-// Confetti/Firework particle
-interface Particle {
-  id: number;
-  x: number;
-  y: number;
-  color: string;
-  size: number;
-  speedX: number;
-  speedY: number;
-  life: number;
-  type: 'confetti' | 'firework';
-}
 
 export function SnowEffect() {
   const [snowflakes, setSnowflakes] = useState<React.CSSProperties[]>([]);
@@ -83,7 +69,6 @@ export function SnowEffect() {
 
 export function FireworksEffect() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const particlesRef = useRef<Particle[]>([]);
   const animationRef = useRef<number>();
 
   useEffect(() => {
@@ -117,17 +102,6 @@ export function FireworksEffect() {
         const angle = (Math.PI * 2 / particleCount) * i;
         const speed = Math.random() * 4 + 2;
         
-        particlesRef.current.push({
-          id: Date.now() + i,
-          x,
-          y,
-          color,
-          size: Math.random() * 3 + 2,
-          speedX: Math.cos(angle) * speed,
-          speedY: Math.sin(angle) * speed,
-          life: 1,
-          type: 'firework'
-        });
       }
     };
 
@@ -135,57 +109,10 @@ export function FireworksEffect() {
       const x = Math.random() * canvas.width;
       const color = colors[Math.floor(Math.random() * colors.length)];
 
-      particlesRef.current.push({
-        id: Date.now(),
-        x,
-        y: -10,
-        color,
-        size: Math.random() * 8 + 4,
-        speedX: (Math.random() - 0.5) * 2,
-        speedY: Math.random() * 2 + 1,
-        life: 1,
-        type: 'confetti'
-      });
     };
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      particlesRef.current = particlesRef.current.filter(p => {
-        if (p.type === 'firework') {
-          p.x += p.speedX;
-          p.y += p.speedY;
-          p.speedY += 0.05; // gravity
-          p.life -= 0.015;
-
-          if (p.life <= 0) return false;
-
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-          ctx.fillStyle = p.color;
-          ctx.globalAlpha = p.life;
-          ctx.fill();
-          ctx.globalAlpha = 1;
-        } else {
-          p.x += p.speedX;
-          p.y += p.speedY;
-          p.speedX += (Math.random() - 0.5) * 0.1;
-          p.life -= 0.003;
-
-          if (p.y > canvas.height || p.life <= 0) return false;
-
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate(p.y * 0.02);
-          ctx.fillStyle = p.color;
-          ctx.globalAlpha = p.life;
-          ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
-          ctx.restore();
-          ctx.globalAlpha = 1;
-        }
-
-        return true;
-      });
 
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -321,19 +248,6 @@ export function WinterGreeting() {
         }
       `}</style>
       
-      <div className="bg-gradient-to-r from-red-600 via-green-600 to-red-600 text-white px-6 py-3 rounded-xl shadow-2xl border-2 border-white/30 backdrop-blur-sm">
-        <div className="flex items-center gap-2 justify-center mb-1">
-          <span className="text-xl" style={{ animation: 'sparkle 1s infinite' }}>🎄</span>
-          <span className="text-xl" style={{ animation: 'sparkle 1s infinite 0.3s' }}>⭐</span>
-          <span className="text-xl" style={{ animation: 'sparkle 1s infinite 0.6s' }}>🎅</span>
-        </div>
-        <h2 className="text-lg sm:text-xl font-bold drop-shadow-lg">
-          🎉 Yangi Yil Muborak! 🎉
-        </h2>
-        <p className="text-xs opacity-90">
-          2026-yil sizga omad keltirsin!
-        </p>
-      </div>
     </div>
   );
 }
@@ -366,35 +280,6 @@ export function SnowmanDecoration() {
         {/* Arms */}
         <path d="M25 50 L10 40" stroke="#8b4513" strokeWidth="3" strokeLinecap="round" />
         <path d="M55 50 L70 40" stroke="#8b4513" strokeWidth="3" strokeLinecap="round" />
-      </svg>
-    </div>
-  );
-}
-
-export function ChristmasTree() {
-  return (
-    <div className="fixed bottom-4 right-4 z-30 opacity-80 pointer-events-none hidden sm:block">
-      <svg width="50" height="80" viewBox="0 0 60 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Tree layers */}
-        <polygon points="30,5 10,35 50,35" fill="#228b22" stroke="#1a6b1a" strokeWidth="1" />
-        <polygon points="30,20 5,55 55,55" fill="#228b22" stroke="#1a6b1a" strokeWidth="1" />
-        <polygon points="30,40 0,80 60,80" fill="#228b22" stroke="#1a6b1a" strokeWidth="1" />
-        {/* Trunk */}
-        <rect x="23" y="80" width="14" height="15" fill="#8b4513" />
-        {/* Star */}
-        <polygon points="30,0 32,8 40,8 34,13 36,21 30,16 24,21 26,13 20,8 28,8" fill="#ffd700" />
-        {/* Ornaments */}
-        <circle cx="25" cy="28" r="3" fill="#ff0000" />
-        <circle cx="38" cy="45" r="3" fill="#0000ff" />
-        <circle cx="18" cy="50" r="3" fill="#ffd700" />
-        <circle cx="45" cy="60" r="3" fill="#ff00ff" />
-        <circle cx="30" cy="65" r="3" fill="#00ffff" />
-        <circle cx="15" cy="70" r="3" fill="#ff6600" />
-        <circle cx="48" cy="75" r="3" fill="#ff0066" />
-        {/* Lights garland effect */}
-        <circle cx="22" cy="38" r="2" fill="#ffff00" opacity="0.8" />
-        <circle cx="42" cy="52" r="2" fill="#ffff00" opacity="0.8" />
-        <circle cx="28" cy="55" r="2" fill="#ffff00" opacity="0.8" />
       </svg>
     </div>
   );

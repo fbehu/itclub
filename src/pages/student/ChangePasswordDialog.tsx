@@ -14,10 +14,10 @@ import { useState } from 'react';
 const passwordSchema = z.object({
   old_password: z.string().min(1, 'Eski parolni kiriting'),
   new_password: z.string().min(6, 'Yangi parol kamida 6 ta belgidan iborat bo\'lishi kerak'),
-  confirm_password: z.string().min(6, 'Parolni tasdiqlang'),
-}).refine((data) => data.new_password === data.confirm_password, {
+  new_password_confirm: z.string().min(6, 'Parolni tasdiqlang'),
+}).refine((data) => data.new_password === data.new_password_confirm, {
   message: 'Parollar mos kelmaydi',
-  path: ['confirm_password'],
+  path: ['new_password_confirm'],
 });
 
 type PasswordFormData = z.infer<typeof passwordSchema>;
@@ -25,13 +25,11 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 interface ChangePasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userId: string;
 }
 
 export default function ChangePasswordDialog({
   open,
   onOpenChange,
-  userId,
 }: ChangePasswordDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,18 +46,55 @@ export default function ChangePasswordDialog({
   const onSubmit = async (data: PasswordFormData) => {
     setIsSubmitting(true);
     try {
-      const response = await authFetch(API_ENDPOINTS.CHANGE_PASSWORD(userId), {
+      const response = await authFetch('/profile/change-password/', {
         method: 'POST',
         body: JSON.stringify({
           old_password: data.old_password,
           new_password: data.new_password,
-          confirm_password: data.confirm_password,
+          new_password_confirm: data.new_password_confirm,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Parolni o\'zgartirishda xatolik');
+        console.error('API Error Response:', errorData);
+        
+        // Xato response dan spesifik xabar olish
+        let errorMessage = 'Parolni o\'zgartirishda xatolik';
+        
+        if (errorData.old_password) {
+          errorMessage = Array.isArray(errorData.old_password) 
+            ? errorData.old_password[0] 
+            : errorData.old_password;
+        } else if (errorData.new_password) {
+          errorMessage = Array.isArray(errorData.new_password) 
+            ? errorData.new_password[0] 
+            : errorData.new_password;
+        } else if (errorData.new_password_confirm) {
+          errorMessage = Array.isArray(errorData.new_password_confirm) 
+            ? errorData.new_password_confirm[0] 
+            : errorData.new_password_confirm;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (typeof errorData === 'object' && Object.keys(errorData).length > 0) {
+          // Barcha error fieldlarni birlashtirib xabar yasash
+          const errors: string[] = [];
+          Object.entries(errorData).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              errors.push(value.join(', '));
+            } else if (typeof value === 'string') {
+              errors.push(value);
+            }
+          });
+          if (errors.length > 0) {
+            errorMessage = errors.join(' | ');
+          }
+        }
+        
+        console.error('Final Error Message:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       toast({
@@ -70,9 +105,12 @@ export default function ChangePasswordDialog({
       reset();
       onOpenChange(false);
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Parolni o\'zgartirishda xatolik';
+      console.error('Catch Error:', errorMsg);
+      
       toast({
         title: 'Xatolik',
-        description: error instanceof Error ? error.message : 'Parolni o\'zgartirishda xatolik',
+        description: errorMsg,
         variant: 'destructive',
       });
     } finally {
@@ -112,14 +150,14 @@ export default function ChangePasswordDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirm_password">Parolni tasdiqlang</Label>
+            <Label htmlFor="new_password_confirm">Parolni tasdiqlang</Label>
             <PasswordInput
-              id="confirm_password"
-              {...register('confirm_password')}
+              id="new_password_confirm"
+              {...register('new_password_confirm')}
               placeholder="Yangi parolni qayta kiriting"
             />
-            {errors.confirm_password && (
-              <p className="text-sm text-destructive">{errors.confirm_password.message}</p>
+            {errors.new_password_confirm && (
+              <p className="text-sm text-destructive">{errors.new_password_confirm.message}</p>
             )}
           </div>
 

@@ -38,18 +38,18 @@ export function AddStudentsDialog({ open, onOpenChange, group, onSuccess }: AddS
 
   useEffect(() => {
     if (open) {
-      loadStudents();
+      loadAvailableStudents();
       loadGroupStudents();
     }
   }, [open]);
 
-  const loadStudents = async () => {
+  const loadAvailableStudents = async () => {
     try {
-      const response = await authFetch(API_ENDPOINTS.USERS_LIST);
+      const response = await authFetch(API_ENDPOINTS.GROUP_AVAILABLE_STUDENTS(group.id));
       const data = await response.json();
       setAllStudents(data.results || data);
     } catch (error) {
-      console.error('Error loading students:', error);
+      console.error('Error loading available students:', error);
       toast.error('O\'quvchilarni yuklashda xatolik');
     }
   };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,27 +15,67 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check, X, Loader } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import QRScanner from '@/components/QRScanner';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 
-const userSchema = z.object({
-  first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50, 'Ism 50 ta belgidan oshmasligi kerak'),
-  last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50, 'Familya 50 ta belgidan oshmasligi kerak'),
-  username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30, 'Username 30 ta belgidan oshmasligi kerak'),
+const studentSchema = z.object({
+  first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
+  last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
+  username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30),
   password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
   phone_number: z.string().min(6, 'Telefon raqam kiriting'),
   tg_username: z.string().max(50).optional(),
+  role: z.literal('student'),
   level: z.enum(['beginner', 'intermediate', 'expert'], { required_error: 'Level tanlang' }),
-  course: z.string().min(1, 'Kurs tanlang'),
-  direction: z.string().min(2, 'Yo\'nalish kamida 2 ta belgidan iborat bo\'lishi kerak').max(100),
-  uuid: z.string().regex(/^ITC\d{3}$/, 'UUID Topilmadi)'),
+  group: z.string().optional(),
+  social: z.enum(['instagram', 'telegram', 'facebook', 'friend', 'other'], { required_error: 'Social tanlang' }),
+  invite_code: z.string().max(30).optional(),
+  father: z.string().max(50).optional(),
+  mother: z.string().max(50).optional(),
+}).refine(
+  (data) => data.father || data.mother,
+  {
+    message: 'Kamida bitta ota-ona telefon raqami kerak',
+    path: ['father'],
+  }
+);
+
+const teacherSchema = z.object({
+  first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
+  last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
+  username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30),
+  password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
+  phone_number: z.string().min(6, 'Telefon raqam kiriting'),
+  tg_username: z.string().max(50).optional(),
+  role: z.literal('teacher'),
+  level: z.enum(['beginner', 'intermediate', 'expert']).optional(),
+  group: z.string().optional(),
+  social: z.string().optional(),
+  invite_code: z.string().optional(),
+  parent_type: z.string().optional(),
+  parent_phone_number: z.string().optional(),
 });
 
-type UserFormData = z.infer<typeof userSchema>;
+type StudentFormData = z.infer<typeof studentSchema>;
+type TeacherFormData = z.infer<typeof teacherSchema>;
+type UserFormData = StudentFormData | TeacherFormData;
+
+interface Group {
+  id: number;
+  name: string;
+  smena: string;
+  start_time: string;
+}
+
+interface ReferrerInfo {
+  id: string;
+  username: string;
+  full_name: string;
+  photo: string | null;
+}
 
 export default function AddUser() {
   const navigate = useNavigate();
@@ -43,9 +83,16 @@ export default function AddUser() {
   const { toast } = useToast();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(true);
+  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | undefined>(undefined);
+  const [inviteCode, setInviteCode] = useState('');
+  const [codeValidation, setCodeValidation] = useState<{ valid: boolean; message: string } | null>(null);
+  const [validatingCode, setValidatingCode] = useState(false);
+  const [referrerInfo, setReferrerInfo] = useState<ReferrerInfo | null>(null);
 
   const form = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
+    resolver: selectedRole === 'student' ? zodResolver(studentSchema) : selectedRole === 'teacher' ? zodResolver(teacherSchema) : zodResolver(studentSchema),
     defaultValues: {
       first_name: '',
       last_name: '',
@@ -53,19 +100,136 @@ export default function AddUser() {
       password: '',
       phone_number: '',
       tg_username: '',
+      role: selectedRole,
       level: undefined,
-      course: '',
-      direction: '',
-      uuid: '',
+      group: '',
+      social: undefined,
+      invite_code: '',
+      parent_type: undefined,
+      parent_phone_number: '',
     },
   });
 
-  const handleQRScan = (decodedText: string) => {
-    form.setValue('uuid', decodedText);
-    toast({
-      title: 'QR kod muvaffaqiyatli skanerlandi',
-      description: `UUID: ${decodedText}`,
-    });
+  // Fetch groups on component mount
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        setLoadingGroups(true);
+        const response = await authFetch('/groups/', {
+          method: 'GET',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setGroups(Array.isArray(data) ? data : []);
+        } else {
+          toast({
+            title: 'Xato',
+            description: 'Guruhlarni yuklashda xatolik',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        console.error('Guruhlarni yuklash xatosi:', error);
+        toast({
+          title: 'Xato',
+          description: 'Guruhlarni yuklashda xatolik',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoadingGroups(false);
+      }
+    };
+
+    fetchGroups();
+  }, [toast]);
+
+  const validateInviteCode = async () => {
+    if (!inviteCode.trim()) {
+      setCodeValidation(null);
+      setReferrerInfo(null);
+      form.setValue('invite_code', '');
+      return;
+    }
+
+    setValidatingCode(true);
+    try {
+      const response = await authFetch(API_ENDPOINTS.REFERRAL_VALIDATE, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: inviteCode.trim() }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.code_valid && data.referrer) {
+          setCodeValidation({ valid: true, message: '✅ Promokod to\'g\'ri!' });
+          setReferrerInfo(data.referrer);
+          form.setValue('invite_code', inviteCode.trim());
+        } else {
+          setCodeValidation({ valid: false, message: data.error || 'Promokod topilmadi' });
+          setReferrerInfo(null);
+          form.setValue('invite_code', '');
+        }
+      } else {
+        const error = await response.json().catch(() => ({}));
+        setCodeValidation({ 
+          valid: false, 
+          message: error.error || error.detail || 'Promokod topilmadi yoki xato' 
+        });
+        setReferrerInfo(null);
+        form.setValue('invite_code', '');
+      }
+    } catch (error) {
+      console.error('Promokodni tekshirishda xatolik:', error);
+      setCodeValidation({ 
+        valid: false, 
+        message: 'Tekshirishda xatolik yuz berdi' 
+      });
+      setReferrerInfo(null);
+      form.setValue('invite_code', '');
+    } finally {
+      setValidatingCode(false);
+    }
+  };
+
+  const handleInviteCodeChange = (value: string) => {
+    setInviteCode(value);
+    setCodeValidation(null);
+  };
+
+  const handleInviteCodeClear = () => {
+    setInviteCode('');
+    setCodeValidation(null);
+    setReferrerInfo(null);
+    form.setValue('invite_code', '');
+  };
+
+  const handleRoleChange = (value: 'student' | 'teacher') => {
+    setSelectedRole(value);
+    form.setValue('role', value as any);
+    // Reset conditional fields when role changes
+    if (value === 'teacher') {
+      form.setValue('level', undefined);
+      form.setValue('group', '');
+      form.setValue('social', undefined);
+      form.setValue('invite_code', '');
+      form.setValue('parent_type', undefined);
+      form.setValue('parent_phone_number', '');
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      toast({
+        title: 'Muvaffaqiyatli',
+        description: `Fayl tanlandi: ${file.name}`,
+      });
+    }
   };
 
   const onSubmit = async (data: UserFormData) => {
@@ -77,13 +241,35 @@ export default function AddUser() {
       formData.append('username', data.username);
       formData.append('first_name', data.first_name);
       formData.append('last_name', data.last_name);
-      formData.append('uuid', data.uuid);
       formData.append('phone_number', data.phone_number);
       formData.append('tg_username', data.tg_username || '');
-      formData.append('level', data.level);
-      formData.append('course', data.course);
-      formData.append('direction', data.direction);
+      formData.append('role', data.role);
       formData.append('password', data.password);
+      
+      if (data.level) {
+        formData.append('level', data.level);
+      }
+
+      // Only add conditional fields for students
+      if (data.role === 'student') {
+        formData.append('group', (data as StudentFormData).group);
+        formData.append('social', (data as StudentFormData).social);
+        
+        // Only add invite_code if validated
+        if (codeValidation?.valid && inviteCode.trim()) {
+          formData.append('invite_code', inviteCode.trim());
+        }
+        
+        const parentPhoneData: Record<string, string> = {};
+        if ((data as StudentFormData).father) {
+          parentPhoneData['father'] = (data as StudentFormData).father;
+        }
+        if ((data as StudentFormData).mother) {
+          parentPhoneData['mother'] = (data as StudentFormData).mother;
+        }
+        
+        formData.append('parent_phone_number', JSON.stringify(parentPhoneData));
+      }
       
       if (photoFile) {
         formData.append('photo', photoFile);
@@ -97,8 +283,6 @@ export default function AddUser() {
 
       if (!response.ok) {
         const errorData = await response.json();
-
-        // Field-level xatoliklarni toast qilamiz
         Object.entries(errorData).forEach(([field, messages]) => {
           if (Array.isArray(messages)) {
             messages.forEach((msg) => {
@@ -110,10 +294,8 @@ export default function AddUser() {
             });
           }
         });
-
-        // Xatolikdan keyin isSubmitting = false qilinadi
         setIsSubmitting(false);
-        return; // throw qilmaymiz, shunda form yana ishlaydi
+        return;
       }
 
       toast({
@@ -121,8 +303,10 @@ export default function AddUser() {
         description: 'Foydalanuvchi qo\'shildi',
       });
 
+      // Reset form va promokod qismini
+      setInviteCode('');
+      setCodeValidation(null);
       navigate('/dashboard/admin/users');
-
     } catch (error) {
       toast({
         title: 'Xato',
@@ -130,14 +314,16 @@ export default function AddUser() {
         variant: 'destructive',
       });
     } finally {
-      setIsSubmitting(false); // Xatolik bo'lsa ham tugmani tiklaymiz
+      setIsSubmitting(false);
     }
   };
-
 
   if (user?.role !== 'admin') {
     return null;
   }
+
+  const selectedCourseId = form.watch('group');
+  const selectedGroup = groups.find(g => g.id.toString() === selectedCourseId);
 
   return (
     <DashboardLayout>
@@ -227,16 +413,32 @@ export default function AddUser() {
                     placeholder="@username"
                     {...form.register('tg_username')}
                   />
-                  {form.formState.errors.tg_username && (
-                    <p className="text-sm text-destructive">{form.formState.errors.tg_username.message}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="role">Rol *</Label>
+                  <Select
+                    value={selectedRole || ''}
+                    onValueChange={(value) => handleRoleChange(value as 'student' | 'teacher')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Rolni tanlang" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="student">O'quvchi (Student)</SelectItem>
+                      <SelectItem value="teacher">O'qituvchi (Teacher)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.role && (
+                    <p className="text-sm text-destructive">{form.formState.errors.role?.message}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="level">Level *</Label>
                   <Select
-                    value={form.watch('level')}
-                    onValueChange={(value) => form.setValue('level', value as 'beginner' | 'intermediate' | 'expert')}
+                    value={form.watch('level') || ''}
+                    onValueChange={(value) => form.setValue('level', value as any)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Level tanlang" />
@@ -248,77 +450,193 @@ export default function AddUser() {
                     </SelectContent>
                   </Select>
                   {form.formState.errors.level && (
-                    <p className="text-sm text-destructive">{form.formState.errors.level.message}</p>
+                    <p className="text-sm text-destructive">{form.formState.errors.level?.message}</p>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="course">Kurs *</Label>
-                  <Select
-                    value={form.watch('course')}
-                    onValueChange={(value) => form.setValue('course', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Kurs tanlang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kurs-1">Kurs 1</SelectItem>
-                      <SelectItem value="kurs-2">Kurs 2</SelectItem>
-                      <SelectItem value="kurs-3">Kurs 3</SelectItem>
-                      <SelectItem value="kurs-4">Kurs 4</SelectItem>
-                      <SelectItem value="kurs-5">Kurs 5</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.course && (
-                    <p className="text-sm text-destructive">{form.formState.errors.course.message}</p>
-                  )}
-                </div>
+                {/* Student only fields */}
+                {selectedRole === 'student' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="group">Guruh *</Label>
+                      <Select
+                        value={selectedCourseId || ''}
+                        onValueChange={(value) => {
+                          form.setValue('group', value, { shouldValidate: true });
+                        }}
+                        disabled={loadingGroups}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingGroups ? "Guruhlar yuklanmoqda..." : "Guruhni tanlang"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {groups && groups.length > 0 ? (
+                            groups.map((group) => (
+                              <SelectItem key={group.id} value={group.id.toString()}>
+                                {group.name} ({group.smena}, {group.start_time})
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-2 text-sm text-gray-500">
+                              {loadingGroups ? 'Yuklanmoqda...' : 'Guruhlar topilmadi'}
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {selectedGroup && (
+                        <p className="text-sm text-blue-600">
+                          ✓ Tanlangan: {selectedGroup.name} ({selectedGroup.smena}, {selectedGroup.start_time})
+                        </p>
+                      )}
+                      {form.formState.errors.group && (
+                        <p className="text-sm text-destructive">{form.formState.errors.group?.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="social">Social *</Label>
+                      <Select
+                        value={form.watch('social') || ''}
+                        onValueChange={(value) => form.setValue('social', value as any)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Social tanlang" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="instagram">Instagram</SelectItem>
+                          <SelectItem value="telegram">Telegram</SelectItem>
+                          <SelectItem value="facebook">Facebook</SelectItem>
+                          <SelectItem value="friend">Do'st orqali</SelectItem>
+                          <SelectItem value="other">Boshqa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {form.formState.errors.social && (
+                        <p className="text-sm text-destructive">{form.formState.errors.social?.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="invite_code">Promokod (ixtiyoriy)</Label>
+                      <div className="flex gap-2">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              id="invite_code"
+                              placeholder='PROMO30'
+                              value={inviteCode}
+                              onChange={(e) => handleInviteCodeChange(e.target.value)}
+                              className={codeValidation ? (codeValidation.valid ? 'border-green-500' : 'border-red-500') : ''}
+                            />
+                            <Button
+                              type="button"
+                              disabled={!inviteCode.trim() || validatingCode}
+                              onClick={validateInviteCode}
+                              className="px-4"
+                            >
+                              {validatingCode ? (
+                                <Loader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                'Tekshir'
+                              )}
+                            </Button>
+                            {inviteCode && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleInviteCodeClear}
+                                className="px-3"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                          {codeValidation && (
+                            <div className={`text-sm flex items-center gap-1 ${codeValidation.valid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {codeValidation.valid ? (
+                                <Check className="w-4 h-4" />
+                              ) : (
+                                <X className="w-4 h-4" />
+                              )}
+                              {codeValidation.message}
+                            </div>
+                          )}
+                          {referrerInfo && (
+                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                              <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 font-semibold">👤 Promokod Egasi:</p>
+                              <div className="flex items-center gap-3">
+                                {referrerInfo.photo ? (
+                                  <img 
+                                    src={referrerInfo.photo} 
+                                    alt={referrerInfo.full_name}
+                                    className="w-10 h-10 rounded-full object-cover border border-blue-300"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                                    {referrerInfo.full_name.charAt(0)}
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{referrerInfo.full_name}</p>
+                                  <p className="text-xs text-slate-600 dark:text-slate-400 truncate">@{referrerInfo.username}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <Label>Ota-Ona telefon raqamlari *</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg border-2 border-dashed">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <Label htmlFor="father_phone" className="text-sm font-normal">
+                              Otasining telefoni
+                            </Label>
+                          </div>
+                          <Input 
+                            id="father" 
+                            placeholder="+998901234567"
+                            {...form.register('father')} 
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-pink-500"></div>
+                            <Label htmlFor="mother_phone" className="text-sm font-normal">
+                              Onasining telefoni
+                            </Label>
+                          </div>
+                          <Input 
+                            id="mother" 
+                            placeholder="+998901234567"
+                            {...form.register('mother')} 
+                          />
+                        </div>
+                      </div>
+                      {selectedRole === 'student' && (form.formState.errors as any).father && (
+                        <p className="text-sm text-destructive">{((form.formState.errors as any).father?.message)}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        💡 Kamida bitta telefon raqam kiritilishi shart
+                      </p>
+                    </div>
+                  </>
+                )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="direction">Yo'nalish *</Label>
-                  <Input
-                    id="direction"
-                    placeholder="Masalan: Dasturiy injinering"
-                    {...form.register('direction')}
-                  />
-                  {form.formState.errors.direction && (
-                    <p className="text-sm text-destructive">{form.formState.errors.direction.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="uuid">UUID (QR kod orqali) *</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="uuid"
-                      {...form.register('uuid')}
-                      placeholder="QR kod skanerlang"
-                      readOnly
-                    />
-                    <QRScanner onScanSuccess={handleQRScan} />
-                  </div>
-                  {form.formState.errors.uuid && (
-                    <p className="text-sm text-destructive">{form.formState.errors.uuid.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="photo">Foydalanuvchi rasmi</Label>
+                  <Label htmlFor="photo">Rasm qo'shish</Label>
                   <Input
                     id="photo"
                     type="file"
                     accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setPhotoFile(file);
-                      }
-                    }}
+                    onChange={handleFileUpload}
                   />
                   {photoFile && (
-                    <p className="text-sm text-muted-foreground">
-                      Tanlangan: {photoFile.name}
-                    </p>
+                    <p className="text-sm text-green-600">✓ Fayl tanlandi: {photoFile.name}</p>
                   )}
                 </div>
               </div>
@@ -331,7 +649,7 @@ export default function AddUser() {
                 >
                   Bekor qilish
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || !selectedRole || (inviteCode.trim() && !codeValidation?.valid)}>
                   {isSubmitting ? 'Saqlanmoqda...' : 'Saqlash'}
                 </Button>
               </div>

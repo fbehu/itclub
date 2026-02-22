@@ -1,17 +1,21 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSystemStatus } from '@/contexts/SystemStatusContext';
 import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { PasswordInput } from '@/components/ui/password-input';
 import { WinterEffectsWrapper } from '@/components/WinterEffectsWrapper';
 import { SantaHat, WinterGreeting } from '@/components/WinterEffects';
+import { AlertCircle, Wrench } from 'lucide-react';
+import { MaintenancePage } from '@/components/MaintenancePage';
 import './Login.css';
 
 export default function Login() {
   const navigate = useNavigate();
   const { login, isLoading: authLoading, setUser } = useAuth();
+  const { systemStatus, isMaintenanceActive, setSystemStatus } = useSystemStatus();
   const { toast } = useToast();
   const [usernameOrPhone, setUsernameOrPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -23,7 +27,7 @@ export default function Login() {
   useEffect(() => {
     const accessToken = localStorage.getItem('access_token');
     const refreshToken = localStorage.getItem('refresh_token');
-    if (accessToken && refreshToken) {
+    if (accessToken && refreshToken && !isMaintenanceActive) {
       // Try to fetch user info
       (async () => {
         try {
@@ -45,10 +49,20 @@ export default function Login() {
         }
       })();
     }
-  }, [navigate, setUser]);
+  }, [navigate, setUser, isMaintenanceActive]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Agar maintenance mode bo'lsa, form submit qilmaslik
+    if (isMaintenanceActive) {
+      toast({
+        title: 'Tizim Tamirlash Jarayonida',
+        description: systemStatus?.message || 'Sayt hozircha ishlamayapti. Iltimos, biroz vaqt kutin.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     if (!usernameOrPhone.trim() || !password.trim()) {
       toast({
@@ -63,6 +77,18 @@ export default function Login() {
 
     try {
       const result = await login(usernameOrPhone, password);
+      
+      // Agar login response'da maintenance statusida javob bo'lsa
+      if (result.status && (result.status === 'maintenance' || result.status === 'degraded') && result.data) {
+        setSystemStatus(result.data);
+        toast({
+          title: 'Tizim Tamirlash Jarayonida',
+          description: result.error || 'Tizim ta\'mirlash jarayonida...',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       if (result.success) {
         toast({
           title: 'Muvaffaqiyatli!',
@@ -103,56 +129,63 @@ export default function Login() {
 
   return (
     <div className="login-page">
-      {/* Winter Effects */}
-      <WinterEffectsWrapper />
-      <WinterGreeting />
+      {/* Maintenance Page - Full screen */}
+      {isMaintenanceActive && <MaintenancePage />}
+      
+      {/* Login Form - Show only if not in maintenance mode */}
+      {!isMaintenanceActive && (
+        <>
+          {/* Winter Effects */}
+          <WinterEffectsWrapper />
+          <WinterGreeting />
 
-      <div className="background winter-bg">
-        <div className="shape shape-1"></div>
-        <div className="shape shape-2"></div>
-        <div className="shape shape-3"></div>
-        <div className="shape shape-4"></div>
-        <div className="shape shape-5"></div>
-      </div>
+          <div className="background winter-bg">
+            <div className="shape shape-1"></div>
+            <div className="shape shape-2"></div>
+            <div className="shape shape-3"></div>
+            <div className="shape shape-4"></div>
+            <div className="shape shape-5"></div>
+          </div>
 
-      <div className="login-card winter-card">
-        <div className="logo-container">
-          <img className="logo-placeholder" src="./../ubslogo.png" alt="Logo" />
-          <SantaHat />
-        </div>
-        
-        <div className="login-header">
-          <h3>
-            <span className="winter-emoji">❄️</span> University of Business and Science <span className="winter-emoji">❄️</span>
-            <br />Tashkent branch
-          </h3>
-        </div>
-        <form className="login-form" onSubmit={handleSubmit}>
-          <label htmlFor="usernameOrPhone">Username yoki Telefon</label>
-          <input
-            type="text"
-            id="usernameOrPhone"
-            placeholder="username yoki telefon raqam"
-            value={usernameOrPhone}
-            onChange={(e) => setUsernameOrPhone(e.target.value)}
-            required
-            disabled={isLoading}
-          />
-          <label htmlFor="password">Parol</label>
-          <PasswordInput
-            id="password"
-            placeholder="********"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={isLoading}
-          />
+          <div className="login-card winter-card">
+            <div className="logo-container">
+              <img className="logo-placeholder" src="./../univerce_campus.png" alt="Logo" />
+              {/* <SantaHat /> */}
+            </div>
+            
+            <div className="login-header">
+              <h3>
+                <span className="winter-emoji">❄️</span> Universe Campus <span className="winter-emoji">❄️</span>
+              </h3>
+            </div>
+            <form className="login-form" onSubmit={handleSubmit}>
+              <label htmlFor="usernameOrPhone">Username yoki Telefon</label>
+              <input
+                type="text"
+                id="usernameOrPhone"
+                placeholder="username yoki telefon raqam"
+                value={usernameOrPhone}
+                onChange={(e) => setUsernameOrPhone(e.target.value)}
+                required
+                disabled={isLoading || isMaintenanceActive}
+              />
+              <label htmlFor="password">Parol</label>
+              <PasswordInput
+                id="password"
+                placeholder="********"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading || isMaintenanceActive}
+              />
 
-          <button type="submit" className="signin-btn" disabled={isLoading}>
-            {isLoading ? 'Yuklanmoqda...' : 'Login'}
-          </button>
-        </form>
-      </div>
+              <button type="submit" className="signin-btn" disabled={isLoading || isMaintenanceActive}>
+                {isMaintenanceActive ? 'Tizim Tamirlash Jarayonida ⏳' : isLoading ? 'Yuklanmoqda...' : 'Login'}
+              </button>
+            </form>
+          </div>
+        </>
+      )}
     </div>
   );
 }

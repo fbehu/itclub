@@ -84,14 +84,55 @@ export default function EditProfileDialog({
         formData.append('photo', selectedPhoto);
       }
 
-      const response = await authFetch(API_ENDPOINTS.USER_PROFILE, {
-        method: 'PUT',
+      const response = await authFetch('/profile/me/', {
+        method: 'PATCH',
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Profilni yangilashda xatolik');
+        console.error('API Error Response:', errorData);
+        
+        // Xato response dan spesifik xabar olish
+        let errorMessage = 'Profilni yangilashda xatolik';
+        
+        if (errorData.username) {
+          errorMessage = Array.isArray(errorData.username) 
+            ? errorData.username[0] 
+            : errorData.username;
+        } else if (errorData.first_name) {
+          errorMessage = Array.isArray(errorData.first_name) 
+            ? errorData.first_name[0] 
+            : errorData.first_name;
+        } else if (errorData.last_name) {
+          errorMessage = Array.isArray(errorData.last_name) 
+            ? errorData.last_name[0] 
+            : errorData.last_name;
+        } else if (errorData.photo) {
+          errorMessage = Array.isArray(errorData.photo) 
+            ? errorData.photo[0] 
+            : errorData.photo;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (typeof errorData === 'object' && Object.keys(errorData).length > 0) {
+          // Barcha error fieldlarni birlashtirib xabar yasash
+          const errors: string[] = [];
+          Object.entries(errorData).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              errors.push(value.join(', '));
+            } else if (typeof value === 'string') {
+              errors.push(value);
+            }
+          });
+          if (errors.length > 0) {
+            errorMessage = errors.join(' | ');
+          }
+        }
+        
+        console.error('Final Error Message:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       toast({
@@ -102,9 +143,12 @@ export default function EditProfileDialog({
       onSuccess();
       onOpenChange(false);
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Profilni yangilashda xatolik';
+      console.error('Catch Error:', errorMsg);
+      
       toast({
         title: 'Xatolik',
-        description: error instanceof Error ? error.message : 'Profilni yangilashda xatolik',
+        description: errorMsg,
         variant: 'destructive',
       });
     } finally {

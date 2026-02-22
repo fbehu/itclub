@@ -78,7 +78,7 @@ export function NotificationBell() {
     loadUnreadMessages();
     const interval = setInterval(() => {
       loadUnreadMessages();
-    }, 5000);
+    }, 15000);
     return () => clearInterval(interval);
   }, [loadUnreadMessages]);
 

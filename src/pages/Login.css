@@ -93,13 +93,13 @@
   height: 180px;
   top: 20%;
   right: 10%;
-  border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  border-radius: 30% 70% 70% 30% / 30% 70% 70% 70%;
   background: rgba(0, 191, 255, 0.2);
   animation-delay: 4s;
 }
 .shape, .shape-1, .shape-2, .shape-3, .shape-4, .shape-5 {
   
-  background: url("./../../itclublogo.png") no-repeat center center/cover;
+  background: url("./../../univerce_campus.png") no-repeat center center/cover;
 }
 
 @keyframes float {
@@ -171,7 +171,15 @@
 
 .winter-emoji {
   display: inline-block;
-  animation: twinkle 2s ease-in-out infinite;
+  animation: twinkle 2s ease-in-out infinite, rotate 3s linear infinite;
+  font-size: 1.5em;
+  font-weight: bold;
+  text-shadow: 
+    0 0 10px rgba(59, 130, 246, 0.8),
+    0 0 20px rgba(147, 197, 253, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 2px;
+  color: #60a5fa;
 }
 
 @keyframes twinkle {
@@ -182,9 +190,16 @@
 .login-header h3 {
   font-size: 1.2em;
   margin-bottom: 30px;
-  font-weight: 400;
+  font-weight: 800;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.9);
+  color: #60a5fa;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #60a5fa, #93c5fd, #60a5fa);
+  background-size: 100% 100%;
+  background-clip: text;
+  animation: gradient-shift 3s ease-in-out infinite;
 }
 
 /* Form Styles */

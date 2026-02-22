@@ -82,7 +82,9 @@ export function ChangeStudentGroupDialog({
       });
 
       if (!response.ok) {
-        throw new Error('O\'quvchini o\'tkazishda xatolik');
+        const errorData = await response.json();
+        const errorMessage = errorData.detail || errorData.message || 'O\'quvchini o\'tkazishda xatolik';
+        throw new Error(errorMessage);
       }
 
       toast.success('O\'quvchi muvaffaqiyatli o\'tkazildi');

@@ -37,7 +37,7 @@ interface Teacher {
   username: string;
   photo?: string;
   phone_number?: string;
-  direction?: string;
+  level?: string;
   tg_username?: string;
 }
 
@@ -46,6 +46,8 @@ interface Group {
   name: string;
   smena: string;
   start_time: string;
+  end_time?: string;
+  class_days?: string[];
   teacher?: Teacher;
   created_at: string;
   updated_at?: string;
@@ -56,8 +58,10 @@ interface Student {
   first_name: string;
   last_name: string;
   username: string;
-  direction: string;
   phone_number?: string;
+  coins?: number;
+  level?: string;
+  parent_phone_number?: string;
   photo?: string;
 }
 
@@ -79,8 +83,9 @@ export default function GroupDetail() {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Pagination - 20 items per page from API
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const itemsPerPage = 20;
   
   // Dialogs
@@ -110,21 +115,63 @@ export default function GroupDetail() {
   };
 
   // Load students with pagination from API
-  const loadStudents = async (page: number = 1) => {
+  const loadStudents = async (page: number = 1, search: string = '') => {
     if (!groupId) return;
     
     try {
       setLoadingStudents(true);
-      const response = await authFetch(`${API_ENDPOINTS.GROUP_STUDENTS(groupId)}?page=${page}`);
+      let url = `${API_ENDPOINTS.GROUP_STUDENTS(groupId)}`;
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      
+      if (search) {
+        params.append('search', search);
+        params.append('page', '1'); // Reset to page 1 when searching
+      } else {
+        params.append('page', String(page));
+      }
+      
+      params.append('page_size', String(itemsPerPage));
+      
+      const response = await authFetch(`${url}?${params.toString()}`);
       
       if (response.ok) {
-        const data: StudentsResponse = await response.json();
-        setStudents(data.results || []);
-        setTotalStudents(data.count || 0);
+        const data: any = await response.json();
+        
+        // Handle nested structure: data.results.students
+        let studentsList: Student[] = [];
+        if (data.results?.students && Array.isArray(data.results.students)) {
+          studentsList = data.results.students;
+        } else if (Array.isArray(data.results)) {
+          studentsList = data.results;
+        } else if (Array.isArray(data)) {
+          studentsList = data;
+        }
+        
+        setStudents(studentsList);
+        
+        // Get total count from nested or flat structure
+        let totalCount = 0;
+        if (data.results?.count !== undefined) {
+          totalCount = data.results.count;
+        } else if (data.count !== undefined) {
+          totalCount = data.count;
+        }
+        
+        setTotalStudents(totalCount);
+        setTotalPages(Math.ceil(totalCount / itemsPerPage));
+      } else {
+        setStudents([]);
+        setTotalStudents(0);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('Error loading students:', error);
       toast.error('O\'quvchilarni yuklashda xatolik');
+      setStudents([]);
+      setTotalStudents(0);
+      setTotalPages(1);
     } finally {
       setLoadingStudents(false);
     }
@@ -135,7 +182,7 @@ export default function GroupDetail() {
   }, [groupId]);
 
   useEffect(() => {
-    loadStudents(currentPage);
+    loadStudents(currentPage, '');
   }, [groupId, currentPage]);
 
   const handleRemoveStudent = async () => {
@@ -165,19 +212,12 @@ export default function GroupDetail() {
     }
   };
 
-  // Filter students locally (search within current page)
-  const filteredStudents = students.filter(student =>
-    student.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Calculate total pages from API count
-  const totalPages = Math.ceil(totalStudents / itemsPerPage);
+  // API already filters, no need for local filtering
+  const filteredStudents = Array.isArray(students) ? students : [];
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    setSearchQuery(''); // Reset search when changing page
+    loadStudents(page, '');
   };
 
   if (loading) {
@@ -208,7 +248,7 @@ export default function GroupDetail() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto p-4 sm:p-6 space-y-6">
+      <div className="mx-auto p-4 sm:p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
@@ -244,11 +284,11 @@ export default function GroupDetail() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
-                  <Calendar className="w-5 h-5 text-primary" />
+                  <Clock className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Smena</p>
-                  <p className="font-semibold">{group.smena}</p>
+                  <p className="text-sm text-muted-foreground">Boshlanish vaqti</p>
+                  <p className="font-semibold">{group.start_time}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -256,8 +296,8 @@ export default function GroupDetail() {
                   <Clock className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Boshlanish vaqti</p>
-                  <p className="font-semibold">{group.start_time}</p>
+                  <p className="text-sm text-muted-foreground">Tugash vaqti</p>
+                  <p className="font-semibold">{group.end_time}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -271,6 +311,20 @@ export default function GroupDetail() {
               </div>
             </div>
 
+            {/* Class Days */}
+            {group.class_days && (
+              <div className="border-t pt-4 mb-4">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Dars kunlari</h3>
+                <div className="flex flex-wrap gap-2">
+                  {Array.isArray(group.class_days) && group.class_days.map((day, idx) => (
+                    <Badge key={idx} variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                      {day}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Teacher Info */}
             {group.teacher && (
               <div className="border-t pt-4">
@@ -279,14 +333,14 @@ export default function GroupDetail() {
                   <Avatar className="w-14 h-14">
                     <AvatarImage src={group.teacher.photo || undefined} />
                     <AvatarFallback className="text-lg">
-                      {group.teacher.first_name[0]}{group.teacher.last_name[0]}
+                      {(group.teacher.first_name || '')[0]}{(group.teacher.last_name || '')[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-muted-foreground" />
                       <div>
-                        <p className="font-medium">{group.teacher.first_name} {group.teacher.last_name}</p>
+                        <p className="font-medium">{group.teacher.first_name || ''} {group.teacher.last_name || ''}</p>
                         <p className="text-sm text-muted-foreground">@{group.teacher.username}</p>
                       </div>
                     </div>
@@ -300,8 +354,8 @@ export default function GroupDetail() {
                     <div className="flex items-center gap-2">
                       <GraduationCap className="w-4 h-4 text-muted-foreground" />
                       <div>
-                        <p className="text-sm text-muted-foreground">Yo'nalish</p>
-                        <p className="font-medium">{group.teacher.direction || '-'}</p>
+                        <p className="text-sm text-muted-foreground">Darajasi</p>
+                        <p className="font-medium">{group.teacher.level || '-'}</p>
                       </div>
                     </div>
                   </div>
@@ -324,9 +378,29 @@ export default function GroupDetail() {
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  placeholder="Qidirish..."
+                  placeholder="Qidirish (Ism, Familya, Username)..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+                    setCurrentPage(1);
+                    
+                    // Clear previous timeout
+                    if (searchTimeout) {
+                      clearTimeout(searchTimeout);
+                    }
+                    
+                    // Set new timeout for search
+                    if (value.trim().length > 0) {
+                      const timeout = setTimeout(() => {
+                        loadStudents(1, value);
+                      }, 500); // 500ms delay
+                      setSearchTimeout(timeout);
+                    } else {
+                      // Load without search if empty
+                      loadStudents(1, '');
+                    }
+                  }}
                   className="pl-10"
                 />
               </div>
@@ -353,7 +427,8 @@ export default function GroupDetail() {
                         <TableHead>O'quvchi</TableHead>
                         <TableHead>Username</TableHead>
                         <TableHead>Telefon</TableHead>
-                        <TableHead>Yo'nalish</TableHead>
+                        <TableHead>Ball</TableHead>
+                        <TableHead>Darajasi</TableHead>
                         <TableHead className="text-right">Amallar</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -368,11 +443,11 @@ export default function GroupDetail() {
                               <Avatar className="w-8 h-8">
                                 <AvatarImage src={student.photo || undefined} />
                                 <AvatarFallback className="text-xs">
-                                  {student.first_name[0]}{student.last_name[0]}
+                                  {(student.first_name || '')[0]}{(student.last_name || '')[0]}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="font-medium">
-                                {student.first_name} {student.last_name}
+                                {student.first_name || ''} {student.last_name || ''}
                               </div>
                             </div>
                           </TableCell>
@@ -380,7 +455,8 @@ export default function GroupDetail() {
                             <Badge variant="secondary">@{student.username}</Badge>
                           </TableCell>
                           <TableCell>{student.phone_number || '-'}</TableCell>
-                          <TableCell>{student.direction || '-'}</TableCell>
+                          <TableCell>{student.coins || '0'}</TableCell>
+                          <TableCell>{student.level || '-'}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button

@@ -3,86 +3,88 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronLeft, ChevronRight, Calendar, CheckCircle2, XCircle, Clock, TrendingUp } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, parseISO } from 'date-fns';
+import { ChevronLeft, ChevronRight, Calendar, CheckCircle2, XCircle, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { format, addMonths, subMonths } from 'date-fns';
 import { uz } from 'date-fns/locale';
 import DashboardLayout from '@/components/DashboardLayout';
+import { authFetch } from '@/lib/authFetch';
+import { API_ENDPOINTS } from '@/config/api';
+import { useToast } from '@/hooks/use-toast';
 
-type AttendanceStatus = 'present' | 'absent' | 'excused';
+type AttendanceStatus = 'present' | 'absent' | 'excuse';
 
-interface AttendanceRecord {
+interface DailyAttendance {
   date: string;
-  status: AttendanceStatus;
+  day_name: string;
   group_name: string;
+  group_id: number;
+  status: AttendanceStatus;
+  reason: string | null;
+  coins: number;
+  created_at: string;
 }
 
 interface AttendanceStats {
-  total_days: number;
-  present: number;
-  absent: number;
-  excused: number;
-  percentage: number;
+  total_classes: number;
+  present_count: number;
+  absent_count: number;
+  excuse_count: number;
+  attendance_percentage: number;
 }
 
-// Mock data for demonstration
-const generateMockAttendance = (month: Date): AttendanceRecord[] => {
-  const records: AttendanceRecord[] = [];
-  const days = eachDayOfInterval({
-    start: startOfMonth(month),
-    end: endOfMonth(month)
-  });
-  
-  const statuses: AttendanceStatus[] = ['present', 'absent', 'excused'];
-  const today = new Date();
-  
-  days.forEach((day) => {
-    // Skip weekends and future dates
-    const dayOfWeek = day.getDay();
-    if (dayOfWeek === 0 || dayOfWeek === 6 || day > today) return;
-    
-    // Random attendance with higher chance of present
-    const random = Math.random();
-    let status: AttendanceStatus;
-    if (random < 0.75) status = 'present';
-    else if (random < 0.9) status = 'absent';
-    else status = 'excused';
-    
-    records.push({
-      date: format(day, 'yyyy-MM-dd'),
-      status,
-      group_name: 'IT Club - Web Development'
-    });
-  });
-  
-  return records;
-};
+interface AttendanceResponse {
+  year: number;
+  month: number;
+  message?: string;
+  summary: AttendanceStats;
+  daily_attendance: DailyAttendance[];
+}
 
-const calculateStats = (records: AttendanceRecord[]): AttendanceStats => {
-  const present = records.filter(r => r.status === 'present').length;
-  const absent = records.filter(r => r.status === 'absent').length;
-  const excused = records.filter(r => r.status === 'excused').length;
-  const total = records.length;
-  
-  return {
-    total_days: total,
-    present,
-    absent,
-    excused,
-    percentage: total > 0 ? Math.round((present / total) * 100) : 0
-  };
-};
-
-export default function StudentAttendance() {
+export default function StudentAttendance({ groupId, isGroupView }: { groupId?: string; isGroupView?: boolean } = {}) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [attendance, setAttendance] = useState<DailyAttendance[]>([]);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Load mock attendance data
-    const mockData = generateMockAttendance(currentMonth);
-    setAttendance(mockData);
-    setStats(calculateStats(mockData));
+    fetchAttendance();
   }, [currentMonth]);
+
+  const fetchAttendance = async () => {
+    setLoading(true);
+    try {
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth() + 1;
+      
+      let url = `${API_ENDPOINTS.USER_ME.replace('/me', '')}attendance/?year=${year}&month=${month}`;
+      
+      // Add group_id query param if provided
+      if (groupId && isGroupView) {
+        url += `&group_id=${groupId}`;
+      }
+      
+      const response = await authFetch(url, { method: 'GET' });
+
+      if (!response.ok) {
+        throw new Error('Davomat ma\'lumotlarini olishda xatolik');
+      }
+
+      const data: AttendanceResponse = await response.json();
+      setAttendance(data.daily_attendance || []);
+      setStats(data.summary);
+
+    } catch (error) {
+      console.error('Attendance fetch error:', error);
+      toast({
+        title: 'Xato',
+        description: error instanceof Error ? error.message : 'Davomat ma\'lumotlarini olishda xatolik yuz berdi',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const goToPreviousMonth = () => {
     setCurrentMonth(prev => subMonths(prev, 1));
@@ -101,7 +103,7 @@ export default function StudentAttendance() {
         return <CheckCircle2 className="w-5 h-5 text-green-500" />;
       case 'absent':
         return <XCircle className="w-5 h-5 text-red-500" />;
-      case 'excused':
+      case 'excuse':
         return <Clock className="w-5 h-5 text-yellow-500" />;
     }
   };
@@ -112,19 +114,25 @@ export default function StudentAttendance() {
         return <Badge className="bg-green-500 hover:bg-green-600">Keldi</Badge>;
       case 'absent':
         return <Badge className="bg-red-500 hover:bg-red-600">Kelmadi</Badge>;
-      case 'excused':
+      case 'excuse':
         return <Badge className="bg-yellow-500 hover:bg-yellow-600">Sababli</Badge>;
     }
   };
 
-  return (
-    <DashboardLayout>
-      <div className="container mx-auto p-4 sm:p-6 space-y-6">
-        {/* Header */}
+  // Wrapper component for standalone page view
+  const AttendanceContent = () => (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header - only show if not in group view */}
+      {!isGroupView && (
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mening davomatim</h1>
-          <p className="text-muted-foreground mt-1">O'qish davomatingizni kuzating</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            {isGroupView ? 'Davomat' : 'Mening davomatim'}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {isGroupView ? 'Bu guruh davomatini kuzating' : 'O\'qish davomatingizni kuzating'}
+          </p>
         </div>
+      )}
 
         {/* Stats Cards */}
         {stats && (
@@ -137,7 +145,7 @@ export default function StudentAttendance() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Kelgan</p>
-                    <p className="text-2xl font-bold text-green-600">{stats.present}</p>
+                    <p className="text-2xl font-bold text-green-600">{stats.present_count}</p>
                   </div>
                 </div>
               </CardContent>
@@ -151,7 +159,7 @@ export default function StudentAttendance() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Kelmagan</p>
-                    <p className="text-2xl font-bold text-red-600">{stats.absent}</p>
+                    <p className="text-2xl font-bold text-red-600">{stats.absent_count}</p>
                   </div>
                 </div>
               </CardContent>
@@ -165,7 +173,7 @@ export default function StudentAttendance() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Sababli</p>
-                    <p className="text-2xl font-bold text-yellow-600">{stats.excused}</p>
+                    <p className="text-2xl font-bold text-yellow-600">{stats.excuse_count}</p>
                   </div>
                 </div>
               </CardContent>
@@ -179,7 +187,7 @@ export default function StudentAttendance() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Davomat %</p>
-                    <p className="text-2xl font-bold text-primary">{stats.percentage}%</p>
+                    <p className="text-2xl font-bold text-primary">{stats.attendance_percentage.toFixed(1)}%</p>
                   </div>
                 </div>
               </CardContent>
@@ -216,9 +224,16 @@ export default function StudentAttendance() {
           </CardHeader>
           
           <CardContent className="p-0">
-            {attendance.length === 0 ? (
+            {loading ? (
               <div className="text-center py-12 text-muted-foreground">
-                <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <div className="animate-spin mb-3">
+                  <Calendar className="w-12 h-12 mx-auto opacity-50" />
+                </div>
+                <p>Davomat ma'lumotlari yuklanmoqda...</p>
+              </div>
+            ) : attendance.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>Bu oyda davomat ma'lumotlari yo'q</p>
               </div>
             ) : (
@@ -229,44 +244,51 @@ export default function StudentAttendance() {
                       <TableHead className="w-14 text-center font-semibold">#</TableHead>
                       <TableHead className="font-semibold">Sana</TableHead>
                       <TableHead className="font-semibold">Kun</TableHead>
-                      <TableHead className="font-semibold">Guruh</TableHead>
+                      {!isGroupView && <TableHead className="font-semibold">Guruh</TableHead>}
                       <TableHead className="text-center font-semibold">Holat</TableHead>
+                      <TableHead className="font-semibold">Sababli</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {attendance.map((record, index) => {
-                      const date = parseISO(record.date);
-                      return (
-                        <TableRow 
-                          key={record.date}
-                          className={`
-                            transition-colors
-                            ${record.status === 'present' ? 'bg-green-50 dark:bg-green-950/20' : ''}
-                            ${record.status === 'absent' ? 'bg-red-50 dark:bg-red-950/20' : ''}
-                            ${record.status === 'excused' ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}
-                          `}
-                        >
-                          <TableCell className="text-center font-medium text-muted-foreground">
-                            {index + 1}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {format(date, "d-MMMM", { locale: uz })}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {format(date, "EEEE", { locale: uz })}
-                          </TableCell>
+                    {attendance.map((record, index) => (
+                      <TableRow 
+                        key={`${record.date}-${record.group_id}`}
+                        className={`
+                          transition-colors
+                          ${record.status === 'present' ? 'bg-green-50 dark:bg-green-950/20' : ''}
+                          ${record.status === 'absent' ? 'bg-red-50 dark:bg-red-950/20' : ''}
+                          ${record.status === 'excuse' ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}
+                        `}
+                      >
+                        <TableCell className="text-center font-medium text-muted-foreground">
+                          {index + 1}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {format(new Date(record.date), "d-MMMM", { locale: uz })}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {record.day_name}
+                        </TableCell>
+                        {!isGroupView && (
                           <TableCell>
                             <Badge variant="outline">{record.group_name}</Badge>
                           </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              {getStatusIcon(record.status)}
-                              {getStatusBadge(record.status)}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                        )}
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            {getStatusIcon(record.status)}
+                            {getStatusBadge(record.status)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {record.reason ? (
+                            <span className="text-yellow-600 dark:text-yellow-400">{record.reason}</span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
@@ -294,6 +316,14 @@ export default function StudentAttendance() {
           </CardContent>
         </Card>
       </div>
+    );
+
+  // Return wrapper or content depending on view type
+  return isGroupView ? (
+    <AttendanceContent />
+  ) : (
+    <DashboardLayout>
+      <AttendanceContent />
     </DashboardLayout>
   );
 }

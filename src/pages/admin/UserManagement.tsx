@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import EditUserDialog from './EditUserDialog';
 import ViewUserDialog from './ViewUserDialog';
 import ChangePasswordDialog from './ChangePasswordDialog';
+import ExcelImportExportMenu from './ExcelImportExportMenu';
 
 interface UsersResponse {
   count: number;
@@ -56,13 +57,14 @@ export default function UserManagement() {
   const [isActiveFilter, setIsActiveFilter] = useState<string>('all');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [levelFilter, setLevelFilter] = useState<string>('all');
+  const [socialFilter, setSocialFilter] = useState<string>('all');
   const [orderBy, setOrderBy] = useState<string>('-created_at');
   const itemsPerPage = 20;
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   useEffect(() => {
     fetchUsers(currentPage);
-  }, [currentPage, searchQuery, isActiveFilter, roleFilter, levelFilter, orderBy]);
+  }, [currentPage, searchQuery, isActiveFilter, roleFilter, levelFilter, socialFilter, orderBy]);
 
   const fetchUsers = async (page: number) => {
     setIsLoading(true);
@@ -74,6 +76,7 @@ export default function UserManagement() {
       if (isActiveFilter !== 'all') params.append('is_active', isActiveFilter);
       if (roleFilter !== 'all') params.append('role', roleFilter);
       if (levelFilter !== 'all') params.append('level', levelFilter);
+      if (socialFilter !== 'all') params.append('social', socialFilter);
       if (orderBy) params.append('ordering', orderBy);
       
       const queryString = params.toString();
@@ -88,8 +91,7 @@ export default function UserManagement() {
       }
 
       const data: UsersResponse = await response.json();
-      const filteredUsers = data.results.filter(u => u.role === null);
-      setUsers(filteredUsers.length > 0 ? filteredUsers : data.results);
+      setUsers(data.results || []);
       setTotalCount(data.count);
 
     } catch (error) {
@@ -119,7 +121,7 @@ export default function UserManagement() {
       const formData = new FormData();
       formData.append("is_active", (!currentStatus).toString()); // booleanni stringga o'tkazamiz
 
-      const response = await authFetch(`/users/users/${userId}/`, {
+      const response = await authFetch(`/users/${userId}/`, {
         method: 'PATCH',
         body: formData, // JSON o'rniga FormData yuboramiz
       });
@@ -150,7 +152,7 @@ export default function UserManagement() {
     if (!deletingUserId) return;
 
     try {
-      const response = await authFetch(`/users/users/${deletingUserId}/`, {
+      const response = await authFetch(`/users/${deletingUserId}/`, {
         method: 'DELETE',
       });
 
@@ -197,20 +199,31 @@ export default function UserManagement() {
 
 
 
-  const getRoleColor = (level?: string) => {
-    switch (level) {
+  const getRoleColor = (role?: string) => {
+    switch (role) {
+      case 'teacher': return 'bg-blue-500';
       case 'student': return 'bg-green-500';
       case 'admin': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
   };
 
-  const getRoleText = (level?: string) => {
-    switch (level) {
-      case 'student': return 'Student';
+  const getRoleText = (role?: string) => {
+    switch (role) {
+      case 'teacher': return 'O\'qituvchi';
+      case 'student': return 'O\'quvchi';
       case 'admin': return 'Admin';
-      default: return level;
+      default: return role || 'Noma\'lum';
     }
+  };
+
+  const getGroupsList = (user: User) => {
+    if (user.role === 'teacher') {
+      return user.teaching_groups || [];
+    } else if (user.role === 'student') {
+      return user.student_groups || [];
+    }
+    return [];
   };
 
 
@@ -219,17 +232,20 @@ export default function UserManagement() {
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-foreground">Foydalanuvchilar</h1>
-          <Button onClick={() => navigate('/dashboard/admin/add-user')} title="Foydalanuvchi qo'shish">
-            <UserPlus className="h-4 w-4 md:mr-2" />
-            <span className="hidden md:inline">Yangi foydalanuvchi</span>
-          </Button>
+          <h1 className="text-3xl font-bold text-foreground">Foydalanuvchilar boshqaruvi</h1>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => navigate('/dashboard/admin/add-user')} title="Foydalanuvchi qo'shish">
+              <UserPlus className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Yangi foydalanuvchi</span>
+            </Button>
+            <ExcelImportExportMenu onImportSuccess={() => fetchUsers(1)} />
+          </div>
         </div>
 
         {/* Search and Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
               {/* Search */}
               <div className="lg:col-span-2 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -269,7 +285,8 @@ export default function UserManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Barchasi</SelectItem>
-                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="student">O'quvchi</SelectItem>
+                  <SelectItem value="teacher">O'qituvchi</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -290,6 +307,24 @@ export default function UserManagement() {
                 </SelectContent>
               </Select>
 
+              {/* Social Filter */}
+              <Select value={socialFilter} onValueChange={(value) => {
+                setSocialFilter(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Manbai" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi</SelectItem>
+                  <SelectItem value="instagram">Instagram</SelectItem>
+                  <SelectItem value="telegram">Telegram</SelectItem>
+                  <SelectItem value="facebook">Facebook</SelectItem>
+                  <SelectItem value="friend">Do'st</SelectItem>
+                  <SelectItem value="other">Boshqa</SelectItem>
+                </SelectContent>
+              </Select>
+
               {/* Order By */}
               <Select value={orderBy} onValueChange={(value) => {
                 setOrderBy(value);
@@ -302,7 +337,7 @@ export default function UserManagement() {
                   <SelectItem value="-created_at">Oxirgi qo'shilgan</SelectItem>
                   <SelectItem value="created_at">Birinchi qo'shilgan</SelectItem>
                   <SelectItem value="first_name">Ism bo'yicha</SelectItem>
-                  <SelectItem value="-coins">Tangalar bo'yicha</SelectItem>
+                  <SelectItem value="-coins">Ballar bo'yicha</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -329,11 +364,10 @@ export default function UserManagement() {
                         <TableHead>Ism</TableHead>
                         <TableHead>Username</TableHead>
                         <TableHead>Telefon</TableHead>
-                        <TableHead>Kurs</TableHead>
-                        <TableHead>Level</TableHead>
+                        <TableHead>Darajasi</TableHead>
                         <TableHead>Rol</TableHead>
-                        <TableHead>Yo'nalish</TableHead>
-                        <TableHead>Tangalar</TableHead>
+                        <TableHead>Guruh</TableHead>
+                        <TableHead>Ballar</TableHead>
                         <TableHead>Holat</TableHead>
                         <TableHead className="text-right">Amallar</TableHead>
                       </TableRow>
@@ -345,17 +379,27 @@ export default function UserManagement() {
                           <TableCell className="font-medium">{student.first_name} {student.last_name}</TableCell>
                           <TableCell>{student.username}</TableCell>
                           <TableCell>{student.phone_number}</TableCell>
-                          <TableCell>{student.course}</TableCell>
                           <TableCell>
                             <Badge className={getLevelColor(student.level)}>{getLevelText(student.level)}</Badge>
                           </TableCell>
                           <TableCell>
                             <Badge className={getRoleColor(student.role)}>{getRoleText(student.role)}</Badge>
                           </TableCell>
-                          <TableCell>{student.direction}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-2">
+                              {getGroupsList(student).length > 0 ? (
+                                getGroupsList(student).map((group) => (
+                                  <Badge key={group.id} variant="outline" className="bg-primary/20 text-primary border-primary/30">
+                                    {group.name}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-sm text-muted-foreground">-</span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="gap-1">
-                              <span className="text-yellow-500">⭐</span>
                               {student.coins || 0}
                             </Badge>
                           </TableCell>
@@ -411,7 +455,15 @@ export default function UserManagement() {
                             <h3 className="font-semibold text-base">{student.first_name} {student.last_name}</h3>
                             <p className="text-sm text-muted-foreground">{student.username}</p>
                             <p className="text-sm text-muted-foreground">{student.phone_number}</p>
-                            <p className="text-sm text-muted-foreground">{student.course}</p>
+                            {getGroupsList(student).length > 0 && (
+                              <div className="text-sm text-muted-foreground mt-2 flex flex-wrap gap-2">
+                                {getGroupsList(student).map((group) => (
+                                  <Badge key={group.id} variant="outline" className="bg-primary/20 text-primary border-primary/30 text-xs">
+                                    {group.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2 pt-2 border-t">

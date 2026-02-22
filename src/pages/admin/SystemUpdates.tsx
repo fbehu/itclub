@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Megaphone, Plus, Edit, Trash2, Calendar, Loader2, RefreshCw } from 'lucide-react';
+import { Megaphone, Plus, Edit, Trash2, Calendar, Loader2, RefreshCw, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -25,6 +25,8 @@ interface SystemUpdate {
   description: string;
   type: UpdateType;
   status: UpdateStatus;
+  photo?: string | null;
+  video?: string | null;
   created_at: string;
 }
 
@@ -40,7 +42,11 @@ export default function SystemUpdates() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'feature' as UpdateType
+    type: 'feature' as UpdateType,
+    photo: null as File | null,
+    video: null as File | null,
+    existingPhoto: null as string | null,
+    existingVideo: null as string | null
   });
 
   useEffect(() => {
@@ -89,7 +95,7 @@ export default function SystemUpdates() {
 
   const openCreateDialog = () => {
     setEditingUpdate(null);
-    setFormData({ title: '', description: '', type: 'feature' });
+    setFormData({ title: '', description: '', type: 'feature', photo: null, video: null, existingPhoto: null, existingVideo: null });
     setDialogOpen(true);
   };
 
@@ -98,7 +104,11 @@ export default function SystemUpdates() {
     setFormData({
       title: update.title,
       description: update.description,
-      type: update.type
+      type: update.type,
+      photo: null,
+      video: null,
+      existingPhoto: update.photo || null,
+      existingVideo: update.video || null
     });
     setDialogOpen(true);
   };
@@ -161,6 +171,22 @@ export default function SystemUpdates() {
       body.append('title', formData.title);
       body.append('description', formData.description);
       body.append('type', formData.type);
+      
+      // Rasm qo'shish yoki o'chirish
+      if (formData.photo) {
+        body.append('photo', formData.photo);
+      } else if (editingUpdate && formData.existingPhoto === null && editingUpdate.photo) {
+        // Eski rasmni o'chirish uchun signal
+        body.append('photo', 'null');
+      }
+      
+      // Video qo'shish yoki o'chirish
+      if (formData.video) {
+        body.append('video', formData.video);
+      } else if (editingUpdate && formData.existingVideo === null && editingUpdate.video) {
+        // Eski videoni o'chirish uchun signal
+        body.append('video', 'null');
+      }
 
       let response;
       if (editingUpdate) {
@@ -251,7 +277,7 @@ export default function SystemUpdates() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto p-4 sm:p-6 space-y-6">
+      <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -299,7 +325,19 @@ export default function SystemUpdates() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{update.title}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium">{update.title}</p>
+                              {update.photo && (
+                                <div title="Rasm mavjud">
+                                  <ImageIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                </div>
+                              )}
+                              {update.video && (
+                                <div title="Video mavjud">
+                                  <VideoIcon className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                                </div>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground line-clamp-1">
                               {update.description}
                             </p>
@@ -403,6 +441,148 @@ export default function SystemUpdates() {
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Yangilik haqida to'liqroq ma'lumot"
                 rows={4}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="photo">Rasm (ixtiyoriy)</Label>
+              
+              {/* Existing photo */}
+              {formData.existingPhoto && !formData.photo && (
+                <div className="relative p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        ✓ Eski rasm
+                      </p>
+                      <img
+                        src={formData.existingPhoto}
+                        alt="Current photo"
+                        className="mt-2 h-24 w-24 object-cover rounded-md border border-blue-300 dark:border-blue-700"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => setFormData(prev => ({ ...prev, existingPhoto: null }))}
+                      className="mt-1"
+                    >
+                      O'chirish
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {/* New photo selected */}
+              {formData.photo && (
+                <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                    ✓ Yangi rasm tanlandi: {formData.photo.name}
+                  </p>
+                </div>
+              )}
+              
+              {/* File input - only show if no existing photo or if we're replacing */}
+              {!formData.existingPhoto || formData.photo ? (
+                <Input
+                  id="photo"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFormData(prev => ({ ...prev, photo: e.target.files?.[0] || null }))}
+                />
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const input = document.getElementById('photo-replace') as HTMLInputElement;
+                    input?.click();
+                  }}
+                  className="w-full"
+                >
+                  Rasmni almashtirish
+                </Button>
+              )}
+              <Input
+                id="photo-replace"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, photo: e.target.files?.[0] || null }));
+                }}
+                className="hidden"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="video">Video (ixtiyoriy)</Label>
+              
+              {/* Existing video */}
+              {formData.existingVideo && !formData.video && (
+                <div className="relative p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
+                        ✓ Eski video
+                      </p>
+                      <video
+                        src={formData.existingVideo}
+                        controls
+                        className="mt-2 h-24 w-24 object-cover rounded-md border border-purple-300 dark:border-purple-700"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => setFormData(prev => ({ ...prev, existingVideo: null }))}
+                      className="mt-1"
+                    >
+                      O'chirish
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {/* New video selected */}
+              {formData.video && (
+                <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                    ✓ Yangi video tanlandi: {formData.video.name}
+                  </p>
+                </div>
+              )}
+              
+              {/* File input - only show if no existing video or if we're replacing */}
+              {!formData.existingVideo || formData.video ? (
+                <Input
+                  id="video"
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setFormData(prev => ({ ...prev, video: e.target.files?.[0] || null }))}
+                />
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const input = document.getElementById('video-replace') as HTMLInputElement;
+                    input?.click();
+                  }}
+                  className="w-full"
+                >
+                  Videoni almashtirish
+                </Button>
+              )}
+              <Input
+                id="video-replace"
+                type="file"
+                accept="video/*"
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, video: e.target.files?.[0] || null }));
+                }}
+                className="hidden"
               />
             </div>
           </div>

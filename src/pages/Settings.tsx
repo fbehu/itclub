@@ -14,17 +14,42 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Bell, Lock, Globe, Moon, LogOut } from 'lucide-react';
+import { Lock, Globe, Moon, LogOut, Sparkles } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useSeason } from '@/contexts/SeasonContext';
 
-export default function Settings() {
+const SettingsPageContent = () => {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { season, setSeason, resetToDefault } = useSeason();
+
+  const seasonLabels = {
+    winter: { label: 'Qish ❄️', description: 'Qorlar, salyutlar va qorbobo' },
+    spring: { label: 'Bahor 🌸', description: 'Gullar va yashil bargli' },
+    summer: { label: 'Yoz ☀️', description: 'Quyosh, bulutlar va palma' },
+    autumn: { label: 'Kuz 🍂', description: 'Tupadigan bargli va balqqalar' },
+  };
+
+  const handleSeason = (newSeason: 'winter' | 'spring' | 'summer' | 'autumn') => {
+    setSeason(newSeason);
+    toast({
+      title: 'Fasl o\'zgartirildi',
+      description: seasonLabels[newSeason].label,
+    });
+  };
+
+  const handleResetToDefault = () => {
+    resetToDefault();
+    toast({
+      title: 'Default holatiga qaytdi',
+      description: 'Qish fasl (default) aktivlashtirildi',
+    });
+  };
 
   const handleSave = () => {
     toast({
@@ -47,6 +72,46 @@ export default function Settings() {
         </div>
 
         <div className="grid gap-6">
+          {/* Fasl Tema */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                Fasl tema
+              </CardTitle>
+              <CardDescription>Tizimning fasl temasini o'zgartiring</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {Object.entries(seasonLabels).map(([key, value]) => (
+                  <Button
+                    key={key}
+                    variant={season === key ? 'default' : 'outline'}
+                    onClick={() => key === 'winter' && handleSeason(key as 'winter' | 'spring' | 'summer' | 'autumn')}
+                    disabled={key !== 'winter'}
+                    className="w-full flex flex-col items-center justify-center h-auto py-3"
+                    title={key !== 'winter' ? 'Tez orada' : ''}
+                  >
+                    <span className="text-xl">{value.label.split(' ')[1]}</span>
+                    <span className="text-xs mt-1">
+                      {key === 'winter' ? value.label.split(' ')[0] : 'Tez orada'}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+              {/* <div className="pt-3 border-t">
+                <Button
+                  variant="outline"
+                  onClick={handleResetToDefault}
+                  className="w-full"
+                >
+                  Default holatiga qaytish
+                </Button>
+              </div> */}
+            </CardContent>
+          </Card>
+
+          {/* Ko'rinish */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -72,6 +137,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          {/* Xavfsizlik */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -88,14 +154,14 @@ export default function Settings() {
                     Qo'shimcha xavfsizlik qatlami
                   </span>
                 </Label>
-                {/* <Switch id="two-factor" /> */}
                 <Button variant="outline" size="sm">
-                  {/* O'zgartirish */} Tez orada
+                  Tez orada
                 </Button>
               </div>
             </CardContent>
           </Card>
 
+          {/* Til va Mintaqa */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -113,12 +179,13 @@ export default function Settings() {
                   </span>
                 </Label>
                 <Button variant="outline" size="sm">
-                  {/* O'zgartirish */} Tez orada
+                  Tez orada
                 </Button>
               </div>
             </CardContent>
           </Card>
 
+          {/* Chiqish */}
           <Card className="border-destructive/20 bg-destructive/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
@@ -157,7 +224,7 @@ export default function Settings() {
           </Card>
 
           <div className="flex justify-end">
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} size="lg">
               Saqlash
             </Button>
           </div>
@@ -165,4 +232,8 @@ export default function Settings() {
       </div>
     </DashboardLayout>
   );
+};
+
+export default function Settings() {
+  return <SettingsPageContent />;
 }
