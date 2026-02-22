@@ -32,37 +32,28 @@
 }
 
 @layer base {
+  /* ===== DEFAULT THEME ===== */
   :root {
     --background: 220 20% 97%;
     --foreground: 224 30% 14%;
-
     --card: 0 0% 100%;
     --card-foreground: 224 30% 14%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 224 30% 14%;
-
     --primary: 230 80% 56%;
     --primary-foreground: 0 0% 100%;
-
     --secondary: 220 20% 93%;
     --secondary-foreground: 224 30% 14%;
-
     --muted: 220 16% 93%;
     --muted-foreground: 220 10% 46%;
-
     --accent: 230 80% 56%;
     --accent-foreground: 0 0% 100%;
-
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 220 16% 90%;
     --input: 220 16% 90%;
     --ring: 230 80% 56%;
-
     --radius: 0.75rem;
-
     --sidebar-background: 228 33% 10%;
     --sidebar-foreground: 220 20% 92%;
     --sidebar-primary: 230 80% 60%;
@@ -71,44 +62,34 @@
     --sidebar-accent-foreground: 220 20% 92%;
     --sidebar-border: 228 20% 18%;
     --sidebar-ring: 230 80% 60%;
-
-    /* Custom tokens */
     --glass-bg: 0 0% 100% / 0.7;
     --glass-border: 220 16% 90%;
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
     --info: 199 89% 48%;
+    --season-glow: 230 80% 56%;
   }
 
   .dark {
     --background: 228 25% 8%;
     --foreground: 220 20% 92%;
-
     --card: 228 25% 12%;
     --card-foreground: 220 20% 92%;
-
     --popover: 228 25% 12%;
     --popover-foreground: 220 20% 92%;
-
     --primary: 230 80% 60%;
     --primary-foreground: 0 0% 100%;
-
     --secondary: 228 20% 18%;
     --secondary-foreground: 220 20% 92%;
-
     --muted: 228 20% 18%;
     --muted-foreground: 220 10% 55%;
-
     --accent: 230 80% 60%;
     --accent-foreground: 0 0% 100%;
-
     --destructive: 0 63% 40%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 228 20% 18%;
     --input: 228 20% 18%;
     --ring: 230 80% 60%;
-
     --sidebar-background: 228 33% 7%;
     --sidebar-foreground: 220 20% 85%;
     --sidebar-primary: 230 80% 60%;
@@ -117,12 +98,264 @@
     --sidebar-accent-foreground: 220 20% 85%;
     --sidebar-border: 228 20% 14%;
     --sidebar-ring: 230 80% 60%;
-
     --glass-bg: 228 25% 12% / 0.8;
     --glass-border: 228 20% 20%;
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
     --info: 199 89% 48%;
+    --season-glow: 230 80% 60%;
+  }
+
+  /* ===== WINTER THEME ❄️ ===== */
+  .season-winter {
+    --background: 210 30% 96%;
+    --foreground: 215 35% 12%;
+    --card: 210 25% 99%;
+    --card-foreground: 215 35% 12%;
+    --popover: 210 25% 99%;
+    --popover-foreground: 215 35% 12%;
+    --primary: 200 85% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 25% 92%;
+    --secondary-foreground: 215 35% 12%;
+    --muted: 210 20% 93%;
+    --muted-foreground: 210 12% 48%;
+    --accent: 200 85% 48%;
+    --accent-foreground: 0 0% 100%;
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 200 85% 48%;
+    --sidebar-background: 215 40% 10%;
+    --sidebar-foreground: 210 25% 90%;
+    --sidebar-primary: 200 85% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 30% 16%;
+    --sidebar-accent-foreground: 210 25% 90%;
+    --sidebar-border: 215 25% 18%;
+    --sidebar-ring: 200 85% 55%;
+    --glass-bg: 210 30% 98% / 0.75;
+    --glass-border: 210 20% 88%;
+    --season-glow: 200 85% 48%;
+  }
+
+  .season-winter.dark {
+    --background: 215 35% 7%;
+    --foreground: 210 25% 92%;
+    --card: 215 30% 11%;
+    --card-foreground: 210 25% 92%;
+    --popover: 215 30% 11%;
+    --popover-foreground: 210 25% 92%;
+    --primary: 200 85% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 25% 16%;
+    --secondary-foreground: 210 25% 92%;
+    --muted: 215 25% 16%;
+    --muted-foreground: 210 12% 55%;
+    --accent: 200 85% 55%;
+    --accent-foreground: 0 0% 100%;
+    --border: 215 25% 18%;
+    --input: 215 25% 18%;
+    --ring: 200 85% 55%;
+    --sidebar-background: 215 40% 6%;
+    --sidebar-foreground: 210 25% 85%;
+    --sidebar-primary: 200 85% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 30% 13%;
+    --sidebar-accent-foreground: 210 25% 85%;
+    --sidebar-border: 215 25% 14%;
+    --sidebar-ring: 200 85% 55%;
+    --glass-bg: 215 30% 11% / 0.85;
+    --glass-border: 215 25% 20%;
+    --season-glow: 200 85% 55%;
+  }
+
+  /* ===== SPRING THEME 🌸 ===== */
+  .season-spring {
+    --background: 140 25% 96%;
+    --foreground: 150 30% 12%;
+    --card: 140 20% 99%;
+    --card-foreground: 150 30% 12%;
+    --popover: 140 20% 99%;
+    --popover-foreground: 150 30% 12%;
+    --primary: 152 60% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 140 20% 92%;
+    --secondary-foreground: 150 30% 12%;
+    --muted: 140 16% 93%;
+    --muted-foreground: 140 10% 46%;
+    --accent: 340 65% 55%;
+    --accent-foreground: 0 0% 100%;
+    --border: 140 18% 88%;
+    --input: 140 18% 88%;
+    --ring: 152 60% 42%;
+    --sidebar-background: 155 35% 10%;
+    --sidebar-foreground: 140 20% 90%;
+    --sidebar-primary: 152 60% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 155 25% 16%;
+    --sidebar-accent-foreground: 140 20% 90%;
+    --sidebar-border: 155 20% 18%;
+    --sidebar-ring: 152 60% 50%;
+    --glass-bg: 140 25% 98% / 0.75;
+    --glass-border: 140 18% 88%;
+    --season-glow: 152 60% 42%;
+  }
+
+  .season-spring.dark {
+    --background: 155 30% 7%;
+    --foreground: 140 20% 92%;
+    --card: 155 25% 11%;
+    --card-foreground: 140 20% 92%;
+    --popover: 155 25% 11%;
+    --popover-foreground: 140 20% 92%;
+    --primary: 152 60% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 155 20% 16%;
+    --secondary-foreground: 140 20% 92%;
+    --muted: 155 20% 16%;
+    --muted-foreground: 140 10% 55%;
+    --accent: 340 65% 55%;
+    --accent-foreground: 0 0% 100%;
+    --border: 155 20% 18%;
+    --input: 155 20% 18%;
+    --ring: 152 60% 50%;
+    --sidebar-background: 155 35% 6%;
+    --sidebar-foreground: 140 20% 85%;
+    --sidebar-primary: 152 60% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 155 25% 13%;
+    --sidebar-accent-foreground: 140 20% 85%;
+    --sidebar-border: 155 20% 14%;
+    --sidebar-ring: 152 60% 50%;
+    --glass-bg: 155 25% 11% / 0.85;
+    --glass-border: 155 20% 20%;
+    --season-glow: 152 60% 50%;
+  }
+
+  /* ===== SUMMER THEME ☀️ ===== */
+  .season-summer {
+    --background: 40 35% 96%;
+    --foreground: 30 35% 12%;
+    --card: 40 25% 99%;
+    --card-foreground: 30 35% 12%;
+    --popover: 40 25% 99%;
+    --popover-foreground: 30 35% 12%;
+    --primary: 25 90% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 25% 92%;
+    --secondary-foreground: 30 35% 12%;
+    --muted: 40 18% 93%;
+    --muted-foreground: 35 12% 46%;
+    --accent: 195 80% 48%;
+    --accent-foreground: 0 0% 100%;
+    --border: 40 20% 88%;
+    --input: 40 20% 88%;
+    --ring: 25 90% 52%;
+    --sidebar-background: 25 40% 10%;
+    --sidebar-foreground: 35 25% 90%;
+    --sidebar-primary: 25 90% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 25 30% 16%;
+    --sidebar-accent-foreground: 35 25% 90%;
+    --sidebar-border: 25 25% 18%;
+    --sidebar-ring: 25 90% 58%;
+    --glass-bg: 40 30% 98% / 0.75;
+    --glass-border: 40 20% 88%;
+    --season-glow: 25 90% 52%;
+  }
+
+  .season-summer.dark {
+    --background: 25 30% 7%;
+    --foreground: 35 25% 92%;
+    --card: 25 25% 11%;
+    --card-foreground: 35 25% 92%;
+    --popover: 25 25% 11%;
+    --popover-foreground: 35 25% 92%;
+    --primary: 25 90% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 25 20% 16%;
+    --secondary-foreground: 35 25% 92%;
+    --muted: 25 20% 16%;
+    --muted-foreground: 35 12% 55%;
+    --accent: 195 80% 48%;
+    --accent-foreground: 0 0% 100%;
+    --border: 25 20% 18%;
+    --input: 25 20% 18%;
+    --ring: 25 90% 58%;
+    --sidebar-background: 25 35% 6%;
+    --sidebar-foreground: 35 25% 85%;
+    --sidebar-primary: 25 90% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 25 25% 13%;
+    --sidebar-accent-foreground: 35 25% 85%;
+    --sidebar-border: 25 20% 14%;
+    --sidebar-ring: 25 90% 58%;
+    --glass-bg: 25 25% 11% / 0.85;
+    --glass-border: 25 20% 20%;
+    --season-glow: 25 90% 58%;
+  }
+
+  /* ===== AUTUMN THEME 🍂 ===== */
+  .season-autumn {
+    --background: 20 25% 95%;
+    --foreground: 15 35% 12%;
+    --card: 20 20% 98%;
+    --card-foreground: 15 35% 12%;
+    --popover: 20 20% 98%;
+    --popover-foreground: 15 35% 12%;
+    --primary: 15 75% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 20 22% 91%;
+    --secondary-foreground: 15 35% 12%;
+    --muted: 20 16% 92%;
+    --muted-foreground: 18 12% 46%;
+    --accent: 35 85% 50%;
+    --accent-foreground: 0 0% 100%;
+    --border: 20 18% 86%;
+    --input: 20 18% 86%;
+    --ring: 15 75% 48%;
+    --sidebar-background: 15 35% 10%;
+    --sidebar-foreground: 20 20% 90%;
+    --sidebar-primary: 15 75% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 15 28% 16%;
+    --sidebar-accent-foreground: 20 20% 90%;
+    --sidebar-border: 15 22% 18%;
+    --sidebar-ring: 15 75% 55%;
+    --glass-bg: 20 25% 97% / 0.75;
+    --glass-border: 20 18% 86%;
+    --season-glow: 15 75% 48%;
+  }
+
+  .season-autumn.dark {
+    --background: 15 28% 7%;
+    --foreground: 20 20% 92%;
+    --card: 15 22% 11%;
+    --card-foreground: 20 20% 92%;
+    --popover: 15 22% 11%;
+    --popover-foreground: 20 20% 92%;
+    --primary: 15 75% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 15 18% 16%;
+    --secondary-foreground: 20 20% 92%;
+    --muted: 15 18% 16%;
+    --muted-foreground: 18 10% 55%;
+    --accent: 35 85% 50%;
+    --accent-foreground: 0 0% 100%;
+    --border: 15 18% 18%;
+    --input: 15 18% 18%;
+    --ring: 15 75% 55%;
+    --sidebar-background: 15 30% 6%;
+    --sidebar-foreground: 20 20% 85%;
+    --sidebar-primary: 15 75% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 15 22% 13%;
+    --sidebar-accent-foreground: 20 20% 85%;
+    --sidebar-border: 15 18% 14%;
+    --sidebar-ring: 15 75% 55%;
+    --glass-bg: 15 22% 11% / 0.85;
+    --glass-border: 15 18% 20%;
+    --season-glow: 15 75% 55%;
   }
 }
 
@@ -134,6 +367,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    transition: background-color 0.5s ease, color 0.3s ease;
   }
 
   /* Smooth scrollbar */
@@ -176,17 +410,65 @@
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(230 80% 72%));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--season-glow) / 0.7));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .shadow-glow {
-    box-shadow: 0 0 20px -5px hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 20px -5px hsl(var(--season-glow) / 0.3);
   }
 
   .animate-float {
     animation: float-gentle 3s ease-in-out infinite;
+  }
+
+  /* Modern card styles */
+  .card-modern {
+    @apply rounded-2xl border border-border/50 bg-card shadow-sm;
+    transition: box-shadow 0.3s ease, transform 0.2s ease, border-color 0.3s ease;
+  }
+  .card-modern:hover {
+    box-shadow: 0 8px 30px -12px hsl(var(--season-glow) / 0.15);
+    border-color: hsl(var(--primary) / 0.2);
+  }
+
+  .card-glass {
+    @apply rounded-2xl;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background: hsl(var(--glass-bg));
+    border: 1px solid hsl(var(--glass-border) / 0.5);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .card-glass:hover {
+    box-shadow: 0 8px 30px -12px hsl(var(--season-glow) / 0.2);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply rounded-2xl p-5 border border-border/40 bg-card relative overflow-hidden;
+    transition: all 0.3s ease;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--season-glow)));
+    border-radius: 2px 2px 0 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .stat-card:hover::before {
+    opacity: 1;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px -15px hsl(var(--season-glow) / 0.2);
   }
 }

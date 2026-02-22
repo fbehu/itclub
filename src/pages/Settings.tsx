@@ -14,47 +14,34 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Lock, Globe, Moon, LogOut, Sparkles } from 'lucide-react';
+import { Lock, Globe, Moon, LogOut, Sparkles, Snowflake, Flower2, Sun, Leaf, Palette } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { useSeason } from '@/contexts/SeasonContext';
+import { useSeason, Season } from '@/contexts/SeasonContext';
+
+const seasonOptions: { key: Season; label: string; emoji: string; description: string; icon: typeof Snowflake; gradient: string }[] = [
+  { key: 'default', label: 'Standart', emoji: '🎨', description: 'Asosiy ko\'rinish', icon: Palette, gradient: 'from-indigo-500 to-blue-500' },
+  { key: 'winter', label: 'Qish', emoji: '❄️', description: 'Muzli va sovuq', icon: Snowflake, gradient: 'from-cyan-400 to-blue-500' },
+  { key: 'spring', label: 'Bahor', emoji: '🌸', description: 'Gullar va tabiat', icon: Flower2, gradient: 'from-green-400 to-emerald-500' },
+  { key: 'summer', label: 'Yoz', emoji: '☀️', description: 'Issiq va yorqin', icon: Sun, gradient: 'from-orange-400 to-amber-500' },
+  { key: 'autumn', label: 'Kuz', emoji: '🍂', description: 'Iliq va qulay', icon: Leaf, gradient: 'from-orange-500 to-red-500' },
+];
 
 const SettingsPageContent = () => {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const { season, setSeason, resetToDefault } = useSeason();
+  const { season, setSeason } = useSeason();
 
-  const seasonLabels = {
-    winter: { label: 'Qish ❄️', description: 'Qorlar, salyutlar va qorbobo' },
-    spring: { label: 'Bahor 🌸', description: 'Gullar va yashil bargli' },
-    summer: { label: 'Yoz ☀️', description: 'Quyosh, bulutlar va palma' },
-    autumn: { label: 'Kuz 🍂', description: 'Tupadigan bargli va balqqalar' },
-  };
-
-  const handleSeason = (newSeason: 'winter' | 'spring' | 'summer' | 'autumn') => {
+  const handleSeason = (newSeason: Season) => {
     setSeason(newSeason);
+    const opt = seasonOptions.find(o => o.key === newSeason);
     toast({
       title: 'Fasl o\'zgartirildi',
-      description: seasonLabels[newSeason].label,
-    });
-  };
-
-  const handleResetToDefault = () => {
-    resetToDefault();
-    toast({
-      title: 'Default holatiga qaytdi',
-      description: 'Qish fasl (default) aktivlashtirildi',
-    });
-  };
-
-  const handleSave = () => {
-    toast({
-      title: 'Saqlandi',
-      description: 'Sozlamalar muvaffaqiyatli saqlandi',
+      description: `${opt?.emoji} ${opt?.label} tema aktivlashtirildi`,
     });
   };
 
@@ -73,57 +60,57 @@ const SettingsPageContent = () => {
 
         <div className="grid gap-6">
           {/* Fasl Tema */}
-          <Card>
+          <Card className="card-modern overflow-hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5" />
+                <Sparkles className="h-5 w-5 text-primary" />
                 Fasl tema
               </CardTitle>
-              <CardDescription>Tizimning fasl temasini o'zgartiring</CardDescription>
+              <CardDescription>Tizimning fasl temasini o'zgartiring — ranglar va effektlar o'zgaradi</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {Object.entries(seasonLabels).map(([key, value]) => (
-                  <Button
-                    key={key}
-                    variant={season === key ? 'default' : 'outline'}
-                    onClick={() => key === 'winter' && handleSeason(key as 'winter' | 'spring' | 'summer' | 'autumn')}
-                    disabled={key !== 'winter'}
-                    className="w-full flex flex-col items-center justify-center h-auto py-3"
-                    title={key !== 'winter' ? 'Tez orada' : ''}
-                  >
-                    <span className="text-xl">{value.label.split(' ')[1]}</span>
-                    <span className="text-xs mt-1">
-                      {key === 'winter' ? value.label.split(' ')[0] : 'Tez orada'}
-                    </span>
-                  </Button>
-                ))}
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                {seasonOptions.map((opt) => {
+                  const Icon = opt.icon;
+                  const active = season === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      onClick={() => handleSeason(opt.key)}
+                      className={`relative flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all duration-300 group ${
+                        active
+                          ? 'border-primary bg-primary/10 shadow-glow scale-[1.02]'
+                          : 'border-border/50 bg-card hover:border-primary/30 hover:bg-primary/5'
+                      }`}
+                    >
+                      {active && (
+                        <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary animate-pulse" />
+                      )}
+                      <div className={`p-2.5 rounded-xl bg-gradient-to-br ${opt.gradient} text-white transition-transform duration-200 group-hover:scale-110`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span className="text-sm font-semibold text-foreground">{opt.label}</span>
+                      <span className="text-[10px] text-muted-foreground text-center leading-tight">{opt.description}</span>
+                    </button>
+                  );
+                })}
               </div>
-              {/* <div className="pt-3 border-t">
-                <Button
-                  variant="outline"
-                  onClick={handleResetToDefault}
-                  className="w-full"
-                >
-                  Default holatiga qaytish
-                </Button>
-              </div> */}
             </CardContent>
           </Card>
 
           {/* Ko'rinish */}
-          <Card>
+          <Card className="card-modern">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Moon className="h-5 w-5" />
+                <Moon className="h-5 w-5 text-primary" />
                 Ko'rinish
               </CardTitle>
               <CardDescription>Tizim ko'rinishini sozlang</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50">
                 <Label htmlFor="dark-mode" className="flex flex-col gap-1">
-                  <span>Tungi rejim</span>
+                  <span className="font-medium">Tungi rejim</span>
                   <span className="font-normal text-sm text-muted-foreground">
                     Qorong'i ranglardan foydalanish
                   </span>
@@ -138,23 +125,23 @@ const SettingsPageContent = () => {
           </Card>
 
           {/* Xavfsizlik */}
-          <Card>
+          <Card className="card-modern">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5" />
+                <Lock className="h-5 w-5 text-primary" />
                 Xavfsizlik
               </CardTitle>
               <CardDescription>Akkaunt xavfsizligi sozlamalari</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50">
                 <Label htmlFor="two-factor" className="flex flex-col gap-1">
-                  <span>Ikki bosqichli autentifikatsiya</span>
+                  <span className="font-medium">Ikki bosqichli autentifikatsiya</span>
                   <span className="font-normal text-sm text-muted-foreground">
                     Qo'shimcha xavfsizlik qatlami
                   </span>
                 </Label>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="rounded-xl">
                   Tez orada
                 </Button>
               </div>
@@ -162,23 +149,23 @@ const SettingsPageContent = () => {
           </Card>
 
           {/* Til va Mintaqa */}
-          <Card>
+          <Card className="card-modern">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
+                <Globe className="h-5 w-5 text-primary" />
                 Til va mintaqa
               </CardTitle>
               <CardDescription>Til va mintaqa sozlamalari</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50">
                 <Label className="flex flex-col gap-1">
-                  <span>Til</span>
+                  <span className="font-medium">Til</span>
                   <span className="font-normal text-sm text-muted-foreground">
                     Hozirgi til: O'zbekcha
                   </span>
                 </Label>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="rounded-xl">
                   Tez orada
                 </Button>
               </div>
@@ -186,7 +173,7 @@ const SettingsPageContent = () => {
           </Card>
 
           {/* Chiqish */}
-          <Card className="border-destructive/20 bg-destructive/5">
+          <Card className="card-modern border-destructive/20 bg-destructive/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
                 <LogOut className="h-5 w-5" />
@@ -197,7 +184,7 @@ const SettingsPageContent = () => {
             <CardContent>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full sm:w-auto">
+                  <Button variant="destructive" className="w-full sm:w-auto rounded-xl">
                     <LogOut className="h-4 w-4 mr-2" />
                     Chiqish
                   </Button>
@@ -222,12 +209,6 @@ const SettingsPageContent = () => {
               </AlertDialog>
             </CardContent>
           </Card>
-
-          <div className="flex justify-end">
-            <Button onClick={handleSave} size="lg">
-              Saqlash
-            </Button>
-          </div>
         </div>
       </div>
     </DashboardLayout>

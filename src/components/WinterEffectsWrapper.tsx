@@ -1,5 +1,5 @@
 import { useSeason } from '@/contexts/SeasonContext';
-import { SnowEffect, FireworksEffect, SnowmanDecoration } from './WinterEffects';
+import { SnowEffect } from './WinterEffects';
 import { SpringEffects } from './SpringEffects';
 import { SummerEffects } from './SummerEffects';
 import { AutumnEffects } from './AutumnEffects';
@@ -17,16 +17,10 @@ export function WinterEffectsWrapper() {
         return <SummerEffects />;
       case 'autumn':
         return <AutumnEffects />;
+      default:
+        return null;
     }
-  } catch (error) {
-    // SeasonProvider konteksti yo'q bo'lsa, default winter effektlarni ko'rsatamiz
-    return (
-      <>
-        <SnowEffect />
-        <FireworksEffect />
-        <SnowmanDecoration />
-      </>
-    );
+  } catch {
+    return null;
   }
 }
-
