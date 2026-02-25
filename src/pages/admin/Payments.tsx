@@ -124,6 +124,8 @@ export default function Payments() {
     payment_type: 'card',
   });
   const [paymentLoading, setPaymentLoading] = useState(false);
+  // computed info for when user types an amount
+  const [paymentInfo, setPaymentInfo] = useState({ months: 0, remainder: 0 });
 
   useEffect(() => {
     loadEnrollments();
@@ -154,6 +156,7 @@ export default function Payments() {
       amount: '',
       payment_type: 'card',
     });
+    setPaymentInfo({ months: 0, remainder: 0 });
     setIsPaymentDialogOpen(true);
   };
 
@@ -182,6 +185,21 @@ export default function Payments() {
   const submitPayment = async () => {
     if (!paymentFormData.amount || Number(paymentFormData.amount) <= 0) {
       toast.error('To\'lov miqdori 0 dan katta bo\'lishi kerak');
+      return;
+    }
+
+    const monthly = Number(selectedEnrollment?.monthly_payment || 0);
+    const amountNum = Number(paymentFormData.amount);
+
+    // enforce at least monthly payment
+    if (monthly > 0 && amountNum < monthly) {
+      toast.error(`To'lov miqdori kamida oylik narx (${monthly.toLocaleString('uz-UZ')}) bo'lishi kerak`);
+      return;
+    }
+
+    // don't allow paying more than remaining debt
+    if (selectedEnrollment && amountNum > Number(selectedEnrollment.debt)) {
+      toast.error('To\'lov miqdori qarzdan oshmasligi kerak');
       return;
     }
 
@@ -305,12 +323,11 @@ export default function Payments() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{statistics.totalEnrollments}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {statistics.activeEnrollments} ta faol
-              </p>
-            </CardContent>
-          </Card>
-
+                <p className="text-xs text-muted-foreground mt-1">
+                  {statistics.activeEnrollments} ta faol
+                </p>
+              </CardContent>
+            </Card>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -586,19 +603,38 @@ export default function Payments() {
                   id="amount"
                   type="number"
                   value={paymentFormData.amount}
-                  onChange={(e) =>
-                    setPaymentFormData((prev) => ({
-                      ...prev,
-                      amount: e.target.value,
-                    }))
-                  }
-                  placeholder="0"
-                  min="0"
-                  step="1000"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Maksimum qarzi: {Number(selectedEnrollment.debt).toLocaleString('uz-UZ')} so'm
-                </p>
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPaymentFormData((prev) => ({
+                        ...prev,
+                        amount: val,
+                      }));
+                      // update distribution info
+                      const m = Number(selectedEnrollment?.monthly_payment || 0);
+                      const n = Number(val);
+                      if (m > 0 && !isNaN(n)) {
+                        const months = Math.floor(n / m);
+                        const remainder = n - months * m;
+                        setPaymentInfo({ months, remainder });
+                      } else {
+                        setPaymentInfo({ months: 0, remainder: 0 });
+                      }
+                    }}
+                    placeholder="0"
+                    min={selectedEnrollment ? String(selectedEnrollment.monthly_payment || 0) : '0'}
+                    step="1000"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Oylik to'lov: {Number(selectedEnrollment?.monthly_payment || 0).toLocaleString('uz-UZ')} so'm.
+                    {paymentInfo.months > 0 && (
+                      <> Bu to'lov {paymentInfo.months} oy uchun.</>
+                    )}
+                    {paymentInfo.remainder > 0 && (
+                      <>
+                        {' '}Qoldiq {paymentInfo.remainder.toLocaleString('uz-UZ')} so'm keyingi oyga o'tadi.
+                      </>
+                    )}
+                  </p>
               </div>
             </div>
           )}
@@ -679,43 +715,43 @@ export default function Payments() {
                   <div className="space-y-3">
                     <h3 className="font-semibold">To'lov Tarixi</h3>
                     <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {selectedEnrollment.payments_history?.map((payment) => (
-                        <div
-                          key={payment.id}
-                          className="border rounded-lg p-3 flex justify-between items-start"
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">
-                              {payment.payment_type_display || payment.payment_type}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(payment.created_at).toLocaleDateString('uz-UZ', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
-                            {payment.note && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {payment.note}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold">
-                              {Number(payment.amount).toLocaleString('uz-UZ')} so'm
-                            </p>
-                            <Badge
-                              variant={payment.is_confirmed ? 'default' : 'secondary'}
-                              className="mt-1"
-                            >
-                              {payment.is_confirmed ? '✓ Tasdi' : 'Kutilmoqda'}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
+                            {selectedEnrollment.payments_history?.map((payment) => (
+                              <div
+                                key={payment.id}
+                                className="border rounded-lg p-3 flex justify-between items-start"
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">
+                                    {payment.payment_type_display || payment.payment_type}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(payment.created_at).toLocaleDateString('uz-UZ', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </p>
+                                  {payment.note && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {payment.note}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-bold text-green-600">
+                                    +{Number(payment.amount).toLocaleString('uz-UZ')} so'm
+                                  </p>
+                                  <Badge
+                                    variant={payment.is_confirmed ? 'default' : 'secondary'}
+                                    className="mt-1"
+                                  >
+                                    {payment.is_confirmed ? '✓ Tasdi' : 'Kutilmoqda'}
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))}
                     </div>
                   </div>
                 )}

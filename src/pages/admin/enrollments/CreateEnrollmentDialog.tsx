@@ -92,6 +92,8 @@ export function CreateEnrollmentDialog({
     payment_method: 'card',
     payment_amount: '',
   });
+  // compute distribution of payment across months for UI hints
+  const [paymentInfo, setPaymentInfo] = useState({ months: 0, remainder: 0 });
 
   useEffect(() => {
     if (open) {
@@ -204,7 +206,7 @@ export function CreateEnrollmentDialog({
   const selectedCourse = courses.find(
     (c) => c.id.toString() === formData.course_id
   );
-  const maxPaymentAmount = selectedCourse
+  const monthlyPrice = selectedCourse
     ? Number(selectedCourse.monthly_discount_price)
     : 0;
 
@@ -223,11 +225,10 @@ export function CreateEnrollmentDialog({
       return;
     }
 
-    if (paymentAmount > maxPaymentAmount) {
+    // ensure at least one month is covered
+    if (monthlyPrice > 0 && paymentAmount < monthlyPrice) {
       toast.error(
-        `To'lov miqdori oylik narxdan (${Number(
-          selectedCourse?.monthly_discount_price
-        ).toLocaleString('uz-UZ')}) oshmasligi kerak`
+        `To'lov miqdori kamida oylik narx (${monthlyPrice.toLocaleString('uz-UZ')}) bo'lishi kerak`
       );
       return;
     }
@@ -258,6 +259,7 @@ export function CreateEnrollmentDialog({
           payment_method: 'card',
           payment_amount: '',
         });
+        setPaymentInfo({ months: 0, remainder: 0 });
       } else {
         const error = await response.json();
         
@@ -567,7 +569,7 @@ export function CreateEnrollmentDialog({
           {selectedCourse && (
             <div className="space-y-2">
               <Label htmlFor="payment_amount">
-                To'lov Miqdori (Maksimum: {Number(
+                To'lov Miqdori (oylik narx: {Number(
                   selectedCourse.monthly_discount_price
                 ).toLocaleString('uz-UZ')}{' '}
                 so'm) *
@@ -576,19 +578,37 @@ export function CreateEnrollmentDialog({
                 type="number"
                 id="payment_amount"
                 value={formData.payment_amount}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const val = e.target.value;
                   setFormData((prev) => ({
                     ...prev,
-                    payment_amount: e.target.value,
-                  }))
-                }
+                    payment_amount: val,
+                  }));
+                  // distribution info
+                  const m = monthlyPrice;
+                  const n = Number(val);
+                  if (m > 0 && !isNaN(n)) {
+                    const months = Math.floor(n / m);
+                    const remainder = n - months * m;
+                    setPaymentInfo({ months, remainder });
+                  } else {
+                    setPaymentInfo({ months: 0, remainder: 0 });
+                  }
+                }}
                 placeholder="0"
                 min="0"
-                max={maxPaymentAmount}
                 step="1000"
               />
               <p className="text-xs text-muted-foreground">
-                Dastlabki to'lov oylik narxdan oshmasligi kerak
+                Kirtilayotgan miqdor bo'yicha hisobraqam:
+                {paymentInfo.months > 0 && (
+                  <> {paymentInfo.months} oy uchun.</>
+                )}
+                {paymentInfo.remainder > 0 && (
+                  <>
+                    {' '}Qoldiq {paymentInfo.remainder.toLocaleString('uz-UZ')} so'm keyingi oyga o'tadi.
+                  </>
+                )}
               </p>
             </div>
           )}

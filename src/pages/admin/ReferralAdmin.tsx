@@ -692,26 +692,17 @@ export default function ReferralAdmin() {
                       </CardTitle>
 
                       {/* Action buttons: View vouchers, detail page, and quick withdraw */}
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-5 flex gap-4">
                         <Button
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/admin/student-detail/${student.id}`);
+                            navigate(`/admin/student-detail/${student.id}`, {
+                              state: { studentData: student }
+                            });
                           }}
                           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                         >
                           Batafsil
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStudent(student);
-                            setActiveTab('vouchers');
-                          }}
-                        >
-                          Vaucherlarni ko'rish
                         </Button>
                       </div>
                     </CardHeader>

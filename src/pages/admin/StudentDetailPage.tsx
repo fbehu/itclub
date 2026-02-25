@@ -6,6 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader, ArrowLeft, TrendingUp, Gift, Wallet, CheckCircle, Clock, XCircle } from 'lucide-react';
 
@@ -70,6 +79,39 @@ interface Voucher {
   activations: Array<{ id: number; course_title: string; activation_month: string; activated_at: string }>;
 }
 
+// simplified enrollment type for voucher activation dialog
+interface Enrollment {
+  id: number;
+  course_name: string;
+  payments_history?: Array<{ id: number; amount: number; created_at: string }>;
+}
+
+interface Transaction {
+  id: string;
+  type: string;
+  description: string;
+  amount?: number;
+  voucher_percent?: number;
+  reward_type?: string;
+  status?: string;
+  approved_by?: string;
+  reason?: string | null;
+  requested_at?: string;
+  approved_at?: string;
+  created_at?: string;
+  icon: string;
+}
+
+interface TransactionsResponse {
+  student: {
+    id: string;
+    username: string;
+    full_name: string;
+  };
+  total_transactions: number;
+  transactions: Transaction[];
+}
+
 export default function StudentDetailPage() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
@@ -80,11 +122,35 @@ export default function StudentDetailPage() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'rewards' | 'withdrawals' | 'vouchers'>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'rewards' | 'withdrawals' | 'vouchers' | 'transactions'>('overview');
   const [processingWithdrawal, setProcessingWithdrawal] = useState<number | null>(null);
   const [rejectionReasons, setRejectionReasons] = useState<{ [key: number]: string }>({});
 
+  // withdrawal form state
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [withdrawingBalance, setWithdrawingBalance] = useState(false);
+
+  // voucher activation UI state
+  const [activateVoucher, setActivateVoucher] = useState<Voucher | null>(null);
+  const [studentEnrollments, setStudentEnrollments] = useState<Enrollment[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
+  const [activationMonth, setActivationMonth] = useState<string>('');
+  const [activating, setActivating] = useState(false);
+
+  // compute current and next month for activation logic
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const nextMonth = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().slice(0, 7);
+  })();
+
+  // determine if current month has any payment recorded
+  const currentPaid = studentEnrollments.some((enr) =>
+    enr.payments_history?.some((p) => p.created_at.startsWith(currentMonth))
+  );
   useEffect(() => {
     if (!studentId) {
       toast({
@@ -105,10 +171,12 @@ export default function StudentDetailPage() {
       const rewardsRes = await authFetch(API_ENDPOINTS.ADMIN_STUDENT_REWARDS(studentId!), { method: 'GET' });
       const withdrawalsRes = await authFetch(`${API_ENDPOINTS.ADMIN_WITHDRAWALS}`, { method: 'GET' });
       const vouchersRes = await authFetch(API_ENDPOINTS.ADMIN_STUDENT_VOUCHERS(studentId!), { method: 'GET' });
+      const transactionsRes = await authFetch(`/referrals/admin/student/${studentId}/transactions/`, { method: 'GET' });
 
       let rewardsData: Reward[] = [];
       let withdrawalsData: Withdrawal[] = [];
       let vouchersData: Voucher[] = [];
+      let transactionsData: Transaction[] = [];
 
       if (rewardsRes.ok) {
         rewardsData = await rewardsRes.json();
@@ -134,6 +202,12 @@ export default function StudentDetailPage() {
           vouchersData = [];
         }
         setVouchers(vouchersData);
+      }
+
+      if (transactionsRes.ok) {
+        const transJson: TransactionsResponse = await transactionsRes.json();
+        transactionsData = transJson.transactions || [];
+        setTransactions(transactionsData);
       }
 
       // Calculate balance from rewards
@@ -194,6 +268,29 @@ export default function StudentDetailPage() {
       setLoading(false);
     }
   };
+
+  // fetch enrollments for current student to populate course dropdown
+  const loadStudentEnrollments = async () => {
+    if (!studentId) return;
+    try {
+      const res = await authFetch(`/courses/user/${studentId}/enrollments/`);
+      if (res.ok) {
+        const data = await res.json();
+        setStudentEnrollments(Array.isArray(data) ? data : data.results || []);
+      }
+    } catch (e) {
+      console.error('Error loading student enrollments:', e);
+    }
+  };
+
+  // when dialog opens or the payment data updates compute default month
+  useEffect(() => {
+    if (activateVoucher) {
+      // reset previous selections
+      setSelectedCourseId(null);
+      setActivationMonth(currentPaid ? nextMonth : currentMonth);
+    }
+  }, [activateVoucher, currentPaid, currentMonth, nextMonth]);
 
   if (loading) {
     return (
@@ -313,18 +410,75 @@ export default function StudentDetailPage() {
     }
   };
 
+  const handleRequestWithdrawal = async () => {
+    if (!withdrawalAmount || Number(withdrawalAmount) <= 0) {
+      toast({
+        title: 'Xato',
+        description: 'To\'lov miqdori 0 dan katta bo\'lishi kerak',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const amount = Number(withdrawalAmount);
+    if (balance && amount > balance.available_money) {
+      toast({
+        title: 'Xato',
+        description: 'Siz balansdan ko\'proq pulni yecha olmaysiz',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setWithdrawingBalance(true);
+    try {
+      const response = await authFetch(`${API_ENDPOINTS.ADMIN_REQUEST_WITHDRAWAL}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: studentId,
+          amount: amount,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || errorData.error || 'Pul yechishda xatolik');
+      }
+
+      toast({
+        title: 'Muvaffaqiyat ✓',
+        description: 'Pul yechish so\'rovi yuborish muvaffaqiyatli tugadi',
+      });
+
+      // Tozalash va qayta yuklash
+      setWithdrawalAmount('');
+      await fetchStudentDetails();
+    } catch (err: any) {
+      console.error('Error requesting withdrawal:', err);
+      toast({
+        title: 'Xato',
+        description: err.message || 'Pul yechishda xatolik yuz berdi',
+        variant: 'destructive',
+      });
+    } finally {
+      setWithdrawingBalance(false);
+    }
+  };
+
   return (
-    <div className="w-full space-y-6 pb-8">
+    <div className="w-full space-y-4 md:space-y-6 pb-8 px-3 md:px-0">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => navigate(-1)}
+          className="h-9 w-9 p-0"
         >
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+        <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
           Student Detail
         </h1>
       </div>
@@ -332,17 +486,17 @@ export default function StudentDetailPage() {
       {/* Student Info Card */}
       <Card className="border-2 border-purple-300 dark:border-purple-600">
         <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <Avatar className="w-20 h-20">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+            <div className="flex items-start gap-3 sm:gap-4 w-full">
+              <Avatar className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
                 {/* Student photo would go here if we have the data */}
-                <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white text-2xl">
+                <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white text-lg sm:text-2xl">
                   {studentId?.[0]?.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">Student #{studentId}</p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Detailed Profile</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white break-words">Student #{studentId}</p>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Detailed Profile</p>
               </div>
             </div>
           </div>
@@ -351,44 +505,44 @@ export default function StudentDetailPage() {
 
       {/* Balance Stats */}
       {balance && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-500/10 dark:to-purple-600/10 border-purple-200 dark:border-purple-500/30">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-purple-700 dark:text-purple-300">Jami Taklif</p>
-                  <p className="text-3xl font-bold text-purple-900 dark:text-purple-200">{balance.total_referrals}</p>
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">Jami Taklif</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-purple-900 dark:text-purple-200">{balance.total_referrals}</p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-purple-500 opacity-50" />
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500 opacity-50 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-500/10 dark:to-green-600/10 border-green-200 dark:border-green-500/30">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-700 dark:text-green-300">Available Money</p>
-                  <p className="text-3xl font-bold text-green-900 dark:text-green-200">
-                    {balance.available_money.toLocaleString()}
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-green-700 dark:text-green-300">Hisobda qolgan</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-green-900 dark:text-green-200">
+                    {balance.available_money} so'm
                   </p>
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                    Total: {balance.total_money.toLocaleString()} | Withdrawn: {balance.withdrawn_money.toLocaleString()}
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1 break-words">
+                    {balance.total_money.toLocaleString()} | -{balance.withdrawn_money.toLocaleString()}
                   </p>
                 </div>
-                <Wallet className="w-8 h-8 text-green-500 opacity-50" />
+                <Wallet className="w-6 h-6 sm:w-8 sm:h-8 text-green-500 opacity-50 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-500/10 dark:to-amber-600/10 border-amber-200 dark:border-amber-500/30">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">Vouchers</p>
-                  <p className="text-3xl font-bold text-amber-900 dark:text-amber-200">{balance.total_vouchers}</p>
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300">Vaucherlar</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-amber-900 dark:text-amber-200">{balance.total_vouchers}</p>
                 </div>
-                <Gift className="w-8 h-8 text-amber-500 opacity-50" />
+                <Gift className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500 opacity-50 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -396,21 +550,22 @@ export default function StudentDetailPage() {
       )}
 
       {/* Sub Tabs */}
-      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
-        {['overview', 'rewards', 'withdrawals', 'vouchers'].map((tab) => (
+      <div className="flex gap-1 sm:gap-2 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+        {['overview', 'rewards', 'withdrawals', 'vouchers', 'transactions'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveSubTab(tab as typeof activeSubTab)}
-            className={`px-4 py-2 font-semibold transition-all ${
+            className={`px-2 sm:px-4 py-2 font-semibold transition-all text-xs sm:text-sm whitespace-nowrap ${
               activeSubTab === tab
                 ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
               {tab === 'overview' && '📊 Ko\'rinish'}
-              {tab === 'rewards' && '🎁 Mukofotlar'}
-              {tab === 'withdrawals' && '💳 Pul yechish'}
-              {tab === 'vouchers' && '🎟️ Kuponlar'}
+              {tab === 'rewards' && '🎁 Mukofot'}
+              {tab === 'withdrawals' && '💳 Yechish'}
+              {tab === 'vouchers' && '🎟️ Kupon'}
+              {tab === 'transactions' && '📋 Tranz'}
           </button>
         ))}
       </div>
@@ -420,27 +575,27 @@ export default function StudentDetailPage() {
         <div className="grid grid-cols-1 gap-4">
           <Card>
             <CardHeader>
-                <CardTitle>Umumiy ma'lumot</CardTitle>
+                <CardTitle className="text-base sm:text-lg">Umumiy ma'lumot</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <CardContent className="space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Jami takliflar</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{balance.total_referrals}</p>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Jami takliflar</p>
+                  <p className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{balance.total_referrals}</p>
                 </div>
                 <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Berilgan mukofotlar</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{balance.given_rewards_count}</p>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Berilgan mukofotlar</p>
+                  <p className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{balance.given_rewards_count}</p>
                 </div>
                 <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Jami daromad</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Jami daromad</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 break-words">
                     {balance.total_money.toLocaleString()} so'm
                   </p>
                 </div>
                 <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Jami yechilgan</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Jami yechilgan</p>
+                  <p className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400 break-words">
                     {balance.withdrawn_money.toLocaleString()} so'm
                   </p>
                 </div>
@@ -452,20 +607,20 @@ export default function StudentDetailPage() {
 
       {/* Rewards Tab */}
       {activeSubTab === 'rewards' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {rewards.length > 0 ? (
             rewards.map((reward) => (
               <Card key={reward.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <p className="font-semibold text-slate-900 dark:text-white">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0 w-full">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <p className="font-semibold text-slate-900 dark:text-white text-sm sm:text-base break-words">
                           {reward.referred_user_full_name}
                         </p>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">@{reward.referred_user_username}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 break-all">@{reward.referred_user_username}</span>
                       </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-2 break-words">
                         {reward.reward_type_display}
                         {reward.amount && `: ${reward.amount.toLocaleString()} so'm`}
                         {reward.voucher_percent && `: ${reward.voucher_percent}% chegirma`}
@@ -474,7 +629,7 @@ export default function StudentDetailPage() {
                         {new Date(reward.created_at).toLocaleDateString('uz-UZ')}
                       </p>
                     </div>
-                    <Badge className={getStatusBadgeColor(reward.status)}>
+                    <Badge className={`${getStatusBadgeColor(reward.status)} text-xs flex-shrink-0`}>
                       {reward.is_given ? '✓ ' : ''}{reward.status_display}
                     </Badge>
                   </div>
@@ -483,7 +638,7 @@ export default function StudentDetailPage() {
             ))
           ) : (
             <Card>
-              <CardContent className="p-6 text-center text-slate-500 dark:text-slate-400">
+              <CardContent className="p-4 sm:p-6 text-center text-slate-500 dark:text-slate-400 text-sm">
                 Mukofotlar topilmadi
               </CardContent>
             </Card>
@@ -494,104 +649,152 @@ export default function StudentDetailPage() {
       {/* Withdrawals Tab */}
       {activeSubTab === 'withdrawals' && (
         <div className="space-y-4">
-          {withdrawals.length > 0 ? (
-            withdrawals.map((withdrawal) => (
-              <Card
-                key={withdrawal.id}
-                className={
-                  withdrawal.status === 'REJECTED'
-                    ? 'border-red-200 dark:border-red-500/30'
-                    : withdrawal.status === 'PENDING'
-                    ? 'border-yellow-200 dark:border-yellow-500/30'
-                    : 'border-green-200 dark:border-green-500/30'
-                }
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <p className="font-semibold text-slate-900 dark:text-white">
-                          {withdrawal.amount.toLocaleString()} so'm
-                        </p>
-                        {getStatusIcon(withdrawal.status)}
-                      </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                        So'ralgan: {new Date(withdrawal.requested_at).toLocaleDateString('uz-UZ')}
-                      </p>
-                      {withdrawal.approved_at && (
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          Tasdiqlovchi: {withdrawal.approved_by_username} ({new Date(withdrawal.approved_at).toLocaleDateString('uz-UZ')})
-                        </p>
-                      )}
-                      {withdrawal.reason && (
-                        <p className="text-sm text-red-600 dark:text-red-400 mt-2">
-                          Sabab: {withdrawal.reason}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* PENDING status - Show approve/reject buttons */}
-                    {withdrawal.status === 'PENDING' ? (
-                      <div className="flex gap-2 flex-col ml-4 min-w-max">
-                        <Button
-                          size="sm"
-                          onClick={() => handleApproveWithdrawal(withdrawal.id)}
-                          disabled={processingWithdrawal === withdrawal.id}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          {processingWithdrawal === withdrawal.id ? (
-                            <Loader className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <>✅ Tasdiqlash</>
-                          )}
-                        </Button>
-                        <div className="flex gap-1 items-end">
-                          <input
-                            type="text"
-                            placeholder="Sababini kiriting..."
-                            value={rejectionReasons[withdrawal.id] || ''}
-                            onChange={(e) => setRejectionReasons({ ...rejectionReasons, [withdrawal.id]: e.target.value })}
-                            disabled={processingWithdrawal === withdrawal.id}
-                            className="text-xs px-2 py-1 border border-red-300 dark:border-red-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-500"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleRejectWithdrawal(withdrawal.id)}
-                            disabled={processingWithdrawal === withdrawal.id || !rejectionReasons[withdrawal.id]?.trim()}
-                            className="text-red-600 dark:text-red-400 whitespace-nowrap"
-                          >
-                            {processingWithdrawal === withdrawal.id ? (
-                              <Loader className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <>❌ Bekor</>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
+          {/* Withdrawal Request Form */}
+          <Card className="border-2 border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/30">
+            <CardHeader>
+              <CardTitle className="text-base sm:text-lg">Pul Yechish</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 sm:space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="withdrawal-amount" className="text-xs sm:text-sm">Yechib olish miqdori (so'm) *</Label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    id="withdrawal-amount"
+                    type="number"
+                    value={withdrawalAmount}
+                    onChange={(e) => setWithdrawalAmount(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                    step="1000"
+                    className="flex-1 px-2 sm:px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500"
+                  />
+                  <Button
+                    onClick={handleRequestWithdrawal}
+                    disabled={withdrawingBalance || !withdrawalAmount || !balance || Number(withdrawalAmount) <= 0}
+                    className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+                  >
+                    {withdrawingBalance ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin mr-2" />
+                        <span className="hidden sm:inline">Sorov yuborilmoqda...</span>
+                        <span className="sm:hidden">Yuborilmoqda...</span>
+                      </>
                     ) : (
-                      /* Not PENDING - Show status badge only */
-                      <Badge className={getStatusBadgeColor(withdrawal.status)}>
-                        {withdrawal.status_display}
-                      </Badge>
+                      <>💸 Yechish</>
                     )}
-                  </div>
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 break-words">
+                  Maksimum: {balance ? balance.available_money.toLocaleString('uz-UZ') : 0} so'm
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Withdrawal History */}
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-3">Pul Yechish Tarixi</h3>
+            {withdrawals.length > 0 ? (
+              <div className="space-y-3">
+                {withdrawals.map((withdrawal) => (
+                  <Card
+                    key={withdrawal.id}
+                    className={
+                      withdrawal.status === 'REJECTED'
+                        ? 'border-red-200 dark:border-red-500/30'
+                        : withdrawal.status === 'PENDING'
+                        ? 'border-yellow-200 dark:border-yellow-500/30'
+                        : 'border-green-200 dark:border-green-500/30'
+                    }
+                  >
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0 w-full">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <p className="font-semibold text-slate-900 dark:text-white text-sm sm:text-base">
+                              {withdrawal.amount.toLocaleString()} so'm
+                            </p>
+                            {getStatusIcon(withdrawal.status)}
+                          </div>
+                          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-2 break-words">
+                            So'ralgan: {new Date(withdrawal.requested_at).toLocaleDateString('uz-UZ')}
+                          </p>
+                          {withdrawal.approved_at && (
+                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 break-words">
+                              Tasdiqlovchi: {withdrawal.approved_by_username} ({new Date(withdrawal.approved_at).toLocaleDateString('uz-UZ')})
+                            </p>
+                          )}
+                          {withdrawal.reason && (
+                            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 mt-2 break-words">
+                              Sabab: {withdrawal.reason}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* PENDING status - Show approve/reject buttons */}
+                        {withdrawal.status === 'PENDING' ? (
+                          <div className="flex gap-2 flex-col w-full sm:w-auto sm:flex-col sm:min-w-max">
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveWithdrawal(withdrawal.id)}
+                              disabled={processingWithdrawal === withdrawal.id}
+                              className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm w-full sm:w-auto"
+                            >
+                              {processingWithdrawal === withdrawal.id ? (
+                                <Loader className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
+                              ) : (
+                                <>✅ Tasdiqlash</>
+                              )}
+                            </Button>
+                            <div className="flex gap-1 items-end w-full">
+                              <input
+                                type="text"
+                                placeholder="Sababini kiriting..."
+                                value={rejectionReasons[withdrawal.id] || ''}
+                                onChange={(e) => setRejectionReasons({ ...rejectionReasons, [withdrawal.id]: e.target.value })}
+                                disabled={processingWithdrawal === withdrawal.id}
+                                className="text-xs px-2 py-1 border border-red-300 dark:border-red-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-500 flex-1 min-w-0"
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRejectWithdrawal(withdrawal.id)}
+                                disabled={processingWithdrawal === withdrawal.id || !rejectionReasons[withdrawal.id]?.trim()}
+                                className="text-red-600 dark:text-red-400 whitespace-nowrap text-xs"
+                              >
+                                {processingWithdrawal === withdrawal.id ? (
+                                  <Loader className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <>❌ Bekor</>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Not PENDING - Show status badge only */
+                          <Badge className={`${getStatusBadgeColor(withdrawal.status)} text-xs sm:text-sm flex-shrink-0`}>
+                            {withdrawal.status_display}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-4 sm:p-6 text-center text-slate-500 dark:text-slate-400 text-sm">
+                  Pul yechish so'rovi topilmadi
                 </CardContent>
               </Card>
-            ))
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center text-slate-500 dark:text-slate-400">
-                Pul yechish topilmadi
-              </CardContent>
-            </Card>
-          )}
+            )}
+          </div>
         </div>
       )}
 
       {/* Vouchers Tab */}
       {activeSubTab === 'vouchers' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {vouchers.length > 0 ? (
             vouchers.map((voucher) => (
               <Card
@@ -602,33 +805,47 @@ export default function StudentDetailPage() {
                     : 'border-amber-300 dark:border-amber-600'
                 }`}
               >
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <code className="bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded text-sm font-mono">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0 w-full">
+                        <code className="bg-slate-100 dark:bg-slate-800 px-2 sm:px-3 py-1 sm:py-2 rounded text-xs sm:text-sm font-mono break-all">
                           {voucher.code}
                         </code>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-2">
                           {voucher.discount_percent}% chegirma
                         </p>
                       </div>
-                      <Badge
-                        className={
-                          voucher.is_activated
-                            ? 'bg-green-500 text-white'
-                            : 'bg-amber-500 text-white'
-                        }
-                      >
-                        {voucher.is_activated ? '✅ Aktivlashtirilgan' : '⏳ Odin'}
-                      </Badge>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge
+                            className={`text-xs ${
+                              voucher.is_activated
+                                ? 'bg-green-500 text-white'
+                                : 'bg-amber-500 text-white'
+                            }`}
+                          >
+                            {voucher.is_activated ? '✅ Aktivlashtirilgan' : '⏳'}
+                          </Badge>
+                          {!voucher.is_activated && (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setActivateVoucher(voucher);
+                                loadStudentEnrollments();
+                              }}
+                              className="text-xs"
+                            >
+                              Aktivlashtirish
+                            </Button>
+                          )}
+                        </div>
                     </div>
 
                     {voucher.is_activated && voucher.activations.length > 0 && (
-                      <div className="p-3 bg-green-50 dark:bg-green-500/10 rounded border border-green-200 dark:border-green-500/30">
-                        <p className="font-semibold text-green-900 dark:text-green-100 mb-2">Aktivlashtirilgan</p>
+                      <div className="p-2 sm:p-3 bg-green-50 dark:bg-green-500/10 rounded border border-green-200 dark:border-green-500/30">
+                        <p className="font-semibold text-green-900 dark:text-green-100 mb-2 text-xs sm:text-sm">Aktivlashtirilgan</p>
                         {voucher.activations.map((act) => (
-                          <div key={act.id} className="text-sm text-green-800 dark:text-green-300">
+                          <div key={act.id} className="text-xs sm:text-sm text-green-800 dark:text-green-300 space-y-1 break-words">
                             <p>📚 {act.course_title}</p>
                             <p>📅 {new Date(act.activation_month + '-01').toLocaleDateString('uz-UZ', { year: 'numeric', month: 'long' })}</p>
                           </div>
@@ -641,13 +858,234 @@ export default function StudentDetailPage() {
             ))
           ) : (
             <Card>
-              <CardContent className="p-6 text-center text-slate-500 dark:text-slate-400">
+              <CardContent className="p-4 sm:p-6 text-center text-slate-500 dark:text-slate-400 text-sm">
                 Kuponlar topilmadi
               </CardContent>
             </Card>
           )}
         </div>
       )}
+
+      {/* Transactions Tab */}
+      {activeSubTab === 'transactions' && (
+        <div className="space-y-4">
+          <Card className="bg-slate-50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-base sm:text-lg">Jami Tranzaksiyalar: {transactions.length}</CardTitle>
+            </CardHeader>
+          </Card>
+
+          {transactions.length > 0 ? (
+            <div className="space-y-3">
+              {transactions.map((transaction) => (
+                <Card
+                  key={transaction.id}
+                  className={`border-l-4 ${
+                    transaction.type === 'WITHDRAWAL'
+                      ? 'border-l-red-500 dark:border-l-red-600'
+                      : transaction.type === 'REWARD_GIVEN'
+                      ? 'border-l-green-500 dark:border-l-green-600'
+                      : 'border-l-blue-500 dark:border-l-blue-600'
+                  }`}
+                >
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+                      <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0 w-full">
+                        <div className="text-xl sm:text-2xl flex-shrink-0">{transaction.icon}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-slate-900 dark:text-white text-sm sm:text-base break-words">
+                            {transaction.description}
+                          </p>
+                          <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
+                            {transaction.type && (
+                              <Badge variant="outline" className="text-xs">
+                                {transaction.type === 'WITHDRAWAL' && '💸 Yechish'}
+                                {transaction.type === 'REWARD_GIVEN' && '🎁 Mukofot'}
+                                {transaction.type === 'PAYMENT' && '💳 To\'lov'}
+                                {transaction.type === 'VOUCHER_USED' && '🎟️ Vaucher'}
+                              </Badge>
+                            )}
+                            {transaction.status && (
+                              <Badge
+                                className={`text-xs ${
+                                  transaction.status === 'APPROVED' || transaction.status === 'GIVEN'
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                    : transaction.status === 'PENDING'
+                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                }`}
+                              >
+                                {transaction.status === 'APPROVED' && '✅ Tasdiqlandi'}
+                                {transaction.status === 'GIVEN' && '✅ Berildi'}
+                                {transaction.status === 'PENDING' && '⏳ Kutilmoqda'}
+                                {transaction.status === 'REJECTED' && '❌ Rad etildi'}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 mt-2 space-y-1 break-words">
+                            {transaction.requested_at && (
+                              <p>
+                                So'ralgan: {new Date(transaction.requested_at).toLocaleDateString('uz-UZ', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            )}
+                            {transaction.approved_at && (
+                              <p>
+                                Tasdiqlandi: {new Date(transaction.approved_at).toLocaleDateString('uz-UZ', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            )}
+                            {transaction.created_at && !transaction.requested_at && (
+                              <p>
+                                Sana: {new Date(transaction.created_at).toLocaleDateString('uz-UZ', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            )}
+                            {transaction.approved_by && (
+                              <p>Tasdiqlovchi: <span className="font-semibold break-words">{transaction.approved_by}</span></p>
+                            )}
+                            {transaction.reason && (
+                              <p className="text-red-600 dark:text-red-400 mt-1 break-words">Sabab: {transaction.reason}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                        {transaction.amount && (
+                          <p className={`text-base sm:text-lg font-bold ${
+                            transaction.status === 'REJECTED'
+                              ? 'line-through text-slate-400 dark:text-slate-600'
+                              : transaction.type === 'WITHDRAWAL'
+                              ? 'text-red-600 dark:text-red-400'
+                              : 'text-green-600 dark:text-green-400'
+                          }`}>
+                            {transaction.type === 'WITHDRAWAL' ? '-' : '+'}
+                            {transaction.amount.toLocaleString('uz-UZ')} so'm
+                          </p>
+                        )}
+                        {transaction.voucher_percent && (
+                          <p className={`text-base sm:text-lg font-bold ${
+                            transaction.status === 'REJECTED'
+                              ? 'line-through text-slate-400 dark:text-slate-600'
+                              : 'text-blue-600 dark:text-blue-400'
+                          }`}>
+                            {transaction.voucher_percent}%
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-4 sm:p-6 text-center text-slate-500 dark:text-slate-400 text-sm">
+                Tranzaksiyalar topilmadi
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Activation dialog - outside vouchers tab so it can overlay */}
+      <Dialog open={!!activateVoucher} onOpenChange={(open) => !open && setActivateVoucher(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kuponni aktivlashtirish</DialogTitle>
+            <DialogDescription>
+              Kupon: <strong>{activateVoucher?.code}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="course">Kursni tanlang</Label>
+              <Select
+                value={selectedCourseId ? String(selectedCourseId) : ''}
+                onValueChange={(val) => setSelectedCourseId(Number(val))}
+              >
+                <SelectTrigger id="course">
+                  <SelectValue placeholder="Kursni tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {studentEnrollments.map((enr) => (
+                    <SelectItem key={enr.id} value={String(enr.id)}>
+                      {enr.course_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="month">Oy</Label>
+              <input
+                id="month"
+                type="month"
+                className="mt-1 block w-full rounded-md border-input"
+                value={activationMonth}
+                onChange={(e) => setActivationMonth(e.target.value)}
+                min={new Date().toISOString().slice(0, 7)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Agar hozirgi oy to'langan bo'lsa, faqat kelgusi oyni tanlash mumkin
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                if (!activateVoucher || !selectedCourseId || !activationMonth) return;
+                setActivating(true);
+                try {
+                  const res = await authFetch(API_ENDPOINTS.ADMIN_ACTIVATE_VOUCHER(studentId!), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      voucher_id: activateVoucher.id,
+                      course_id: selectedCourseId,
+                      activation_month: activationMonth,
+                    }),
+                  });
+                  if (res.ok) {
+                    toast({ title: 'Muvaffaqiyat', description: 'Kupon aktivlashtirildi' });
+                    fetchStudentDetails();
+                    setActivateVoucher(null);
+                  } else {
+                    const data = await res.json();
+                    toast({ title: 'Xato', description: data.error || 'Faol qilishda xatolik', variant: 'destructive' });
+                  }
+                } catch (err) {
+                  console.error(err);
+                  toast({ title: 'Xato', description: 'Faol qilishda xatolik', variant: 'destructive' });
+                } finally {
+                  setActivating(false);
+                }
+              }}
+              disabled={activating || !selectedCourseId || !activationMonth}
+            >
+              {activating ? <Loader className="w-4 h-4 animate-spin" /> : 'Aktivlashtirish'}
+            </Button>
+            <DialogClose>
+              <Button variant="outline">Bekor qilish</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

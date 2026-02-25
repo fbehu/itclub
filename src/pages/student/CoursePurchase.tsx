@@ -118,6 +118,7 @@ export default function CoursePurchase() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentInfo, setPaymentInfo] = useState({ months: 0, remainder: 0 });
 
   // Enrollment result
   const [enrollment, setEnrollment] = useState<EnrollmentResponse | null>(null);
@@ -190,6 +191,7 @@ export default function CoursePurchase() {
     setSelectedGroup(group);
     setStep('payment');
     setPaymentAmount('');
+    setPaymentInfo({ months: 0, remainder: 0 });
   };
 
   const handleConfirmPurchase = async () => {
@@ -204,10 +206,9 @@ export default function CoursePurchase() {
       toast.error('To\'lov miqdori 0 dan katta bo\'lishi kerak');
       return;
     }
-
-    if (amount > monthlyPrice) {
+    if (monthlyPrice > 0 && amount < monthlyPrice) {
       toast.error(
-        `To'lov oylik narxdan (${monthlyPrice.toLocaleString('uz-UZ')}) oshmasligi kerak`
+        `To'lov miqdori kamida oylik narx (${monthlyPrice.toLocaleString('uz-UZ')}) bo\'lishi kerak`
       );
       return;
     }
@@ -268,8 +269,6 @@ export default function CoursePurchase() {
             </p>
           </div>
         </div>
-
-        {/* Step Indicator */}
         <div className="flex items-center justify-between mb-8">
           {(['select-course', 'select-group', 'payment', 'success'] as const).map(
             (s, index) => (
@@ -280,10 +279,10 @@ export default function CoursePurchase() {
                       ? 'bg-primary text-primary-foreground'
                       : (['select-course', 'select-group', 'payment'].includes(s) &&
                           step === 'success') ||
-                          (s === 'select-group' && step !== 'select-course') ||
-                          (s === 'payment' && step === 'payment')
-                        ? 'bg-green-500 text-white'
-                        : 'bg-muted text-muted-foreground'
+                        (s === 'select-group' && step !== 'select-course') ||
+                        (s === 'payment' && step === 'payment')
+                      ? 'bg-green-500 text-white'
+                      : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {index + 1}
@@ -291,9 +290,7 @@ export default function CoursePurchase() {
                 {index < 3 && (
                   <div
                     className={`w-12 h-1 mx-2 ${
-                      step === 'success'
-                        ? 'bg-green-500'
-                        : 'bg-muted'
+                      step === 'success' ? 'bg-green-500' : 'bg-muted'
                     }`}
                   />
                 )}
@@ -581,10 +578,20 @@ export default function CoursePurchase() {
                     id="amount"
                     type="number"
                     value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPaymentAmount(val);
+                      const n = Number(val);
+                      if (monthlyPrice > 0 && !isNaN(n)) {
+                        const months = Math.floor(n / monthlyPrice);
+                        const remainder = n - months * monthlyPrice;
+                        setPaymentInfo({ months, remainder });
+                      } else {
+                        setPaymentInfo({ months: 0, remainder: 0 });
+                      }
+                    }}
                     placeholder="0"
                     min="0"
-                    max={monthlyPrice}
                     step="1000"
                     className="pr-12"
                   />
@@ -593,8 +600,15 @@ export default function CoursePurchase() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Maksimum: {monthlyPrice.toLocaleString('uz-UZ')} so'm (oylik
-                  narx)
+                  Oylik narx: {monthlyPrice.toLocaleString('uz-UZ')} so'm.
+                  {paymentInfo.months > 0 && (
+                    <> Bu to'lov {paymentInfo.months} oy uchun.</>
+                  )}
+                  {paymentInfo.remainder > 0 && (
+                    <>
+                      {' '}Qoldiq {paymentInfo.remainder.toLocaleString('uz-UZ')} so'm keyingi oyga o'tadi.
+                    </>
+                  )}
                 </p>
               </div>
 
