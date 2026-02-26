@@ -257,15 +257,15 @@ export default function AddUser() {
         formData.append('email', (data as any).email);
       }
       
-      // Add level for teacher and sub_teacher
-      if ((data as TeacherFormData).level) {
-        formData.append('level', (data as TeacherFormData).level);
+      // Add level
+      if (data.level) {
+        formData.append('level', data.level);
       }
 
-      // Only add conditional fields for students and teachers
+      // Only add conditional fields for students
       if (data.role === 'student') {
-        formData.append('group', (data as StudentFormData).group);
-        formData.append('social', (data as StudentFormData).social);
+        if (data.group) formData.append('group', data.group);
+        if (data.social) formData.append('social', data.social);
         
         // Only add invite_code if validated
         if (codeValidation?.valid && inviteCode.trim()) {
@@ -273,12 +273,8 @@ export default function AddUser() {
         }
         
         const parentPhoneData: Record<string, string> = {};
-        if ((data as StudentFormData).father) {
-          parentPhoneData['father'] = (data as StudentFormData).father;
-        }
-        if ((data as StudentFormData).mother) {
-          parentPhoneData['mother'] = (data as StudentFormData).mother;
-        }
+        if (data.father) parentPhoneData['father'] = data.father;
+        if (data.mother) parentPhoneData['mother'] = data.mother;
         
         formData.append('parent_phone_number', JSON.stringify(parentPhoneData));
       }
