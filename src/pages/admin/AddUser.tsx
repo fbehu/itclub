@@ -444,13 +444,13 @@ export default function AddUser() {
                     <p className="text-sm text-destructive">{form.formState.errors.role?.message}</p>
                   )}
                 </div>
-                {/* Level field - only for teachers and sub_teachers */}
-                {(selectedRole === 'teacher' || selectedRole === 'sub_teacher' || selectedRole === 'admin' || selectedRole === 'manager') && (
+                {/* Level field - for all roles */}
+                {selectedRole && (
                   <div className="space-y-2">
-                    <Label htmlFor="level">Level *</Label>
+                    <Label htmlFor="level">Level {selectedRole === 'student' ? '*' : ''}</Label>
                     <Select
                       value={form.watch('level') || ''}
-                      onValueChange={(value) => form.setValue('level', value as any)}
+                      onValueChange={(value) => form.setValue('level', value as any, { shouldValidate: true })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Level tanlang" />
@@ -510,7 +510,7 @@ export default function AddUser() {
                       <Label htmlFor="social">Social *</Label>
                       <Select
                         value={form.watch('social') || ''}
-                        onValueChange={(value) => form.setValue('social', value as any)}
+                        onValueChange={(value) => form.setValue('social', value as any, { shouldValidate: true })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Social tanlang" />
