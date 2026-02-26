@@ -510,7 +510,7 @@ export default function AddUser() {
                       <Label htmlFor="social">Social *</Label>
                       <Select
                         value={form.watch('social') || ''}
-                        onValueChange={(value) => form.setValue('social', value as any)}
+                        onValueChange={(value) => form.setValue('social', value as any, { shouldValidate: true })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Social tanlang" />
