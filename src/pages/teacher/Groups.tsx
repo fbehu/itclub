@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,8 @@ interface Group {
 
 export default function TeacherGroups() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSubTeacher = user?.role === 'sub_teacher';
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -194,18 +197,20 @@ export default function TeacherGroups() {
                             >
                               <Eye className="w-4 h-4 text-blue-600" />
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="hover:bg-amber-100"
-                              onClick={() => {
-                                setSelectedGroup(group as any);
-                                setEditDialogOpen(true);
-                              }}
-                              title="Tahrirlash"
-                            >
-                              <Edit className="w-4 h-4 text-amber-600" />
-                            </Button>
+                            {!isSubTeacher && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="hover:bg-amber-100"
+                                onClick={() => {
+                                  setSelectedGroup(group as any);
+                                  setEditDialogOpen(true);
+                                }}
+                                title="Tahrirlash"
+                              >
+                                <Edit className="w-4 h-4 text-amber-600" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

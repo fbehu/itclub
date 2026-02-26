@@ -871,53 +871,55 @@ export default function Profile() {
               </Card>
             </div>
 
-            {/* Sertifikatlar Card */}
-            <Card className="border-none bg-gradient-to-br from-white to-gray-50 dark:from-slate-900/90 dark:to-slate-800/90 backdrop-blur-sm card-animate">
-              <CardHeader className="pb-3 sm:pb-4">
-                <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 dark:text-purple-400" />
-                  <CardTitle className="text-lg sm:text-xl text-slate-900 dark:text-white">Sertifikatlar</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingCertificates ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader className="w-6 h-6 animate-spin text-purple-500" />
+            {/* Sertifikatlar Card - Only for student and teacher roles */}
+            {profileUser.role !== 'admin' && (
+              <Card className="border-none bg-gradient-to-br from-white to-gray-50 dark:from-slate-900/90 dark:to-slate-800/90 backdrop-blur-sm card-animate">
+                <CardHeader className="pb-3 sm:pb-4">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 dark:text-purple-400" />
+                    <CardTitle className="text-lg sm:text-xl text-slate-900 dark:text-white">Sertifikatlar</CardTitle>
                   </div>
-                ) : certificates.length === 0 ? (
-                  <div className="text-center py-6">
-                    <Award className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-slate-600 dark:text-slate-400 text-sm">Sertifikatlar hali yo'q</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {certificates.map((cert) => (
-                      <div key={cert.id} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-500/10 dark:to-pink-500/10 border border-purple-200 dark:border-purple-500/30 rounded-lg hover:shadow-lg transition-shadow">
-                        <div className="flex items-start gap-3">
-                          {cert.photo && (
-                            <img 
-                              src={cert.photo} 
-                              alt={cert.name}
-                              className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover flex-shrink-0 border-2 border-purple-300 dark:border-purple-600"
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-slate-900 dark:text-white line-clamp-2">{cert.name}</p>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{cert.description}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Calendar className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                              <p className="text-xs text-slate-600 dark:text-slate-400">
-                                {formatDate(cert.issued_date)}
-                              </p>
+                </CardHeader>
+                <CardContent>
+                  {loadingCertificates ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader className="w-6 h-6 animate-spin text-purple-500" />
+                    </div>
+                  ) : certificates.length === 0 ? (
+                    <div className="text-center py-6">
+                      <Award className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                      <p className="text-slate-600 dark:text-slate-400 text-sm">Sertifikatlar hali yo'q</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {certificates.map((cert) => (
+                        <div key={cert.id} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-500/10 dark:to-pink-500/10 border border-purple-200 dark:border-purple-500/30 rounded-lg hover:shadow-lg transition-shadow">
+                          <div className="flex items-start gap-3">
+                            {cert.photo && (
+                              <img 
+                                src={cert.photo} 
+                                alt={cert.name}
+                                className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover flex-shrink-0 border-2 border-purple-300 dark:border-purple-600"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-slate-900 dark:text-white line-clamp-2">{cert.name}</p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{cert.description}</p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Calendar className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                                <p className="text-xs text-slate-600 dark:text-slate-400">
+                                  {formatDate(cert.issued_date)}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* So'nggi faoliyat Card */}
             <Card className="border-none bg-gradient-to-br from-white to-gray-50 dark:from-slate-900/90 dark:to-slate-800/90 backdrop-blur-sm card-animate">

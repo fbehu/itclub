@@ -287,7 +287,9 @@ export default function UserManagement() {
                   <SelectItem value="all">Barchasi</SelectItem>
                   <SelectItem value="student">O'quvchi</SelectItem>
                   <SelectItem value="teacher">O'qituvchi</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="sub_teacher">Yordamchi O'qituvchi</SelectItem>
+                  <SelectItem value="manager">Administrator</SelectItem>
+                  <SelectItem value="admin">CEO (Boshliq)</SelectItem>
                 </SelectContent>
               </Select>
 

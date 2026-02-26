@@ -45,7 +45,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         { path: '/dashboard/statistics', label: 'Statistika', icon: BarChart3 },
         { path: '/dashboard/settings', label: 'Sozlamalar', icon: Settings },
       ];
-    } else if (user?.role === 'teacher') {
+    } else if (user?.role === 'manager') {
+      return [
+        { path: '/dashboard/manager/statistics', label: 'Statistika', icon: BarChart3 },
+        { path: '/dashboard/manager/attendance', label: 'Davomat', icon: ClipboardList },
+        { path: '/dashboard/manager/groups', label: 'Guruhlar', icon: UsersRound },
+        { path: '/dashboard/chat', label: 'Suhbat', icon: MessageSquare },
+        { path: '/dashboard/notifications', label: 'Bildirishnomalar', icon: Bell },
+        { path: '/dashboard/profile', label: 'Profil', icon: User },
+        { path: '/dashboard/settings', label: 'Sozlamalar', icon: Settings },
+      ];
+    } else if (user?.role === 'teacher' || user?.role === 'sub_teacher') {
       return [
         { path: '/dashboard/teacher/groups', label: 'Guruhlar', icon: UsersRound },
         { path: '/dashboard/teacher/attendance', label: 'Davomat', icon: ClipboardList },
@@ -54,7 +64,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         { path: '/dashboard/chat', label: 'Suhbat', icon: MessageSquare },
         { path: '/dashboard/notifications', label: 'Bildirishnomalar', icon: Bell },
         { path: '/dashboard/profile', label: 'Profil', icon: User },
-        { path: '/dashboard/statistics', label: 'Statistika', icon: BarChart3 },
         { path: '/dashboard/settings', label: 'Sozlamalar', icon: Settings },
       ];
     } else {
@@ -81,13 +90,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const getRoleLabel = () => {
     if (user?.role === 'admin') return 'Administrator';
-    if (user?.role === 'teacher') return "O'qituvchi";
+    if (user?.role === 'manager') return 'Menedzher';
+    if (user?.role === 'teacher' || user?.role === 'sub_teacher') return "O'qituvchi";
     return 'Talaba';
   };
 
   const getRoleBadgeColor = () => {
     if (user?.role === 'admin') return 'bg-red-500/15 text-red-400 border-red-500/20';
-    if (user?.role === 'teacher') return 'bg-purple-500/15 text-purple-400 border-purple-500/20';
+    if (user?.role === 'manager') return 'bg-orange-500/15 text-orange-400 border-orange-500/20';
+    if (user?.role === 'teacher' || user?.role === 'sub_teacher') return 'bg-purple-500/15 text-purple-400 border-purple-500/20';
     return 'bg-blue-500/15 text-blue-400 border-blue-500/20';
   };
 

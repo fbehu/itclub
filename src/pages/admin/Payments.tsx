@@ -105,12 +105,14 @@ interface AddPaymentData {
   payment_type: 'card' | 'cash';
 }
 
-type SortBy = 'name' | 'debt-high' | 'paid-high' | 'status';
+type SortBy = 'name' | 'debt-high' | 'paid-high' | 'status' | 'id';
 
 export default function Payments() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'blocked' | 'finished' | ''>('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<'paid' | 'partial' | 'unpaid' | ''>('');
   const [sortBy, setSortBy] = useState<SortBy>('name');
   const [selectedEnrollment, setSelectedEnrollment] = useState<Enrollment | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -129,12 +131,25 @@ export default function Payments() {
 
   useEffect(() => {
     loadEnrollments();
-  }, []);
+  }, [searchTerm, statusFilter, paymentStatusFilter]);
 
   const loadEnrollments = async () => {
     try {
       setLoading(true);
-      const response = await authFetch('/courses/enrollments-all/');
+      const params = new URLSearchParams();
+      
+      if (searchTerm.trim()) {
+        params.append('search', searchTerm.trim());
+      }
+      if (statusFilter) {
+        params.append('status', statusFilter);
+      }
+      if (paymentStatusFilter) {
+        params.append('payment_status', paymentStatusFilter);
+      }
+      
+      const url = `/courses/enrollments-all/?${params.toString()}`;
+      const response = await authFetch(url);
       if (response.ok) {
         const data = await response.json();
         setEnrollments(data.results || []);
@@ -265,6 +280,8 @@ export default function Payments() {
     )
     .sort((a, b) => {
       switch (sortBy) {
+        case 'id':
+          return Number(b.id) - Number(a.id);
         case 'debt-high':
           return Number(b.debt) - Number(a.debt);
         case 'paid-high':
@@ -387,25 +404,57 @@ export default function Payments() {
         {/* Search and Filter */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <Input
-                  placeholder="O'quvchi yoki kurs nomini izlang..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="O'quvchi yoki kurs nomini izlang..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortBy)}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Nomi bo'yicha</SelectItem>
-                  <SelectItem value="debt-high">Katta qarz</SelectItem>
-                  <SelectItem value="paid-high">Katta to'lov</SelectItem>
-                  <SelectItem value="status">Holati</SelectItem>
-                </SelectContent>
-              </Select>
+              
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Select value={statusFilter || 'all'} onValueChange={(value) => setStatusFilter(value === 'all' ? '' : (value as any))}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Holati (Hammasi)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Hammasi</SelectItem>
+                    <SelectItem value="active">🟢 Faol</SelectItem>
+                    <SelectItem value="blocked">🔴 Aktiv emas</SelectItem>
+                    <SelectItem value="finished">✅ Tugatilgan</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={paymentStatusFilter || 'all'} onValueChange={(value) => setPaymentStatusFilter(value === 'all' ? '' : (value as any))}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="To'lov holati (Hammasi)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Hammasi</SelectItem>
+                    <SelectItem value="paid">✅ To'langan</SelectItem>
+                    <SelectItem value="partial">⚠️ Qisman to'langan</SelectItem>
+                    <SelectItem value="unpaid">❌ To'lanmagan</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortBy)}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Nomi bo'yicha</SelectItem>
+                    <SelectItem value="debt-high">Katta qarz</SelectItem>
+                    <SelectItem value="paid-high">Katta to'lov</SelectItem>
+                    <SelectItem value="status">Holati</SelectItem>
+                    <SelectItem value="id">Oxirgi qo'shilgan</SelectItem>
+
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>

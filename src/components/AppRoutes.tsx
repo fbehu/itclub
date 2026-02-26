@@ -33,6 +33,9 @@ import TeacherGroups from '@/pages/teacher/Groups';
 import TeacherGroupDetail from '@/pages/teacher/groups/GroupDetail';
 import TeacherSystemUpdates from '@/pages/teacher/SystemUpdates';
 import CourseMarketplace from '@/pages/teacher/CourseMarketplace';
+import ManagerStatistics from '@/pages/manager/Statistics';
+import ManagerAttendance from '@/pages/manager/Attendance';
+import ManagerGroups from '@/pages/manager/Groups';
 import Chat from '@/pages/Chat';
 import Notifications from '@/pages/Notifications';
 import NotFound from '@/pages/NotFound';
@@ -289,6 +292,31 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <CourseMarketplace />
+          </ProtectedRoute>
+        } 
+      />
+      {/* Manager Routes */}
+      <Route 
+        path="/dashboard/manager/statistics" 
+        element={
+          <ProtectedRoute>
+            <ManagerStatistics />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/manager/attendance" 
+        element={
+          <ProtectedRoute>
+            <ManagerAttendance />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/manager/groups" 
+        element={
+          <ProtectedRoute>
+            <ManagerGroups />
           </ProtectedRoute>
         } 
       />

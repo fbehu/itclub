@@ -25,7 +25,10 @@ interface Teacher {
   first_name: string;
   last_name: string;
   username: string;
+  phone_number?: string;
   photo?: string;
+  level?: string;
+  role?: string;
 }
 
 interface Group {
@@ -37,7 +40,8 @@ interface Group {
   student_count: number;
   created_at: string;
   telegram_link?: string;
-  teacher?: string | Teacher; // ✅ Added teacher field
+  teacher?: string | Teacher;
+  sub_teachers?: Teacher[]; // ✅ Added sub_teachers field
   course?: {
     id: number;
     name: string;
@@ -52,10 +56,11 @@ interface Group {
     is_active: boolean;
   };
   room?: {
-    id: number; // ✅ Changed from string to number
+    id: number;
     name: string;
     room_number?: string;
-    floor?: number; // ✅ Added floor
+    floor?: number;
+    capacity?: number; // ✅ Added capacity
   };
 }
 
@@ -169,6 +174,8 @@ export default function Groups() {
                       </div>
                     </TableHead>
                     <TableHead className="font-bold">Xona</TableHead>
+                    <TableHead className="font-bold">Ustoz</TableHead>
+                    <TableHead className="font-bold">Yordamchilar</TableHead>
                     <TableHead className="font-bold text-center">
                       <div className="flex items-center justify-center gap-1">
                         <Users className="w-4 h-4" />
@@ -247,6 +254,32 @@ export default function Groups() {
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">Belgilanmagan</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {group.teacher && typeof group.teacher === 'object' ? (
+                          <div className="space-y-1">
+                            <p className="font-medium text-sm">
+                              {group.teacher.first_name} {group.teacher.last_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">@{group.teacher.username}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Belgilanmagan</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {group.sub_teachers && group.sub_teachers.length > 0 ? (
+                          <div className="space-y-1">
+                            {group.sub_teachers.map((teacher) => (
+                              <div key={teacher.id} className="text-xs">
+                                <p className="font-medium">{teacher.first_name} {teacher.last_name}</p>
+                                <p className="text-muted-foreground">@{teacher.username}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Yo'q</span> 
                         )}
                       </TableCell>
                       <TableCell>

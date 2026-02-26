@@ -43,27 +43,49 @@ const studentSchema = z.object({
   }
 );
 
-const generalSchema = z.object({
+const teacherSchema = z.object({
   first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
   last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
   username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30),
   password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
   phone_number: z.string().min(6, 'Telefon raqam kiriting'),
   tg_username: z.string().max(50).optional(),
-  role: z.enum(['teacher', 'admin', 'sub_teacher']),
+  role: z.enum(['teacher', 'sub_teacher']), 
   level: z.enum(['beginner', 'intermediate', 'expert']).optional(),
   group: z.string().optional(),
   social: z.string().optional(),
   invite_code: z.string().optional(),
   parent_type: z.string().optional(),
   parent_phone_number: z.string().optional(),
-  father: z.string().optional(),
-  mother: z.string().optional(),
+});
+
+const managerSchema = z.object({
+  first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
+  last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
+  username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30),
+  password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
+  phone_number: z.string().min(6, 'Telefon raqam kiriting'),
+  tg_username: z.string().max(50).optional(),
+  role: z.literal('manager'),
+  email: z.string().email('Email kiriting').optional(),
+});
+
+const adminSchema = z.object({
+  first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
+  last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
+  username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30),
+  password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
+  phone_number: z.string().min(6, 'Telefon raqam kiriting'),
+  tg_username: z.string().max(50).optional(),
+  role: z.literal('admin'),
+  email: z.string().email('Email kiriting').optional(),
 });
 
 type StudentFormData = z.infer<typeof studentSchema>;
-type GeneralFormData = z.infer<typeof generalSchema>;
-type UserFormData = StudentFormData | GeneralFormData;
+type TeacherFormData = z.infer<typeof teacherSchema>;
+type ManagerFormData = z.infer<typeof managerSchema>;
+type AdminFormData = z.infer<typeof adminSchema>;
+type UserFormData = StudentFormData | TeacherFormData | ManagerFormData | AdminFormData;
 
 interface Group {
   id: number;
@@ -79,7 +101,7 @@ interface ReferrerInfo {
   photo: string | null;
 }
 
-export default function AddUser() {
+export default function AddUser() { 
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -87,14 +109,31 @@ export default function AddUser() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
-  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'admin' | 'sub_teacher' | undefined>(undefined);
+  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'sub_teacher' | 'manager' | 'admin' | undefined>(undefined);
   const [inviteCode, setInviteCode] = useState('');
   const [codeValidation, setCodeValidation] = useState<{ valid: boolean; message: string } | null>(null);
   const [validatingCode, setValidatingCode] = useState(false);
   const [referrerInfo, setReferrerInfo] = useState<ReferrerInfo | null>(null);
 
   const form = useForm<UserFormData>({
-    resolver: selectedRole === 'student' ? zodResolver(studentSchema) : zodResolver(generalSchema),
+    // Use a dynamic resolver function so validation matches currently selected role.
+    // React Hook Form will call this resolver on each validation, and it reads the
+    // latest `selectedRole` from closure, so switching role updates validation.
+    resolver: async (values, context, options) => {
+      const schema =
+        selectedRole === 'student'
+          ? studentSchema
+          : (selectedRole === 'teacher' || selectedRole === 'sub_teacher')
+          ? teacherSchema
+          : selectedRole === 'manager'
+          ? managerSchema
+          : selectedRole === 'admin'
+          ? adminSchema
+          : studentSchema;
+
+      // delegate to zodResolver for consistent error format
+      return zodResolver(schema)(values, context, options as any);
+    },
     defaultValues: {
       first_name: '',
       last_name: '',
@@ -102,13 +141,14 @@ export default function AddUser() {
       password: '',
       phone_number: '',
       tg_username: '',
-      role: selectedRole,
+      role: selectedRole as any,
       level: undefined,
       group: '',
       social: undefined,
       invite_code: '',
       parent_type: undefined,
       parent_phone_number: '',
+      email: '',
     },
   });
 
@@ -209,17 +249,26 @@ export default function AddUser() {
     form.setValue('invite_code', '');
   };
 
-  const handleRoleChange = (value: 'student' | 'teacher' | 'admin' | 'sub_teacher') => {
+  const handleRoleChange = (value: 'student' | 'teacher' | 'sub_teacher' | 'manager' | 'admin') => {
     setSelectedRole(value);
     form.setValue('role', value as any);
+    
+    // Always reset invite code state when switching roles (so validation doesn't block Save)
+    setInviteCode('');
+    setCodeValidation(null);
+    setReferrerInfo(null);
+    
     // Reset conditional fields when role changes
-    if (value !== 'student') {
+    if (value === 'teacher' || value === 'sub_teacher' || value === 'manager' || value === 'admin') {
       form.setValue('level', undefined);
       form.setValue('group', '');
       form.setValue('social', undefined);
       form.setValue('invite_code', '');
       form.setValue('parent_type', undefined);
       form.setValue('parent_phone_number', '');
+    } else {
+      // For admin, manager, and when switching from student: clear invite_code
+      form.setValue('invite_code', '');
     }
   };
 
@@ -248,11 +297,17 @@ export default function AddUser() {
       formData.append('role', data.role);
       formData.append('password', data.password);
       
-      if (data.level) {
-        formData.append('level', data.level);
+      // Add email for manager and admin
+      if ((data as any).email) {
+        formData.append('email', (data as any).email);
+      }
+      
+      // Add level for teacher and sub_teacher
+      if ((data as TeacherFormData).level) {
+        formData.append('level', (data as TeacherFormData).level);
       }
 
-      // Only add conditional fields for students
+      // Only add conditional fields for students and teachers
       if (data.role === 'student') {
         formData.append('group', (data as StudentFormData).group);
         formData.append('social', (data as StudentFormData).social);
@@ -419,9 +474,9 @@ export default function AddUser() {
 
                 <div className="space-y-2">
                   <Label htmlFor="role">Rol *</Label>
-                    <Select
+                  <Select
                     value={selectedRole || ''}
-                    onValueChange={(value) => handleRoleChange(value as 'student' | 'teacher' | 'admin' | 'sub_teacher')}
+                    onValueChange={(value) => handleRoleChange(value as 'student' | 'teacher' | 'sub_teacher' | 'manager' | 'admin')}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Rolni tanlang" />
@@ -429,34 +484,37 @@ export default function AddUser() {
                     <SelectContent>
                       <SelectItem value="student">O'quvchi (Student)</SelectItem>
                       <SelectItem value="teacher">O'qituvchi (Teacher)</SelectItem>
-                      <SelectItem value="sub_teacher">Yordamchi o'qituvchi (Sub Teacher)</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="sub_teacher">Yordamchi O'qituvchi (Sub-Teacher)</SelectItem>
+                      <SelectItem value="manager">Administrator (Manager)</SelectItem>
+                      <SelectItem value="admin">CEO (Admin)</SelectItem>
                     </SelectContent>
                   </Select>
                   {form.formState.errors.role && (
                     <p className="text-sm text-destructive">{form.formState.errors.role?.message}</p>
                   )}
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="level">Level *</Label>
-                  <Select
-                    value={form.watch('level') || ''}
-                    onValueChange={(value) => form.setValue('level', value as any)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Level tanlang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="beginner">Boshlang'ich (Yashil)</SelectItem>
-                      <SelectItem value="intermediate">O'rta (Sariq)</SelectItem>
-                      <SelectItem value="expert">Yuksak (Qizil)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.level && (
-                    <p className="text-sm text-destructive">{form.formState.errors.level?.message}</p>
-                  )}
-                </div>
+                {/* Level field - only for teachers and sub_teachers */}
+                {(selectedRole === 'teacher' || selectedRole === 'sub_teacher' || selectedRole === 'admin' || selectedRole === 'manager') && (
+                  <div className="space-y-2">
+                    <Label htmlFor="level">Level *</Label>
+                    <Select
+                      value={form.watch('level') || ''}
+                      onValueChange={(value) => form.setValue('level', value as any)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Level tanlang" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Boshlang'ich (Yashil)</SelectItem>
+                        <SelectItem value="intermediate">O'rta (Sariq)</SelectItem>
+                        <SelectItem value="expert">Yuksak (Qizil)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {(form.formState.errors as any).level && (
+                      <p className="text-sm text-destructive">{(form.formState.errors as any).level?.message}</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Student only fields */}
                 {selectedRole === 'student' && (
@@ -492,8 +550,8 @@ export default function AddUser() {
                           ✓ Tanlangan: {selectedGroup.name} ({selectedGroup.smena}, {selectedGroup.start_time})
                         </p>
                       )}
-                      {form.formState.errors.group && (
-                        <p className="text-sm text-destructive">{form.formState.errors.group?.message}</p>
+                      {(form.formState.errors as any).group && (
+                        <p className="text-sm text-destructive">{(form.formState.errors as any).group?.message}</p>
                       )}
                     </div>
 
@@ -514,8 +572,8 @@ export default function AddUser() {
                           <SelectItem value="other">Boshqa</SelectItem>
                         </SelectContent>
                       </Select>
-                      {form.formState.errors.social && (
-                        <p className="text-sm text-destructive">{form.formState.errors.social?.message}</p>
+                      {(form.formState.errors as any).social && (
+                        <p className="text-sm text-destructive">{(form.formState.errors as any).social?.message}</p>
                       )}
                     </div>
 

@@ -16,6 +16,7 @@ interface Teacher {
   last_name: string;
   username: string;
   photo?: string;
+  role?: string; // ✅ Added role field
 }
 
 interface Room {
@@ -58,6 +59,7 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
     end_time: '',
     class_days: [] as string[],
     teacher_id: '',
+    sub_teacher_ids: [] as string[], // ✅ Added sub_teachers
     room: '',
     course: '',
     telegram_link: ''
@@ -74,11 +76,27 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
   const loadTeachers = async () => {
     try {
       setLoadingTeachers(true);
-      const response = await authFetch(`${API_ENDPOINTS.USERS_LIST}?role=teacher`);
-      if (response.ok) {
-        const data = await response.json();
-        setTeachers(data.results || data);
+      // Load both teacher and sub_teacher roles separately
+      const [teachersRes, subTeachersRes] = await Promise.all([
+        authFetch(`${API_ENDPOINTS.USERS_LIST}?role=teacher`),
+        authFetch(`${API_ENDPOINTS.USERS_LIST}?role=sub_teacher`)
+      ]);
+
+      const teachersData: Teacher[] = [];
+      
+      if (teachersRes.ok) {
+        const data = await teachersRes.json();
+        const teachers = data.results || data;
+        teachersData.push(...(Array.isArray(teachers) ? teachers : []));
       }
+      
+      if (subTeachersRes.ok) {
+        const data = await subTeachersRes.json();
+        const subTeachers = data.results || data;
+        teachersData.push(...(Array.isArray(subTeachers) ? subTeachers : []));
+      }
+      
+      setTeachers(teachersData);
     } catch (error) {
       console.error('Error loading teachers:', error);
       toast.error('O\'qituvchilarni yuklashda xatolik');
@@ -156,6 +174,7 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
           end_time: formData.end_time,
           class_days: formData.class_days,
           teacher: formData.teacher_id,
+          sub_teachers: formData.sub_teacher_ids, // ✅ Added sub_teachers
           room: formData.room ? Number(formData.room) : undefined,
           course: Number(formData.course),
           telegram_link: link || undefined
@@ -164,7 +183,7 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
 
       if (response.ok) {
         toast.success('Guruh yaratildi');
-        setFormData({ name: '', start_time: '', end_time: '', class_days: [], teacher_id: '', room: '', course: '', telegram_link: '' });
+        setFormData({ name: '', start_time: '', end_time: '', class_days: [], teacher_id: '', sub_teacher_ids: [], room: '', course: '', telegram_link: '' });
         onOpenChange(false);
         onSuccess();
       } else {
@@ -262,7 +281,7 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {teachers.map((teacher) => (
+                {teachers.filter(teacher => teacher.role === 'teacher').map((teacher) => (
                   <SelectItem key={teacher.id} value={teacher.id}>
                     <div className="flex items-center gap-2">
                       <Avatar className="w-6 h-6">
@@ -325,6 +344,49 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Yordamchi O'qituvchilar</Label>
+            <div className="space-y-2 border rounded-lg p-3 max-h-48 overflow-y-auto">
+              {teachers.filter(teacher => teacher.role === 'sub_teacher').length === 0 ? (
+                <p className="text-xs text-muted-foreground">Yordamchi o'qituvchilar topilmadi</p>
+              ) : (
+                teachers.filter(teacher => teacher.role === 'sub_teacher').map((teacher) => (
+                  <div key={teacher.id} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`sub_teacher_${teacher.id}`}
+                      checked={formData.sub_teacher_ids.includes(teacher.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFormData(prev => ({
+                            ...prev,
+                            sub_teacher_ids: [...prev.sub_teacher_ids, teacher.id]
+                          }));
+                        } else {
+                          setFormData(prev => ({
+                            ...prev,
+                            sub_teacher_ids: prev.sub_teacher_ids.filter(id => id !== teacher.id)
+                          }));
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`sub_teacher_${teacher.id}`} className="font-normal cursor-pointer flex items-center gap-2 flex-1">
+                      <Avatar className="w-5 h-5">
+                        <AvatarImage src={teacher.photo || undefined} />
+                        <AvatarFallback className="text-xs">
+                          {(teacher.first_name || '')[0]}{(teacher.last_name || '')[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm">{teacher.first_name} {teacher.last_name}</span>
+                    </Label>
+                  </div>
+                ))
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tanlangan: {formData.sub_teacher_ids.length}
+            </p>
           </div>
 
           <div className="space-y-2">
