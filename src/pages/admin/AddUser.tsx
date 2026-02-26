@@ -43,25 +43,27 @@ const studentSchema = z.object({
   }
 );
 
-const teacherSchema = z.object({
+const generalSchema = z.object({
   first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
   last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
   username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30),
   password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
   phone_number: z.string().min(6, 'Telefon raqam kiriting'),
   tg_username: z.string().max(50).optional(),
-  role: z.literal('teacher'),
+  role: z.enum(['teacher', 'admin', 'sub_teacher']),
   level: z.enum(['beginner', 'intermediate', 'expert']).optional(),
   group: z.string().optional(),
   social: z.string().optional(),
   invite_code: z.string().optional(),
   parent_type: z.string().optional(),
   parent_phone_number: z.string().optional(),
+  father: z.string().optional(),
+  mother: z.string().optional(),
 });
 
 type StudentFormData = z.infer<typeof studentSchema>;
-type TeacherFormData = z.infer<typeof teacherSchema>;
-type UserFormData = StudentFormData | TeacherFormData;
+type GeneralFormData = z.infer<typeof generalSchema>;
+type UserFormData = StudentFormData | GeneralFormData;
 
 interface Group {
   id: number;
@@ -85,14 +87,14 @@ export default function AddUser() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
-  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | undefined>(undefined);
+  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'admin' | 'sub_teacher' | undefined>(undefined);
   const [inviteCode, setInviteCode] = useState('');
   const [codeValidation, setCodeValidation] = useState<{ valid: boolean; message: string } | null>(null);
   const [validatingCode, setValidatingCode] = useState(false);
   const [referrerInfo, setReferrerInfo] = useState<ReferrerInfo | null>(null);
 
   const form = useForm<UserFormData>({
-    resolver: selectedRole === 'student' ? zodResolver(studentSchema) : selectedRole === 'teacher' ? zodResolver(teacherSchema) : zodResolver(studentSchema),
+    resolver: selectedRole === 'student' ? zodResolver(studentSchema) : zodResolver(generalSchema),
     defaultValues: {
       first_name: '',
       last_name: '',
@@ -207,11 +209,11 @@ export default function AddUser() {
     form.setValue('invite_code', '');
   };
 
-  const handleRoleChange = (value: 'student' | 'teacher') => {
+  const handleRoleChange = (value: 'student' | 'teacher' | 'admin' | 'sub_teacher') => {
     setSelectedRole(value);
     form.setValue('role', value as any);
     // Reset conditional fields when role changes
-    if (value === 'teacher') {
+    if (value !== 'student') {
       form.setValue('level', undefined);
       form.setValue('group', '');
       form.setValue('social', undefined);
@@ -417,9 +419,9 @@ export default function AddUser() {
 
                 <div className="space-y-2">
                   <Label htmlFor="role">Rol *</Label>
-                  <Select
+                    <Select
                     value={selectedRole || ''}
-                    onValueChange={(value) => handleRoleChange(value as 'student' | 'teacher')}
+                    onValueChange={(value) => handleRoleChange(value as 'student' | 'teacher' | 'admin' | 'sub_teacher')}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Rolni tanlang" />
@@ -427,6 +429,8 @@ export default function AddUser() {
                     <SelectContent>
                       <SelectItem value="student">O'quvchi (Student)</SelectItem>
                       <SelectItem value="teacher">O'qituvchi (Teacher)</SelectItem>
+                      <SelectItem value="sub_teacher">Yordamchi o'qituvchi (Sub Teacher)</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                   {form.formState.errors.role && (
