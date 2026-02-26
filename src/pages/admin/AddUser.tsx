@@ -21,71 +21,44 @@ import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 
-const studentSchema = z.object({
+// Universal schema — validates based on role value
+const baseFields = {
   first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
   last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
   username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30),
   password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
   phone_number: z.string().min(6, 'Telefon raqam kiriting'),
   tg_username: z.string().max(50).optional(),
-  role: z.literal('student'),
-  level: z.enum(['beginner', 'intermediate', 'expert'], { required_error: 'Level tanlang' }),
+  role: z.enum(['student', 'teacher', 'sub_teacher', 'manager', 'admin']),
+  level: z.enum(['beginner', 'intermediate', 'expert']).optional().nullable(),
   group: z.string().optional(),
-  social: z.enum(['instagram', 'telegram', 'facebook', 'friend', 'other'], { required_error: 'Social tanlang' }),
-  invite_code: z.string().max(30).optional(),
-  father: z.string().max(50).optional(),
-  mother: z.string().max(50).optional(),
-}).refine(
-  (data) => data.father || data.mother,
-  {
-    message: 'Kamida bitta ota-ona telefon raqami kerak',
-    path: ['father'],
-  }
-);
-
-const teacherSchema = z.object({
-  first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
-  last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
-  username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30),
-  password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
-  phone_number: z.string().min(6, 'Telefon raqam kiriting'),
-  tg_username: z.string().max(50).optional(),
-  role: z.enum(['teacher', 'sub_teacher']), 
-  level: z.enum(['beginner', 'intermediate', 'expert']).optional(),
-  group: z.string().optional(),
-  social: z.string().optional(),
+  social: z.string().optional().nullable(),
   invite_code: z.string().optional(),
+  father: z.string().optional(),
+  mother: z.string().optional(),
+  email: z.string().optional(),
   parent_type: z.string().optional(),
   parent_phone_number: z.string().optional(),
+};
+
+const userSchema = z.object(baseFields).superRefine((data, ctx) => {
+  if (data.role === 'student') {
+    // Student requires social
+    if (!data.social) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Social tanlang', path: ['social'] });
+    }
+    // Student requires at least one parent phone
+    if (!data.father && !data.mother) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Kamida bitta ota-ona telefon raqami kerak', path: ['father'] });
+    }
+    // Student requires level
+    if (!data.level) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Level tanlang', path: ['level'] });
+    }
+  }
 });
 
-const managerSchema = z.object({
-  first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
-  last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
-  username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30),
-  password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
-  phone_number: z.string().min(6, 'Telefon raqam kiriting'),
-  tg_username: z.string().max(50).optional(),
-  role: z.literal('manager'),
-  email: z.string().email('Email kiriting').optional(),
-});
-
-const adminSchema = z.object({
-  first_name: z.string().min(2, 'Ism kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
-  last_name: z.string().min(2, 'Familya kamida 2 ta belgidan iborat bo\'lishi kerak').max(50),
-  username: z.string().min(3, 'Username kamida 3 ta belgidan iborat bo\'lishi kerak').max(30),
-  password: z.string().min(6, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak').max(100),
-  phone_number: z.string().min(6, 'Telefon raqam kiriting'),
-  tg_username: z.string().max(50).optional(),
-  role: z.literal('admin'),
-  email: z.string().email('Email kiriting').optional(),
-});
-
-type StudentFormData = z.infer<typeof studentSchema>;
-type TeacherFormData = z.infer<typeof teacherSchema>;
-type ManagerFormData = z.infer<typeof managerSchema>;
-type AdminFormData = z.infer<typeof adminSchema>;
-type UserFormData = StudentFormData | TeacherFormData | ManagerFormData | AdminFormData;
+type UserFormData = z.infer<typeof userSchema>;
 
 interface Group {
   id: number;
@@ -116,24 +89,7 @@ export default function AddUser() {
   const [referrerInfo, setReferrerInfo] = useState<ReferrerInfo | null>(null);
 
   const form = useForm<UserFormData>({
-    // Use a dynamic resolver function so validation matches currently selected role.
-    // React Hook Form will call this resolver on each validation, and it reads the
-    // latest `selectedRole` from closure, so switching role updates validation.
-    resolver: async (values, context, options) => {
-      const schema =
-        selectedRole === 'student'
-          ? studentSchema
-          : (selectedRole === 'teacher' || selectedRole === 'sub_teacher')
-          ? teacherSchema
-          : selectedRole === 'manager'
-          ? managerSchema
-          : selectedRole === 'admin'
-          ? adminSchema
-          : studentSchema;
-
-      // delegate to zodResolver for consistent error format
-      return zodResolver(schema)(values, context, options as any);
-    },
+    resolver: zodResolver(userSchema),
     defaultValues: {
       first_name: '',
       last_name: '',
@@ -141,17 +97,16 @@ export default function AddUser() {
       password: '',
       phone_number: '',
       tg_username: '',
-      role: selectedRole as any,
+      role: undefined as any,
       level: undefined,
       group: '',
       social: undefined,
       invite_code: '',
-      parent_type: undefined,
-      parent_phone_number: '',
+      father: '',
+      mother: '',
       email: '',
     },
   });
-
   // Fetch groups on component mount
   useEffect(() => {
     const fetchGroups = async () => {
@@ -302,15 +257,15 @@ export default function AddUser() {
         formData.append('email', (data as any).email);
       }
       
-      // Add level for teacher and sub_teacher
-      if ((data as TeacherFormData).level) {
-        formData.append('level', (data as TeacherFormData).level);
+      // Add level
+      if (data.level) {
+        formData.append('level', data.level);
       }
 
-      // Only add conditional fields for students and teachers
+      // Only add conditional fields for students
       if (data.role === 'student') {
-        formData.append('group', (data as StudentFormData).group);
-        formData.append('social', (data as StudentFormData).social);
+        if (data.group) formData.append('group', data.group);
+        if (data.social) formData.append('social', data.social);
         
         // Only add invite_code if validated
         if (codeValidation?.valid && inviteCode.trim()) {
@@ -318,12 +273,8 @@ export default function AddUser() {
         }
         
         const parentPhoneData: Record<string, string> = {};
-        if ((data as StudentFormData).father) {
-          parentPhoneData['father'] = (data as StudentFormData).father;
-        }
-        if ((data as StudentFormData).mother) {
-          parentPhoneData['mother'] = (data as StudentFormData).mother;
-        }
+        if (data.father) parentPhoneData['father'] = data.father;
+        if (data.mother) parentPhoneData['mother'] = data.mother;
         
         formData.append('parent_phone_number', JSON.stringify(parentPhoneData));
       }
