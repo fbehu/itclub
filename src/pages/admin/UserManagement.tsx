@@ -234,7 +234,7 @@ export default function UserManagement() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-foreground">Foydalanuvchilar boshqaruvi</h1>
           <div className="flex items-center gap-2">
-            <Button onClick={() => navigate('/dashboard/admin/add-user')} title="Foydalanuvchi qo'shish">
+            <Button onClick={() => navigate(user?.role === 'manager' ? '/dashboard/manager/add-user' : '/dashboard/admin/add-user')} title="Foydalanuvchi qo'shish">
               <UserPlus className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Yangi foydalanuvchi</span>
             </Button>

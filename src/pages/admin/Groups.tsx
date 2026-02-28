@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -66,6 +67,8 @@ interface Group {
 
 export default function Groups() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const basePath = user?.role === 'manager' ? '/dashboard/manager' : '/dashboard/admin';
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -308,7 +311,7 @@ export default function Groups() {
                             size="sm"
                             variant="ghost"
                             className="hover:bg-blue-100"
-                            onClick={() => navigate(`/dashboard/admin/groups/${group.id}`)}
+                            onClick={() => navigate(`${basePath}/groups/${group.id}`)}
                             title="Ko'rish"
                           >
                             <Eye className="w-4 h-4 text-blue-600" />
