@@ -47,9 +47,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ];
     } else if (user?.role === 'manager') {
       return [
+        { path: '/dashboard/manager/users', label: 'Foydalanuvchilar', icon: Users },
         { path: '/dashboard/manager/statistics', label: 'Statistika', icon: BarChart3 },
         { path: '/dashboard/manager/attendance', label: 'Davomat', icon: ClipboardList },
         { path: '/dashboard/manager/groups', label: 'Guruhlar', icon: UsersRound },
+        { path: '/dashboard/manager/rooms', label: 'Xonalar', icon: Home },
         { path: '/dashboard/chat', label: 'Suhbat', icon: MessageSquare },
         { path: '/dashboard/notifications', label: 'Bildirishnomalar', icon: Bell },
         { path: '/dashboard/profile', label: 'Profil', icon: User },
