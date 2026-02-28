@@ -301,6 +301,22 @@ export function AppRoutes() {
       />
       {/* Manager Routes */}
       <Route 
+        path="/dashboard/manager/users" 
+        element={
+          <ProtectedRoute>
+            <ManagerUserManagement />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/manager/add-user" 
+        element={
+          <ProtectedRoute>
+            <ManagerAddUser />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
         path="/dashboard/manager/statistics" 
         element={
           <ProtectedRoute>
@@ -321,6 +337,22 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <ManagerGroups />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/manager/groups/:groupId" 
+        element={
+          <ProtectedRoute>
+            <ManagerGroupDetail />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/manager/rooms" 
+        element={
+          <ProtectedRoute>
+            <ManagerRooms />
           </ProtectedRoute>
         } 
       />
