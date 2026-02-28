@@ -311,7 +311,7 @@ export default function Groups() {
                             size="sm"
                             variant="ghost"
                             className="hover:bg-blue-100"
-                            onClick={() => navigate(`/dashboard/admin/groups/${group.id}`)}
+                            onClick={() => navigate(`${basePath}/groups/${group.id}`)}
                             title="Ko'rish"
                           >
                             <Eye className="w-4 h-4 text-blue-600" />
