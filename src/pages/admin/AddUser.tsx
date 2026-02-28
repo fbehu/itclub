@@ -444,8 +444,8 @@ export default function AddUser() {
                     <p className="text-sm text-destructive">{form.formState.errors.role?.message}</p>
                   )}
                 </div>
-                {/* Level field - only for teachers and sub_teachers */}
-                {(selectedRole === 'teacher' || selectedRole === 'sub_teacher' || selectedRole === 'admin' || selectedRole === 'manager') && (
+                {/* Level field - for all roles */}
+                {(selectedRole === 'student' || selectedRole === 'teacher' || selectedRole === 'sub_teacher' || selectedRole === 'admin' || selectedRole === 'manager') && (
                   <div className="space-y-2">
                     <Label htmlFor="level">Level *</Label>
                     <Select
