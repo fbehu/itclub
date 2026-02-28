@@ -67,6 +67,8 @@ interface Group {
 
 export default function Groups() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const basePath = user?.role === 'manager' ? '/dashboard/manager' : '/dashboard/admin';
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
