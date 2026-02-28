@@ -146,7 +146,7 @@ export default function Statistics() {
 
       if (user.role === 'student') {
         endpoint = '/statistic/student/';
-      } else if (user.role === 'admin') {
+      } else if (user.role === 'admin' || user.role === 'manager') {
         endpoint = '/statistic/admin/';
       } else if (user.role === 'teacher') {
         endpoint = '/statistic/teacher/';
@@ -162,7 +162,7 @@ export default function Statistics() {
         const data = await response.json();
         if (user.role === 'student') {
           setStudentStats(data);
-        } else if (user.role === 'admin') {
+        } else if (user.role === 'admin' || user.role === 'manager') {
           setAdminStats(data);
         } else if (user.role === 'teacher') {
           setTeacherStats(data);
@@ -507,7 +507,7 @@ export default function Statistics() {
   }
 
   // Render Admin Statistics
-  if (user?.role === 'admin' && adminStats) {
+  if ((user?.role === 'admin' || user?.role === 'manager') && adminStats) {
     return (
       <DashboardLayout>
         <div className="space-y-8 pb-8">
