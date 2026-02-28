@@ -23,7 +23,8 @@ interface Course {
   description?: string;
   monthly_price: string | number;
   monthly_discount_price: string | number;
-  course_duration: number;
+  duration_months: number;
+  final_price: string | number;
   groups_list: number[];
   enrollment_count?: number;
   created_at?: string;
@@ -101,7 +102,7 @@ export default function CourseMarketplace() {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -115,7 +116,7 @@ export default function CourseMarketplace() {
               </p>
             </CardContent>
           </Card>
-
+{/* 
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -130,7 +131,7 @@ export default function CourseMarketplace() {
                 Barcha kurslar bo'yicha
               </p>
             </CardContent>
-          </Card>
+          </Card> */}
 
           <Card>
             <CardHeader className="pb-2">
@@ -237,7 +238,7 @@ export default function CourseMarketplace() {
                         Davom
                       </p>
                       <p className="font-bold text-orange-600 dark:text-orange-400">
-                        {course.course_duration} oy
+                        {course.duration_months} oy
                       </p>
                     </div>
                   </div>
@@ -249,8 +250,7 @@ export default function CourseMarketplace() {
                     </p>
                     <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
                       {(
-                        Number(course.monthly_discount_price) *
-                        course.course_duration
+                        Number(course.final_price)
                       ).toLocaleString('uz-UZ')}{' '}
                       so'm
                     </p>

@@ -574,7 +574,7 @@ export default function Statistics() {
               <CardContent className="p-6">
                 <div className="space-y-3">
                   <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'} font-semibold uppercase`}>Daromad</p>
-                  <p className="text-2xl font-bold text-green-500">{(Number(adminStats.payments.total_revenue) / 1000000000).toFixed(1)}B</p>
+                  <p className="text-2xl font-bold text-green-500">{Number(adminStats.payments.total_revenue).toLocaleString('uz-UZ')} so'm </p>
                   <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'} mt-2`}>
                     {Number(adminStats.payments.total_revenue).toLocaleString('uz-UZ')} so'm
                   </p>

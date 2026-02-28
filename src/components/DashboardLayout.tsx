@@ -89,9 +89,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const getRoleLabel = () => {
-    if (user?.role === 'admin') return 'Administrator';
-    if (user?.role === 'manager') return 'Menedzher';
-    if (user?.role === 'teacher' || user?.role === 'sub_teacher') return "O'qituvchi";
+    if (user?.role === 'admin') return 'CEO & Asoschi';
+    if (user?.role === 'manager') return 'Administrator';
+    if (user?.role === 'sub_teacher') return 'Yordamchi o\'qituvchi';
+    if (user?.role === 'teacher') return "O'qituvchi";
     return 'Talaba';
   };
 
