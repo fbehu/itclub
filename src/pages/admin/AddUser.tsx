@@ -326,7 +326,7 @@ export default function AddUser() {
     }
   };
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.role !== 'manager') {
     return null;
   }
 
@@ -599,6 +599,18 @@ export default function AddUser() {
                         </div>
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="photo">Rasm qo'shish</Label>
+                      <Input
+                        id="photo"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                      />
+                      {photoFile && (
+                        <p className="text-sm text-green-600">✓ Fayl tanlandi: {photoFile.name}</p>
+                      )}
+                    </div>
                     <div className="space-y-3">
                       <Label>Ota-Ona telefon raqamlari *</Label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg border-2 border-dashed">
@@ -639,19 +651,6 @@ export default function AddUser() {
                     </div>
                   </>
                 )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="photo">Rasm qo'shish</Label>
-                  <Input
-                    id="photo"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                  />
-                  {photoFile && (
-                    <p className="text-sm text-green-600">✓ Fayl tanlandi: {photoFile.name}</p>
-                  )}
-                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-4">

@@ -202,8 +202,10 @@ export default function UserManagement() {
   const getRoleColor = (role?: string) => {
     switch (role) {
       case 'teacher': return 'bg-blue-500';
+      case 'sub_teacher': return 'bg-blue-500';  
       case 'student': return 'bg-green-500';
       case 'admin': return 'bg-red-500';
+      case 'manager': return 'bg-amber-500';
       default: return 'bg-gray-500';
     }
   };
@@ -211,8 +213,10 @@ export default function UserManagement() {
   const getRoleText = (role?: string) => {
     switch (role) {
       case 'teacher': return 'O\'qituvchi';
+      case 'sub_teacher': return 'Yordamchi O\'qituvchi';
       case 'student': return 'O\'quvchi';
-      case 'admin': return 'Admin';
+      case 'admin': return 'CEO & Asoschi';
+      case 'manager': return 'Administrator';
       default: return role || 'Noma\'lum';
     }
   };

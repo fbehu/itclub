@@ -58,14 +58,6 @@ export default function TeacherGroups() {
     loadGroups();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-lg text-muted-foreground">Yuklanmoqda...</div>
-      </div>
-    );
-  }
-
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
@@ -76,7 +68,11 @@ export default function TeacherGroups() {
           </div>
         </div>
 
-        {groups.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-lg text-muted-foreground">Yuklanmoqda...</div>
+          </div>
+        ) : groups.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Users className="w-12 h-12 text-muted-foreground mb-4" />
@@ -197,20 +193,6 @@ export default function TeacherGroups() {
                             >
                               <Eye className="w-4 h-4 text-blue-600" />
                             </Button>
-                            {!isSubTeacher && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="hover:bg-amber-100"
-                                onClick={() => {
-                                  setSelectedGroup(group as any);
-                                  setEditDialogOpen(true);
-                                }}
-                                title="Tahrirlash"
-                              >
-                                <Edit className="w-4 h-4 text-amber-600" />
-                              </Button>
-                            )}
                           </div>
                         </TableCell>
                       </TableRow>

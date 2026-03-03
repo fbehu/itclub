@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Award, Plus, Edit, Trash2, Calendar, Loader2, Image as ImageIcon, Search, X, Eye } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +47,9 @@ export default function AdminCertificates() {
   const [studentSearchOpen, setStudentSearchOpen] = useState(false);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingCertificate, setDeletingCertificate] = useState<Certificate | null>(null);
+  const [deleting, setDeleting] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -193,7 +197,18 @@ export default function AdminCertificates() {
       }
 
       if (!response.ok) {
-        throw new Error(editingCertificate ? 'Sertifikatni tahrirlashda xatolik' : 'Sertifikat qo\'shishda xatolik');
+        let errorMessage = editingCertificate ? 'Sertifikatni tahrirlashda xatolik' : 'Sertifikat qo\'shishda xatolik';
+        try {
+          const errorData = await response.json();
+          if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // Agar JSON parse qilsa bo'lmasa, default message'ni ishlatamiz
+        }
+        throw new Error(errorMessage);
       }
 
       const updatedCert = await response.json();
@@ -229,23 +244,42 @@ export default function AdminCertificates() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Rostdan ham bu sertifikatni o'chirmoqchimisiz?")) return;
-    
+  const handleDelete = async (cert: Certificate) => {
+    setDeletingCertificate(cert);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingCertificate) return;
+
+    setDeleting(true);
     try {
-      const response = await authFetch(`${API_ENDPOINTS.CERTIFICATES}${id}/`, {
+      const response = await authFetch(`${API_ENDPOINTS.CERTIFICATES}${deletingCertificate.id}/`, {
         method: 'DELETE'
       });
 
       if (!response.ok) {
-        throw new Error('Sertifikatni o\'chirishda xatolik');
+        let errorMessage = 'Sertifikatni o\'chirishda xatolik';
+        try {
+          const errorData = await response.json();
+          if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // Agar JSON parse qilsa bo'lmasa, default message'ni ishlatamiz
+        }
+        throw new Error(errorMessage);
       }
 
-      setCertificates(prev => prev.filter(c => c.id !== id));
+      setCertificates(prev => prev.filter(c => c.id !== deletingCertificate.id));
       toast({
         title: "Muvaffaqiyat",
         description: "Sertifikat o'chirildi"
       });
+      setDeleteConfirmOpen(false);
+      setDeletingCertificate(null);
     } catch (error) {
       console.error('Error deleting certificate:', error);
       toast({
@@ -253,6 +287,8 @@ export default function AdminCertificates() {
         description: error instanceof Error ? error.message : 'Sertifikatni o\'chirishda xatolik',
         variant: 'destructive'
       });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -282,7 +318,7 @@ export default function AdminCertificates() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto p-4 sm:p-6 space-y-6">
+      <div className="mx-auto p-4 sm:p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -367,7 +403,7 @@ export default function AdminCertificates() {
                               variant="ghost"
                               size="icon"
                               className="text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(cert.id)}
+                              onClick={() => handleDelete(cert)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -641,6 +677,25 @@ export default function AdminCertificates() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sertifikatni o'chirish</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{deletingCertificate?.name}" sertifikatini o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              O'chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

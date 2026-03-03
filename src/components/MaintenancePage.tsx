@@ -46,11 +46,11 @@ export function MaintenancePage() {
             </div>
 
             <h1 className="text-5xl font-bold text-white mb-4">
-              ⏳ Bir Moment Kutin
+              ⏳ Bir Moment Kuting
             </h1>
 
             <p className="text-xl text-blue-200 mb-6">
-              {throttleMessage || 'Juda ko\'m so\'rov. Iltimos, biroz vaqt kutin.'}
+              {throttleMessage || 'Juda ko\'p so\'rov. Iltimos, biroz vaqt kuting.'}
             </p>
 
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-8 mb-8">
@@ -117,24 +117,15 @@ export function MaintenancePage() {
             </div>
 
             <h1 className="text-5xl font-bold text-white mb-4">
-              🔧 Tizim Tamirlash Jarayonida
+              🔧 Tizim Ta'mirda
             </h1>
 
             <p className="text-xl text-red-200 mb-6">
               {systemStatus.message}
             </p>
 
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 mb-8">
-              <p className="text-red-100 font-semibold">
-                ⏳ Iltimos, biroz vaqt kutin...
-              </p>
-              <p className="text-red-200 text-sm mt-2">
-                Tamir ishlari bitirilgach, saytga avtomatik qayta kirish imkonyatlari paydo bo'ladi.
-              </p>
-            </div>
-
             {/* Status Info */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 mb-8">
+            <div className="bg-slate-800/50 rounded-lg p-6 mb-4">
               <div className="grid grid-cols-2 gap-4 text-left">
                 <div>
                   <p className="text-slate-400 text-sm">Status</p>

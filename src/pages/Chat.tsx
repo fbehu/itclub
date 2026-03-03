@@ -54,7 +54,7 @@ interface ChatUser {
   first_name: string;
   last_name: string;
   photo?: string;
-  role: 'admin' | 'student' | 'teacher';
+  role: 'admin' | 'manager' | 'student' | 'sub_teacher' | 'teacher';
   unread_count?: number;
   level?: string | null;
   direction?: string;
@@ -656,7 +656,7 @@ export default function Chat() {
                     variant="ghost"
                     className={`w-full justify-start mb-2 h-auto p-3 relative ${
                       selectedUser?.id === chatUser.id ? 'bg-accent' : ''
-                    } ${chatUser.role === 'admin' ? 'bg-red-500/10 hover:bg-red-500/20' : chatUser.role === 'teacher' ? 'bg-blue-500/10 hover:bg-blue-500/20' : ''}`}
+                    } ${chatUser.role === 'admin' ? 'bg-red-500/10 hover:bg-red-500/20' : chatUser.role === 'teacher' ? 'bg-blue-500/10 hover:bg-blue-500/20' : chatUser.role === 'sub_teacher' ? 'bg-green-500/10 hover:bg-green-500/20' : chatUser.role === 'manager' ? 'bg-purple-500/10 hover:bg-purple-500/20' :''}`}
                     onClick={() => handleUserSelect(chatUser)}
                   >
                     <Avatar className="h-10 w-10 mr-3">
@@ -668,8 +668,10 @@ export default function Chat() {
                     <div className="text-left flex-1">
                       <p className="font-medium">{chatUser.first_name} {chatUser.last_name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {chatUser.role === 'admin' ? 'Admin' : 
+                        {chatUser.role === 'admin' ? 'CEO & Asoschi' : 
                          chatUser.role === 'teacher' ? 'O\'qituvchi' :
+                         chatUser.role === 'sub_teacher' ? 'Yordamchi o\'qituvchi' :
+                         chatUser.role === 'manager' ? 'Administrator' :
                          'O\'quvchi'}
                         {chatUser.level && ` • ${chatUser.level}`}
                       </p>
@@ -717,8 +719,10 @@ export default function Chat() {
                     {selectedUser.first_name} {selectedUser.last_name}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedUser.role === 'admin' ? 'Admin' : 
+                    {selectedUser.role === 'admin' ? 'CEO & Asoschi' : 
                      selectedUser.role === 'teacher' ? 'O\'qituvchi' :
+                      selectedUser.role === 'sub_teacher' ? 'Yordamchi o\'qituvchi' :
+                      selectedUser.role === 'manager' ? 'Administrator' :
                      'O\'quvchi'}
                     {selectedUser.level && ` • ${selectedUser.level}`}
                     {selectedUser.unread_count !== undefined && selectedUser.unread_count > 0 && (

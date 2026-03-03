@@ -79,9 +79,15 @@ export const API_ENDPOINTS = {
   ADMIN_STUDENT_REWARDS: (studentId: string) => `/referrals/admin/student/${studentId}/rewards/`,
   ADMIN_STUDENT_BALANCE: (studentId: string) => `/referrals/admin/student/${studentId}/balance/`,
   ADMIN_STUDENT_VOUCHERS: (studentId: string) => `/referrals/admin/student/${studentId}/vouchers/`,
-  ADMIN_WITHDRAWALS: '/referrals/admin/withdrawals/',
+  ADMIN_WITHDRAWALS: (studentId: string) => `/referrals/admin/student/${studentId}/withdrawals/`,
   ADMIN_APPROVE_WITHDRAWAL: (withdrawalId: number) => `/referrals/admin/withdrawals/${withdrawalId}/approve/`,
   ADMIN_ACTIVATE_VOUCHER: (studentId: string) => `/referrals/admin/vouchers/${studentId}/activate/`,
   ADMIN_LEDGER: '/referrals/admin/ledger/',
   ADMIN_LEADERBOARD: '/referrals/admin/leaderboard/',
+
+  // Payments
+  PAYMENTS: '/payments/',
+  PAYMENTS_RECEIPT: (enrollmentId: number) => `/payments/receipt/${enrollmentId}/`,
+  PAYMENTS_AVAILABLE_MONTHS: '/payments/available-months/',
+  PAYMENTS_MONTHLY_STATISTICS: (year: number, month: number) => `/payments/statistics/monthly/?year=${year}&month=${month}`,
 };

@@ -171,7 +171,7 @@ export default function StudentSystemUpdates() {
                         setDetailModalOpen(true);
                       }}
                     >
-                      To'lliq ma'lumot
+                      To'liq ma'lumot
                     </Button>
                   </div>
                 </CardContent>

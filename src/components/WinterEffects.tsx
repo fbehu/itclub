@@ -121,7 +121,7 @@ export function FireworksEffect() {
     for (let i = 0; i < 5; i++) {
       setTimeout(() => createFirework(), i * 300);
     }
-
+ 
     // Periodic fireworks
     const fireworkInterval = setInterval(() => {
       if (Math.random() > 0.3) {

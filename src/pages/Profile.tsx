@@ -29,7 +29,7 @@ interface ProfileUser {
   coins: number;
   invite_code?: string;
   photo?: string | null;
-  role: 'student' | 'teacher' | 'admin';
+  role: 'student' | 'sub_teacher' | 'teacher' | 'admin' | 'manager';
   created_at: string;
 }
 
@@ -331,11 +331,23 @@ export default function Profile() {
           color: 'from-purple-400 to-violet-400',
           icon: '👨‍🏫'
         };
+      case 'sub_teacher':
+        return {
+          label: 'Yordamchi O\'qituvchi',
+          color: 'from-green-400 to-emerald-400',
+          icon: '🧑‍🏫'
+        };
       case 'admin':
         return {
-          label: 'Administrator',
+          label: 'CEO & Asoschi',
           color: 'from-red-400 to-orange-400',
           icon: '👑'
+        };
+      case 'manager':
+        return {
+          label: 'Administrator',
+          color: 'from-amber-400 to-orange-400',
+          icon: '⚙️'
         };
       default:
         return {
@@ -872,7 +884,7 @@ export default function Profile() {
             </div>
 
             {/* Sertifikatlar Card - Only for student and teacher roles */}
-            {profileUser.role !== 'admin' && (
+            {profileUser.role !== 'admin' && profileUser.role !== 'manager' && (
               <Card className="border-none bg-gradient-to-br from-white to-gray-50 dark:from-slate-900/90 dark:to-slate-800/90 backdrop-blur-sm card-animate">
                 <CardHeader className="pb-3 sm:pb-4">
                   <div className="flex items-center gap-2">

@@ -212,30 +212,32 @@ export default function StudentGroupDetail() {
                 {group.sub_teachers && group.sub_teachers.length > 0 && (
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Yordamchi O'qituvchilar</p>
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {group.sub_teachers.map((subTeacher) => (
-                        <div key={subTeacher.id} className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg border border-purple-200 dark:border-purple-500/20">
-                          <Avatar className="w-10 h-10 flex-shrink-0">
-                            <AvatarImage src={subTeacher.photo || undefined} />
-                            <AvatarFallback className="bg-purple-500 text-white">
-                              {(subTeacher.first_name || '')[0]}{(subTeacher.last_name || '')[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">
-                              {subTeacher.first_name} {subTeacher.last_name}
-                            </p>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 truncate">@{subTeacher.username}</p>
+                        <div key={subTeacher.id} className="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg border border-purple-200 dark:border-purple-500/20">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Avatar className="w-10 h-10 flex-shrink-0">
+                              <AvatarImage src={subTeacher.photo || undefined} />
+                              <AvatarFallback className="bg-purple-500 text-white">
+                                {(subTeacher.first_name || '')[0]}{(subTeacher.last_name || '')[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">
+                                {subTeacher.first_name} {subTeacher.last_name}
+                              </p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 truncate">@{subTeacher.username}</p>
+                            </div>
                           </div>
+                          {subTeacher.phone_number && (
+                            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                              <Phone className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">{subTeacher.phone_number}</span>
+                            </div>
+                          )}  
                         </div>
                       ))}
                     </div>
-                    {group.sub_teachers[0]?.phone_number && (
-                      <div className="mt-2 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                        <Phone className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">Telefon: {group.sub_teachers[0].phone_number}</span>
-                      </div>
-                    )}
                   </div>
                 )}
 
@@ -245,7 +247,7 @@ export default function StudentGroupDetail() {
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
                       <div className="flex-1">
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Guruhda</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">GuruhcdaGuruhcdaGuruhcdaGuruhcdaGuruhcdaGuruhcdaGuruhcdaGuruhcda</p>
                         <p className="font-semibold text-slate-900 dark:text-white">{group.student_count} ta o'quvchi</p>
                       </div>
                     </div>

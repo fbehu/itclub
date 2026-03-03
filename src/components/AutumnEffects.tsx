@@ -22,7 +22,7 @@ export const AutumnEffects: React.FC = () => {
 
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
         {Array.from({ length: 15 }).map((_, i) => {
-          const leaves = ['🍂', '🍁', '🌰', '🍃'];
+          const leaves = ['🍂', '🍁', '🍃'];
           return (
             <div
               key={i}

@@ -117,14 +117,6 @@ export default function Groups() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-lg text-muted-foreground">Yuklanmoqda...</div>
-      </div>
-    );
-  }
-
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
@@ -133,13 +125,17 @@ export default function Groups() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Guruhlar</h1>
           <p className="text-muted-foreground mt-1">O'quvchilar guruhlarini boshqarish</p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
+        <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto" disabled={loading}>
           <Plus className="w-4 h-4 mr-2" />
-          Yangi guruh
+          {loading ? 'Yuklanmoqda...' : 'Yangi guruh'}
         </Button>
       </div>
 
-      {groups.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-lg text-muted-foreground">Yuklanmoqda...</div>
+        </div>
+      ) : groups.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Users className="w-12 h-12 text-muted-foreground mb-4" />
@@ -329,18 +325,20 @@ export default function Groups() {
                           >
                             <Edit className="w-4 h-4 text-amber-600" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="hover:bg-red-100"
-                            onClick={() => {
-                              setSelectedGroup(group);
-                              setDeleteDialogOpen(true);
-                            }}
-                            title="O'chirish"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </Button>
+                          {user?.role === 'admin' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="hover:bg-red-100"
+                              onClick={() => {
+                                setSelectedGroup(group);
+                                setDeleteDialogOpen(true);
+                              }}
+                              title="O'chirish"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

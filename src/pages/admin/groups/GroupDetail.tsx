@@ -273,7 +273,7 @@ export default function GroupDetail() {
             <CardTitle className="text-lg">Guruh ma'lumotlari</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Users className="w-5 h-5 text-primary" />
@@ -310,21 +310,17 @@ export default function GroupDetail() {
                   <p className="font-semibold">{new Date(group.created_at).toLocaleDateString('uz-UZ')}</p>
                 </div>
               </div>
-            </div>
-
-            {/* Class Days */}
-            {group.class_days && (
-              <div className="border-t pt-4 mb-4">
-                <h3 className="text-sm font-medium text-muted-foreground mb-3">Dars kunlari</h3>
-                <div className="flex flex-wrap gap-2">
-                  {Array.isArray(group.class_days) && group.class_days.map((day, idx) => (
-                    <Badge key={idx} variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                      {day}
-                    </Badge>
-                  ))}
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Calendar className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Dars kunlari</p>
+                  <p className="font-semibold">{group.class_days?.join(', ') || '-'}</p>
                 </div>
               </div>
-            )}
+            </div>
+
 
             {/* Teacher Info */}
             {group.teacher && (
@@ -368,7 +364,7 @@ export default function GroupDetail() {
             {group.sub_teachers && group.sub_teachers.length > 0 && (
               <div className="border-t pt-4">
                 <h3 className="text-sm font-medium text-muted-foreground mb-3">Yordamchi O'qituvchilar</h3>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {group.sub_teachers.map((subTeacher) => (
                     <div key={subTeacher.id} className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
                       <Avatar className="w-12 h-12">
@@ -377,26 +373,26 @@ export default function GroupDetail() {
                           {(subTeacher.first_name || '')[0]}{(subTeacher.last_name || '')[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
                           <User className="w-4 h-4 text-muted-foreground" />
                           <div>
                             <p className="font-medium">{subTeacher.first_name || ''} {subTeacher.last_name || ''}</p>
                             <p className="text-sm text-muted-foreground">@{subTeacher.username}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mb-2">
                           <Phone className="w-4 h-4 text-muted-foreground" />
                           <div>
                             <p className="text-sm text-muted-foreground">Telefon</p>
-                            <p className="font-medium">{subTeacher.phone_number || '-'}</p>
+                            <p className="font-medium text-sm">{subTeacher.phone_number || '-'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <GraduationCap className="w-4 h-4 text-muted-foreground" />
                           <div>
                             <p className="text-sm text-muted-foreground">Darajasi</p>
-                            <p className="font-medium">{subTeacher.level || '-'}</p>
+                            <p className="font-medium text-sm">{subTeacher.level || '-'}</p>
                           </div>
                         </div>
                       </div>

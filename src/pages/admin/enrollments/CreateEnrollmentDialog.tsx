@@ -225,13 +225,13 @@ export function CreateEnrollmentDialog({
       return;
     }
 
-    // ensure at least one month is covered
-    if (monthlyPrice > 0 && paymentAmount < monthlyPrice) {
-      toast.error(
-        `To'lov miqdori kamida oylik narx (${monthlyPrice.toLocaleString('uz-UZ')}) bo'lishi kerak`
-      );
-      return;
-    }
+    // // ensure at least one month is covered
+    // if (monthlyPrice > 0 && paymentAmount < monthlyPrice) {
+    //   toast.error(
+    //     `To'lov miqdori kamida oylik narx (${monthlyPrice.toLocaleString('uz-UZ')}) bo'lishi kerak`
+    //   );
+    //   return;
+    // }
 
     try {
       setLoading(true);

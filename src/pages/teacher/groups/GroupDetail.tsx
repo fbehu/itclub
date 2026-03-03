@@ -342,7 +342,7 @@ export default function TeacherGroupDetail() {
             {group.sub_teachers && group.sub_teachers.length > 0 && (
               <div className="border-t pt-4">
                 <h3 className="text-sm font-medium text-muted-foreground mb-3">Yordamchi O'qituvchilar</h3>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {group.sub_teachers.map((subTeacher) => (
                     <div key={subTeacher.id} className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
                       <Avatar className="w-12 h-12">
@@ -351,26 +351,26 @@ export default function TeacherGroupDetail() {
                           {(subTeacher.first_name || '')[0]}{(subTeacher.last_name || '')[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
                           <Users className="w-4 h-4 text-muted-foreground" />
                           <div>
                             <p className="font-medium">{subTeacher.first_name || ''} {subTeacher.last_name || ''}</p>
                             <p className="text-sm text-muted-foreground">@{subTeacher.username}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mb-2">
                           <Phone className="w-4 h-4 text-muted-foreground" />
                           <div>
                             <p className="text-sm text-muted-foreground">Telefon</p>
-                            <p className="font-medium">{subTeacher.phone_number || '-'}</p>
+                            <p className="font-medium text-sm">{subTeacher.phone_number || '-'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <GraduationCap className="w-4 h-4 text-muted-foreground" />
                           <div>
                             <p className="text-sm text-muted-foreground">Darajasi</p>
-                            <p className="font-medium">{subTeacher.level || '-'}</p>
+                            <p className="font-medium text-sm">{subTeacher.level || '-'}</p>
                           </div>
                         </div>
                       </div>

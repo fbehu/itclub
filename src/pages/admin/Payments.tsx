@@ -41,7 +41,9 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateEnrollmentDialog } from './enrollments/CreateEnrollmentDialog';
+import MonthlyPaymentStatistics from './MonthlyPaymentStatistics';
 
 
 interface Payment {
@@ -206,11 +208,11 @@ export default function Payments() {
     const monthly = Number(selectedEnrollment?.monthly_payment || 0);
     const amountNum = Number(paymentFormData.amount);
 
-    // enforce at least monthly payment
-    if (monthly > 0 && amountNum < monthly) {
-      toast.error(`To'lov miqdori kamida oylik narx (${monthly.toLocaleString('uz-UZ')}) bo'lishi kerak`);
-      return;
-    }
+    // // enforce at least monthly payment
+    // if (monthly > 0 && amountNum < monthly) {
+    //   toast.error(`To'lov miqdori kamida oylik narx (${monthly.toLocaleString('uz-UZ')}) bo'lishi kerak`);
+    //   return;
+    // }
 
     // don't allow paying more than remaining debt
     if (selectedEnrollment && amountNum > Number(selectedEnrollment.debt)) {
@@ -330,8 +332,23 @@ export default function Payments() {
           </Button>
         </div>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        {/* Tabs */}
+        <Tabs defaultValue="enrollments" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="enrollments">
+              <CreditCard className="w-4 h-4 mr-2" />
+              Ro'yxatlar
+            </TabsTrigger>
+            <TabsTrigger value="statistics">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Oylik Statistika
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Enrollments Tab */}
+          <TabsContent value="enrollments" className="space-y-6">
+            {/* Statistics */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -575,6 +592,13 @@ export default function Payments() {
             </CardContent>
           </Card>
         )}
+          </TabsContent>
+
+          {/* Statistics Tab */}
+          <TabsContent value="statistics" className="space-y-6">
+            <MonthlyPaymentStatistics />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Add Payment Dialog */}

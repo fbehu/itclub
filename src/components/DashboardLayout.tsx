@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -48,10 +48,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     } else if (user?.role === 'manager') {
       return [
         { path: '/dashboard/manager/users', label: 'Foydalanuvchilar', icon: Users },
-        { path: '/dashboard/manager/statistics', label: 'Statistika', icon: BarChart3 },
         { path: '/dashboard/manager/attendance', label: 'Davomat', icon: ClipboardList },
         { path: '/dashboard/manager/groups', label: 'Guruhlar', icon: UsersRound },
+        { path: '/dashboard/manager/referral', label: 'Takliflar', icon: Share2 },
+        { path: '/dashboard/manager/courses', label: 'Kurslar', icon: BookOpen },
+        { path: '/dashboard/manager/payments', label: 'To\'lovlar', icon: CreditCard },
         { path: '/dashboard/manager/rooms', label: 'Xonalar', icon: Home },
+        { path: '/dashboard/manager/send-sms', label: 'SMS', icon: Mail },
+        { path: '/dashboard/admin/certificates', label: 'Sertifikatlar', icon: Award },
         { path: '/dashboard/chat', label: 'Suhbat', icon: MessageSquare },
         { path: '/dashboard/notifications', label: 'Bildirishnomalar', icon: Bell },
         { path: '/dashboard/profile', label: 'Profil', icon: User },
@@ -82,7 +86,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   };
 
-  const navItems = getNavItems();
+  const navItems = useMemo(() => getNavItems(), [user?.role]);
   const isActive = (path: string) => location.pathname === path;
 
   const getCurrentPageTitle = () => {

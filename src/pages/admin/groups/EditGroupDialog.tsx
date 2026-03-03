@@ -434,47 +434,114 @@ export function EditGroupDialog({ open, onOpenChange, group, onSuccess }: EditGr
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
-            <Label>Yordamchi O'qituvchilar</Label>
-            <div className="space-y-2 border rounded-lg p-3 max-h-48 overflow-y-auto">
-              {teachers.filter(teacher => teacher.role === 'sub_teacher').length === 0 ? (
-                <p className="text-xs text-muted-foreground">Yordamchi o'qituvchilar topilmadi</p>
-              ) : (
-                teachers.filter(teacher => teacher.role === 'sub_teacher').map((teacher) => (
-                  <div key={teacher.id} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`sub_teacher_${teacher.id}`}
-                      checked={formData.sub_teacher_ids.includes(teacher.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setFormData(prev => ({
-                            ...prev,
-                            sub_teacher_ids: [...prev.sub_teacher_ids, teacher.id]
-                          }));
-                        } else {
-                          setFormData(prev => ({
-                            ...prev,
-                            sub_teacher_ids: prev.sub_teacher_ids.filter(id => id !== teacher.id)
-                          }));
-                        }
-                      }}
-                    />
-                    <Label htmlFor={`sub_teacher_${teacher.id}`} className="font-normal cursor-pointer flex items-center gap-2 flex-1">
-                      <Avatar className="w-5 h-5">
-                        <AvatarImage src={teacher.photo || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {(teacher.first_name || '')[0]}{(teacher.last_name || '')[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{teacher.first_name} {teacher.last_name}</span>
-                    </Label>
+            <Label>O'qituvchi va Yordamchi O'qituvchilar</Label>
+            <Select>
+              <SelectTrigger>
+                <SelectValue placeholder="O'qituvchilarni tanlang">
+                  {formData.sub_teacher_ids.length > 0 ? (
+                    <span>{formData.sub_teacher_ids.length} ta tanlandi</span>
+                  ) : (
+                    <span className="text-muted-foreground">O'qituvchilarni tanlang</span>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {teachers.length === 0 ? (
+                  <div className="p-3 text-xs text-muted-foreground text-center">
+                    O'qituvchilar topilmadi
                   </div>
-                ))
-              )}
-            </div>
+                ) : (
+                  <>
+                    {/* Main Teacher */}
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-b">
+                      Asosiy O'qituvchi
+                    </div>
+                    {teachers.filter(teacher => teacher.role === 'teacher').length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        O'qituvchilar topilmadi
+                      </div>
+                    ) : (
+                      teachers.filter(teacher => teacher.role === 'teacher').map((teacher) => (
+                        <div key={teacher.id} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded" onClick={(e) => e.stopPropagation()}>
+                          <Avatar className="w-5 h-5 flex-shrink-0">
+                            <AvatarImage src={teacher.photo || undefined} />
+                            <AvatarFallback className="text-xs">
+                              {(teacher.first_name || '')[0]}{(teacher.last_name || '')[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs flex-1">{teacher.first_name} {teacher.last_name}</span>
+                          <input 
+                            type="checkbox"
+                            checked={formData.sub_teacher_ids.includes(teacher.id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              if (e.target.checked) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  sub_teacher_ids: [...prev.sub_teacher_ids, teacher.id]
+                                }));
+                              } else {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  sub_teacher_ids: prev.sub_teacher_ids.filter(id => id !== teacher.id)
+                                }));
+                              }
+                            }}
+                            className="w-4 h-4 flex-shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      ))
+                    )}
+
+                    {/* Sub Teachers */}
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t border-b mt-1">
+                      Yordamchi O'qituvchilar
+                    </div>
+                    {teachers.filter(teacher => teacher.role === 'sub_teacher').length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        Yordamchi o'qituvchilar topilmadi
+                      </div>
+                    ) : (
+                      teachers.filter(teacher => teacher.role === 'sub_teacher').map((teacher) => (
+                        <div key={teacher.id} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded" onClick={(e) => e.stopPropagation()}>
+                          <Avatar className="w-5 h-5 flex-shrink-0">
+                            <AvatarImage src={teacher.photo || undefined} />
+                            <AvatarFallback className="text-xs">
+                              {(teacher.first_name || '')[0]}{(teacher.last_name || '')[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs flex-1">{teacher.first_name} {teacher.last_name}</span>
+                          <input 
+                            type="checkbox"
+                            checked={formData.sub_teacher_ids.includes(teacher.id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              if (e.target.checked) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  sub_teacher_ids: [...prev.sub_teacher_ids, teacher.id]
+                                }));
+                              } else {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  sub_teacher_ids: prev.sub_teacher_ids.filter(id => id !== teacher.id)
+                                }));
+                              }
+                            }}
+                            className="w-4 h-4 flex-shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      ))
+                    )}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">
-              Tanlangan: {formData.sub_teacher_ids.length}
+              Tanlangan: {formData.sub_teacher_ids.length} ta
             </p>
           </div>
 

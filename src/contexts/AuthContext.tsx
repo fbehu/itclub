@@ -51,14 +51,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch current user info using stored tokens
   const fetchCurrentUser = async () => {
     const accessToken = localStorage.getItem('access_token');
-    if (!accessToken) return;
+    const storedUser = localStorage.getItem('currentUser');
+    
+    // Agar localStorage'da user bor bo'lsa, uni immediately set qil
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+      } catch (error) {
+        console.error('Failed to parse stored user:', error);
+      }
+    }
+    
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
 
-    setIsLoading(true);
     try {
       const response = await authFetch(API_ENDPOINTS.USER_ME, {
         method: 'GET',
@@ -75,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem('currentUser');
           setUser(null);
         }
+        setIsLoading(false);
         return;
       }
 

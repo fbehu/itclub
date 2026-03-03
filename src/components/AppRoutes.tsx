@@ -1,4 +1,5 @@
 import { useSystemStatus } from '@/contexts/SystemStatusContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { MaintenancePage } from '@/components/MaintenancePage';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -23,6 +24,7 @@ import AdminAttendance from '@/pages/admin/Attendance';
 import AdminSystemUpdates from '@/pages/admin/SystemUpdates';
 import AdminCertificates from '@/pages/admin/Certificates';
 import ReferralAdmin from '@/pages/admin/ReferralAdmin';
+import ReferralMeneger from '@/pages/manager/ReferralMeneger';
 import StudentDetailPage from '@/pages/admin/StudentDetailPage';
 import Payments from '@/pages/admin/Payments';
 import StudentAttendance from '@/pages/student/Attendance';
@@ -33,7 +35,6 @@ import TeacherGroups from '@/pages/teacher/Groups';
 import TeacherGroupDetail from '@/pages/teacher/groups/GroupDetail';
 import TeacherSystemUpdates from '@/pages/teacher/SystemUpdates';
 import CourseMarketplace from '@/pages/teacher/CourseMarketplace';
-import ManagerStatistics from '@/pages/manager/Statistics';
 import ManagerAttendance from '@/pages/manager/Attendance';
 import ManagerGroups from '@/pages/manager/Groups';
 import ManagerUserManagement from '@/pages/manager/UserManagement';
@@ -46,6 +47,7 @@ import NotFound from '@/pages/NotFound';
 
 export function AppRoutes() {
   const { isMaintenanceActive, isDegraded } = useSystemStatus();
+  const { isLoading } = useAuth();
 
   // Maintenance mode - faqat maintenance page ko'rsatish
   if (isMaintenanceActive || isDegraded) {
@@ -53,6 +55,20 @@ export function AppRoutes() {
       <Routes>
         <Route path="*" element={<MaintenancePage />} />
       </Routes>
+    );
+  }
+
+  // Loading state - auth tekshirilmoqda
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-400/30 backdrop-blur-xl animate-spin">
+            <div className="w-12 h-12 border-3 border-purple-400/30 border-t-purple-400 rounded-full"></div>
+          </div>
+          <p className="text-white text-lg font-medium">Tekshirilmoqda...</p>
+        </div>
+      </div>
     );
   }
 
@@ -317,14 +333,6 @@ export function AppRoutes() {
         } 
       />
       <Route 
-        path="/dashboard/manager/statistics" 
-        element={
-          <ProtectedRoute>
-            <ManagerStatistics />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
         path="/dashboard/manager/attendance" 
         element={
           <ProtectedRoute>
@@ -356,11 +364,55 @@ export function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+      <Route 
+        path="/dashboard/manager/referral" 
+        element={
+          <ProtectedRoute>
+            <ReferralMeneger />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/manager/student-detail/:studentId" 
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <StudentDetailPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/manager/courses" 
+        element={
+          <ProtectedRoute>
+            <Courses />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/manager/payments" 
+        element={
+          <ProtectedRoute>
+            <Payments />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/dashboard/manager/send-sms" 
+        element={
+          <ProtectedRoute>
+            <SendSMS />
+          </ProtectedRoute>
+        } 
+      />
+
       {/* Student Routes */}
       <Route 
         path="/dashboard/attendance" 
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['student', 'admin']}>
             <StudentAttendance />
           </ProtectedRoute>
         } 

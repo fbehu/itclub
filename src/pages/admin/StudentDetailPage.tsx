@@ -169,7 +169,7 @@ export default function StudentDetailPage() {
     try {
       // Fetch student rewards, withdrawals, and vouchers
       const rewardsRes = await authFetch(API_ENDPOINTS.ADMIN_STUDENT_REWARDS(studentId!), { method: 'GET' });
-      const withdrawalsRes = await authFetch(`${API_ENDPOINTS.ADMIN_WITHDRAWALS}`, { method: 'GET' });
+      const withdrawalsRes = await authFetch(API_ENDPOINTS.ADMIN_WITHDRAWALS(studentId!), { method: 'GET' });
       const vouchersRes = await authFetch(API_ENDPOINTS.ADMIN_STUDENT_VOUCHERS(studentId!), { method: 'GET' });
       const transactionsRes = await authFetch(`/referrals/admin/student/${studentId}/transactions/`, { method: 'GET' });
 
@@ -184,9 +184,16 @@ export default function StudentDetailPage() {
       }
 
       if (withdrawalsRes.ok) {
-        const allWithdrawals = await withdrawalsRes.json();
-        // Filter by current student
-        withdrawalsData = Array.isArray(allWithdrawals) ? allWithdrawals : [];
+        const response = await withdrawalsRes.json();
+        // API returns { student_id, student_name, username, count, withdrawals: [...] }
+        if (response && Array.isArray(response.withdrawals)) {
+          withdrawalsData = response.withdrawals;
+        } else if (Array.isArray(response)) {
+          // fallback: direct array
+          withdrawalsData = response;
+        } else {
+          withdrawalsData = [];
+        }
         setWithdrawals(withdrawalsData);
       }
 
