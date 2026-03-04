@@ -125,7 +125,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             sidebarOpen ? 'w-[260px]' : 'w-[68px]'
           } flex flex-col border-r ${isGlass ? 'glass-nav' : 'bg-sidebar border-sidebar-border'}`}
         >
-        >
           {/* Sidebar Header */}
           <div className="p-4 flex-shrink-0">
             <div className="flex items-center justify-between mb-5">
@@ -213,7 +212,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           className={`fixed top-0 right-0 h-16 border-b transition-all duration-300 ${
             sidebarOpen ? 'left-[260px]' : 'left-[68px]'
           } z-40 flex items-center justify-between px-6 ${isGlass ? 'glass-header' : 'bg-background/80 backdrop-blur-xl border-border/50'}`}
-        >
         >
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-foreground">{getCurrentPageTitle()}</h2>
