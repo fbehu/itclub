@@ -321,14 +321,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
             ) : (
               /* Expanded menu */
-              <div className="bg-sidebar rounded-t-3xl max-h-[75vh] overflow-y-auto">
+              <div className={`rounded-t-3xl max-h-[75vh] overflow-y-auto ${isGlass ? 'glass-nav' : 'bg-sidebar'}`}>
                 {/* Handle bar */}
                 <div className="flex justify-center pt-3 pb-2">
-                  <div className="w-10 h-1 rounded-full bg-sidebar-foreground/20" />
+                  <div className={`w-10 h-1 rounded-full ${isGlass ? 'bg-foreground/15' : 'bg-sidebar-foreground/20'}`} />
                 </div>
 
                 <div className="px-4 pb-2">
-                  <p className="text-sm font-semibold text-sidebar-foreground/50 uppercase tracking-wider px-2 mb-3">
+                  <p className={`text-sm font-semibold uppercase tracking-wider px-2 mb-3 ${isGlass ? 'text-foreground/50' : 'text-sidebar-foreground/50'}`}>
                     Menyu
                   </p>
                 </div>
@@ -348,9 +348,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           animation: `slideUpFade 0.3s ease-out ${index * 0.03}s both`,
                         }}
                         className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all duration-200 ${
-                          active
-                            ? 'bg-sidebar-primary/15 ring-1 ring-sidebar-primary/30'
-                            : 'bg-sidebar-accent/50 active:scale-95'
+                          isGlass
+                            ? `glass-nav-item ${active ? 'active' : ''}`
+                            : active
+                              ? 'bg-sidebar-primary/15 ring-1 ring-sidebar-primary/30'
+                              : 'bg-sidebar-accent/50 active:scale-95'
                         }`}
                       >
                         <Icon className={`h-5 w-5 ${active ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'}`} />
