@@ -14,12 +14,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Lock, Globe, Moon, LogOut, Sparkles, Snowflake, Flower2, Sun, Leaf, Palette } from 'lucide-react';
+import { Lock, Globe, Moon, LogOut, Sparkles, Snowflake, Flower2, Sun, Leaf, Palette, GlassWater } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useSeason, Season } from '@/contexts/SeasonContext';
+import { useGlassTheme } from '@/contexts/GlassThemeContext';
 
 const seasonOptions: { key: Season; label: string; emoji: string; description: string; icon: typeof Snowflake; gradient: string }[] = [
   { key: 'default', label: 'Standart', emoji: '🎨', description: 'Asosiy ko\'rinish', icon: Palette, gradient: 'from-indigo-500 to-blue-500' },
@@ -32,9 +33,10 @@ const seasonOptions: { key: Season; label: string; emoji: string; description: s
 const SettingsPageContent = () => {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const { season, setSeason } = useSeason();
+  const { glassEnabled, setGlassEnabled } = useGlassTheme();
 
   const handleSeason = (newSeason: Season) => {
     setSeason(newSeason);
@@ -123,6 +125,49 @@ const SettingsPageContent = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Glassmorphism - faqat student uchun */}
+          {user?.role === 'student' && (
+            <Card className="card-modern overflow-hidden">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <GlassWater className="h-5 w-5 text-primary" />
+                  Glassmorphism dizayn
+                </CardTitle>
+                <CardDescription>iOS 18 uslubidagi shisha effektli dizaynni yoqing</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/50">
+                  <Label htmlFor="glass-mode" className="flex flex-col gap-1">
+                    <span className="font-medium">Shisha dizayn</span>
+                    <span className="font-normal text-sm text-muted-foreground">
+                      Barcha elementlar shaffof shisha ko'rinishida bo'ladi
+                    </span>
+                  </Label>
+                  <Switch
+                    id="glass-mode"
+                    checked={glassEnabled}
+                    onCheckedChange={(checked) => {
+                      setGlassEnabled(checked);
+                      toast({
+                        title: checked ? '🔮 Glassmorphism yoqildi' : '🎨 Oddiy dizayn',
+                        description: checked 
+                          ? 'Shisha effektli dizayn aktivlashtirildi' 
+                          : 'Standart dizaynga qaytildi',
+                      });
+                    }}
+                  />
+                </div>
+                {glassEnabled && (
+                  <div className="p-4 rounded-2xl glass-card">
+                    <p className="text-sm text-muted-foreground text-center">
+                      ✨ Glassmorphism dizayn faol
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Xavfsizlik */}
           <Card className="card-modern">

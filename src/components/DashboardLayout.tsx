@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from '@/components/NotificationBell';
 import { WinterEffectsWrapper } from '@/components/WinterEffectsWrapper';
+import { useGlassTheme } from '@/contexts/GlassThemeContext';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -20,6 +21,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const { glassEnabled } = useGlassTheme();
+  const isGlass = glassEnabled && user?.role === 'student';
 
   const handleLogout = () => {
     logout();
@@ -112,15 +115,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen bg-background ${isGlass ? 'glass-bg-main' : ''}`}>
       <WinterEffectsWrapper />
 
       {/* Desktop Sidebar */}
       {!isMobile && (
-        <aside
-          className={`fixed left-0 top-0 h-full bg-sidebar transition-all duration-300 ease-in-out z-30 ${
+         <aside
+          className={`fixed left-0 top-0 h-full transition-all duration-300 ease-in-out z-30 ${
             sidebarOpen ? 'w-[260px]' : 'w-[68px]'
-          } flex flex-col border-r border-sidebar-border`}
+          } flex flex-col border-r ${isGlass ? 'glass-nav' : 'bg-sidebar border-sidebar-border'}`}
         >
           {/* Sidebar Header */}
           <div className="p-4 flex-shrink-0">
@@ -206,9 +209,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Top Navbar (Desktop) */}
       {!isMobile && (
         <header
-          className={`fixed top-0 right-0 h-16 bg-background/80 backdrop-blur-xl border-b border-border/50 transition-all duration-300 ${
+          className={`fixed top-0 right-0 h-16 border-b transition-all duration-300 ${
             sidebarOpen ? 'left-[260px]' : 'left-[68px]'
-          } z-40 flex items-center justify-between px-6`}
+          } z-40 flex items-center justify-between px-6 ${isGlass ? 'glass-header' : 'bg-background/80 backdrop-blur-xl border-border/50'}`}
         >
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-foreground">{getCurrentPageTitle()}</h2>
@@ -235,7 +238,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Mobile Top Navbar */}
       {isMobile && (
-        <header className="fixed top-0 left-0 right-0 h-16 bg-background/80 backdrop-blur-xl border-b border-border/50 z-40 flex items-center justify-between px-4">
+        <header className={`fixed top-0 left-0 right-0 h-16 border-b z-40 flex items-center justify-between px-4 ${isGlass ? 'glass-header' : 'bg-background/80 backdrop-blur-xl border-border/50'}`}>
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8 ring-2 ring-primary/20">
               <AvatarImage src={user.photo} />
@@ -271,12 +274,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             {!mobileMoreOpen ? (
               /* Compact bottom bar */
-              <div className="bg-sidebar/95 backdrop-blur-xl border-t border-sidebar-border">
+              <div className={`${isGlass ? 'glass-nav' : 'bg-sidebar/95 backdrop-blur-xl'} border-t ${isGlass ? '' : 'border-sidebar-border'}`}>
                 <div className="flex justify-around items-center h-16 px-2 max-w-md mx-auto">
                   {navItems.slice(0, 4).map((item) => {
                     const Icon = item.icon;
                     const active = isActive(item.path);
-                    return (
+                      return (
                       <button
                         key={item.path}
                         onClick={() => {
@@ -284,15 +287,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           setMobileMoreOpen(false);
                         }}
                         className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-2xl transition-all duration-200 ${
-                          active
-                            ? 'text-sidebar-primary scale-105'
-                            : 'text-sidebar-foreground/60'
+                          isGlass
+                            ? `glass-nav-item ${active ? 'active' : ''}`
+                            : active
+                              ? 'text-sidebar-primary scale-105'
+                              : 'text-sidebar-foreground/60'
                         }`}
                       >
-                        <div className={`p-1.5 rounded-xl transition-all duration-200 ${active ? 'bg-sidebar-primary/15' : ''}`}>
-                          <Icon className={`h-5 w-5 ${active ? 'text-sidebar-primary' : ''}`} />
+                        <div className={`p-1.5 rounded-xl transition-all duration-200 ${!isGlass && active ? 'bg-sidebar-primary/15' : ''}`}>
+                          <Icon className={`h-5 w-5 ${active ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/60' : '')}`} />
                         </div>
-                        <span className={`text-[10px] font-medium ${active ? 'text-sidebar-primary' : 'text-sidebar-foreground/50'}`}>
+                        <span className={`text-[10px] font-medium ${
+                          active 
+                            ? (isGlass ? 'text-primary' : 'text-sidebar-primary') 
+                            : (isGlass ? 'text-foreground/50' : 'text-sidebar-foreground/50')
+                        }`}>
                           {item.label.length > 8 ? item.label.slice(0, 7) + '…' : item.label}
                         </span>
                       </button>
@@ -312,14 +321,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
             ) : (
               /* Expanded menu */
-              <div className="bg-sidebar rounded-t-3xl max-h-[75vh] overflow-y-auto">
+              <div className={`rounded-t-3xl max-h-[75vh] overflow-y-auto ${isGlass ? 'glass-nav' : 'bg-sidebar'}`}>
                 {/* Handle bar */}
                 <div className="flex justify-center pt-3 pb-2">
-                  <div className="w-10 h-1 rounded-full bg-sidebar-foreground/20" />
+                  <div className={`w-10 h-1 rounded-full ${isGlass ? 'bg-foreground/15' : 'bg-sidebar-foreground/20'}`} />
                 </div>
 
                 <div className="px-4 pb-2">
-                  <p className="text-sm font-semibold text-sidebar-foreground/50 uppercase tracking-wider px-2 mb-3">
+                  <p className={`text-sm font-semibold uppercase tracking-wider px-2 mb-3 ${isGlass ? 'text-foreground/50' : 'text-sidebar-foreground/50'}`}>
                     Menyu
                   </p>
                 </div>
@@ -339,14 +348,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           animation: `slideUpFade 0.3s ease-out ${index * 0.03}s both`,
                         }}
                         className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all duration-200 ${
-                          active
-                            ? 'bg-sidebar-primary/15 ring-1 ring-sidebar-primary/30'
-                            : 'bg-sidebar-accent/50 active:scale-95'
+                          isGlass
+                            ? `glass-nav-item ${active ? 'active' : ''}`
+                            : active
+                              ? 'bg-sidebar-primary/15 ring-1 ring-sidebar-primary/30'
+                              : 'bg-sidebar-accent/50 active:scale-95'
                         }`}
                       >
-                        <Icon className={`h-5 w-5 ${active ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'}`} />
+                        <Icon className={`h-5 w-5 ${active ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/70' : 'text-sidebar-foreground/70')}`} />
                         <span className={`text-[10px] font-semibold text-center leading-tight ${
-                          active ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'
+                          active ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/70' : 'text-sidebar-foreground/70')
                         }`}>
                           {item.label}
                         </span>
@@ -356,13 +367,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </div>
 
                 {/* Logout button in mobile menu */}
-                <div className="px-4 pb-6 border-t border-sidebar-border pt-3">
+                <div className={`px-4 pb-6 pt-3 ${isGlass ? 'border-t border-border/30' : 'border-t border-sidebar-border'}`}>
                   <button
                     onClick={() => {
                       setMobileMoreOpen(false);
                       handleLogout();
                     }}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-red-400 bg-red-500/10 hover:bg-red-500/15 transition-all text-sm font-medium"
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl transition-all text-sm font-medium ${isGlass ? 'glass-btn text-destructive' : 'text-red-400 bg-red-500/10 hover:bg-red-500/15'}`}
                   >
                     <LogOut className="h-4 w-4" />
                     Chiqish
