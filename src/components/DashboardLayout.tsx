@@ -355,9 +355,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                               : 'bg-sidebar-accent/50 active:scale-95'
                         }`}
                       >
-                        <Icon className={`h-5 w-5 ${active ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'}`} />
+                        <Icon className={`h-5 w-5 ${active ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/70' : 'text-sidebar-foreground/70')}`} />
                         <span className={`text-[10px] font-semibold text-center leading-tight ${
-                          active ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'
+                          active ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/70' : 'text-sidebar-foreground/70')
                         }`}>
                           {item.label}
                         </span>
@@ -367,13 +367,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </div>
 
                 {/* Logout button in mobile menu */}
-                <div className="px-4 pb-6 border-t border-sidebar-border pt-3">
+                <div className={`px-4 pb-6 pt-3 ${isGlass ? 'border-t border-border/30' : 'border-t border-sidebar-border'}`}>
                   <button
                     onClick={() => {
                       setMobileMoreOpen(false);
                       handleLogout();
                     }}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-red-400 bg-red-500/10 hover:bg-red-500/15 transition-all text-sm font-medium"
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl transition-all text-sm font-medium ${isGlass ? 'glass-btn text-destructive' : 'text-red-400 bg-red-500/10 hover:bg-red-500/15'}`}
                   >
                     <LogOut className="h-4 w-4" />
                     Chiqish
