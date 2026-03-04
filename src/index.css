@@ -473,10 +473,69 @@
   }
 
   /* ===== GLASSMORPHISM THEME 🔮 ===== */
+
+  /* Monochrome color override - strip all colors */
+  .glass-theme {
+    --background: 0 0% 96%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 0 0% 15%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 90%;
+    --secondary-foreground: 0 0% 15%;
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 92%;
+    --accent-foreground: 0 0% 15%;
+    --destructive: 0 0% 40%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 0 0% 30%;
+    --sidebar-background: 0 0% 97%;
+    --sidebar-foreground: 0 0% 15%;
+    --sidebar-primary: 0 0% 15%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 92%;
+    --sidebar-accent-foreground: 0 0% 15%;
+    --sidebar-border: 0 0% 88%;
+  }
+  .glass-theme.dark {
+    --background: 0 0% 8%;
+    --foreground: 0 0% 92%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 92%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 92%;
+    --primary: 0 0% 90%;
+    --primary-foreground: 0 0% 8%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 90%;
+    --destructive: 0 0% 60%;
+    --destructive-foreground: 0 0% 8%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 70%;
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 0 0% 90%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 18%;
+  }
+
   .glass-theme .glass-card {
     background: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(24px) saturate(200%);
-    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    backdrop-filter: blur(24px) saturate(120%);
+    -webkit-backdrop-filter: blur(24px) saturate(120%);
     border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: 
       0 8px 32px rgba(0, 0, 0, 0.06),
@@ -488,70 +547,49 @@
   .glass-theme .glass-card:hover {
     box-shadow: 
       0 12px 40px rgba(0, 0, 0, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.7),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
     transform: translateY(-1px);
   }
-
   .glass-theme.dark .glass-card {
-    background: rgba(30, 30, 40, 0.5);
+    background: rgba(30, 30, 30, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.02);
-  }
-  .glass-theme.dark .glass-card:hover {
-    box-shadow: 
-      0 12px 40px rgba(0, 0, 0, 0.35),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   }
 
   /* Glass button */
   .glass-theme .glass-btn {
     background: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 
-      0 2px 12px rgba(0, 0, 0, 0.04),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5);
     border-radius: 1rem;
     transition: all 0.25s ease;
   }
   .glass-theme .glass-btn:hover {
     background: rgba(255, 255, 255, 0.65);
-    box-shadow: 
-      0 4px 20px rgba(0, 0, 0, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     transform: translateY(-1px);
   }
   .glass-theme .glass-btn:active {
     transform: translateY(0);
     background: rgba(255, 255, 255, 0.4);
   }
-
   .glass-theme.dark .glass-btn {
-    background: rgba(40, 40, 55, 0.5);
+    background: rgba(40, 40, 40, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 
-      0 2px 12px rgba(0, 0, 0, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  }
-  .glass-theme.dark .glass-btn:hover {
-    background: rgba(50, 50, 65, 0.6);
   }
 
   /* Glass sidebar / bottom nav */
   .glass-theme .glass-nav {
-    background: rgba(240, 240, 245, 0.6) !important;
-    backdrop-filter: blur(30px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
+    background: rgba(240, 240, 240, 0.6) !important;
+    backdrop-filter: blur(30px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(120%) !important;
     border-color: rgba(255, 255, 255, 0.4) !important;
     box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.05);
   }
   .glass-theme.dark .glass-nav {
-    background: rgba(20, 20, 30, 0.65) !important;
+    background: rgba(20, 20, 20, 0.65) !important;
     border-color: rgba(255, 255, 255, 0.06) !important;
     box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.3);
   }
@@ -562,9 +600,7 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 
-      0 2px 8px rgba(0, 0, 0, 0.03),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.4);
     border-radius: 1rem;
     transition: all 0.25s ease;
   }
@@ -573,35 +609,31 @@
     transform: scale(1.03);
   }
   .glass-theme .glass-nav-item.active {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(99, 102, 241, 0.15));
-    border-color: rgba(99, 102, 241, 0.3);
-    box-shadow: 
-      0 4px 16px rgba(99, 102, 241, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   }
-
   .glass-theme.dark .glass-nav-item {
-    background: rgba(40, 40, 55, 0.4);
+    background: rgba(40, 40, 40, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
   .glass-theme.dark .glass-nav-item:hover {
-    background: rgba(50, 50, 65, 0.5);
+    background: rgba(50, 50, 50, 0.5);
   }
   .glass-theme.dark .glass-nav-item.active {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.2));
-    border-color: rgba(99, 102, 241, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
   }
 
   /* Glass header */
   .glass-theme .glass-header {
-    background: rgba(245, 245, 250, 0.55) !important;
-    backdrop-filter: blur(30px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
+    background: rgba(245, 245, 245, 0.55) !important;
+    backdrop-filter: blur(30px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(120%) !important;
     border-color: rgba(255, 255, 255, 0.4) !important;
   }
   .glass-theme.dark .glass-header {
-    background: rgba(15, 15, 25, 0.6) !important;
+    background: rgba(15, 15, 15, 0.6) !important;
     border-color: rgba(255, 255, 255, 0.06) !important;
   }
 
@@ -615,21 +647,21 @@
     border-radius: 0.875rem;
   }
   .glass-theme .glass-input:focus {
-    border-color: rgba(99, 102, 241, 0.4);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05), inset 0 1px 2px rgba(0, 0, 0, 0.04);
   }
 
   /* Glass background override for student panel */
   .glass-theme .glass-bg-main {
     background: linear-gradient(135deg, 
-      hsl(220 25% 95%) 0%, 
-      hsl(230 20% 92%) 50%, 
-      hsl(240 18% 94%) 100%) !important;
+      hsl(0 0% 95%) 0%, 
+      hsl(0 0% 92%) 50%, 
+      hsl(0 0% 94%) 100%) !important;
   }
   .glass-theme.dark .glass-bg-main {
     background: linear-gradient(135deg, 
-      hsl(228 25% 10%) 0%, 
-      hsl(235 22% 12%) 50%, 
-      hsl(240 20% 11%) 100%) !important;
+      hsl(0 0% 8%) 0%, 
+      hsl(0 0% 10%) 50%, 
+      hsl(0 0% 9%) 100%) !important;
   }
 }
