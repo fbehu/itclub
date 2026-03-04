@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from '@/components/NotificationBell';
 import { WinterEffectsWrapper } from '@/components/WinterEffectsWrapper';
+import { useGlassTheme } from '@/contexts/GlassThemeContext';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -20,6 +21,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const { glassEnabled } = useGlassTheme();
+  const isGlass = glassEnabled && user?.role === 'student';
 
   const handleLogout = () => {
     logout();
