@@ -83,7 +83,7 @@ export default function Chat() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsRetries, setWsRetries] = useState(0);
-  const [isChatMaximized, setIsChatMaximized] = useState(false);
+  const [isFullPage, setIsFullPage] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -102,12 +102,10 @@ export default function Chat() {
     scrollToBottom();
   }, [messages]);
 
-  // Load conversations list
   useEffect(() => {
     loadConversations();
   }, [user]);
 
-  // Check if navigated from notifications with selected user
   useEffect(() => {
     const state = location.state as { selectedUserId?: string };
     if (state?.selectedUserId && chatUsers.length > 0) {
@@ -119,97 +117,68 @@ export default function Chat() {
     }
   }, [location.state, chatUsers]);
 
-  // WebSocket connection and message loading when user selected
   useEffect(() => {
     if (selectedUser && user) {
       loadMessages();
       connectWebSockets();
       markAsRead();
-
       return () => {
         disconnectWebSockets();
       };
     }
   }, [selectedUser, user]);
 
-  // Get WebSocket protocol based on current page protocol
   const getWebSocketProtocol = () => {
     return window.location.protocol === 'https:' ? 'wss' : 'ws';
   };
 
-  // Get backend host for WebSocket connection
   const getWebSocketHost = () => {
-    // Development: backend on port 8000
-    // Production: backend on admin.onedu.uz
     const isDevelopment = window.location.hostname === 'localhost' || 
                           window.location.hostname === '127.0.0.1';
-    
-    if (isDevelopment) {
-      return 'localhost:8000'; // Backend server
-    }
-    
-    return 'admin.onedu.uz'; // Production: backend domain
+    if (isDevelopment) return 'localhost:8000';
+    return 'admin.onedu.uz';
   };
 
-  // Connect to WebSocket endpoints
   const connectWebSockets = () => {
     if (!user?.id || !selectedUser?.id) return;
-
     const token = localStorage.getItem('access_token');
     if (!token) {
       console.warn('⚠️  Autentifikatsiya tokeni topilmadi, polling-dan foydalanilmoqda');
-      // Fallback to polling
       startPolling();
       return;
     }
-
     const wsProtocol = getWebSocketProtocol();
-    const wsHost = getWebSocketHost(); // Use backend host, not frontend
-
-    // Chat messages WebSocket
+    const wsHost = getWebSocketHost();
     const chatWsUrl = `${wsProtocol}://${wsHost}/ws/chat/${user.id}/?token=${token}`;
     console.log('🔗 Connecting to chat WebSocket:', chatWsUrl);
     try {
       chatSocketRef.current = new WebSocket(chatWsUrl);
       let chatConnectTimeout: NodeJS.Timeout;
-
       chatSocketRef.current.onopen = () => {
         clearTimeout(chatConnectTimeout);
         console.log('✅ Chat WebSocket connected');
         setWsConnected(true);
         setWsRetries(0);
-        // Stop polling when WebSocket connects
         stopPolling();
-        // Try to connect typing indicator only if chat is connected
         connectTypingWebSocket();
       };
-
       chatSocketRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-
           if (data.type === 'new_message' && data.sender_id === selectedUser.id) {
             const newMsg: Message = {
-              id: data.message.id,
-              text: data.message.text,
-              sender: data.message.sender,
-              receiver: data.message.receiver,
-              is_read: false,
-              created_at: data.message.created_at,
-              file: data.message.file,
-              file_name: data.message.file_name,
+              id: data.message.id, text: data.message.text,
+              sender: data.message.sender, receiver: data.message.receiver,
+              is_read: false, created_at: data.message.created_at,
+              file: data.message.file, file_name: data.message.file_name,
             };
             setMessages(prev => [...prev, newMsg]);
           } else if (data.type === 'message_sent' && data.status === 'success') {
             const newMsg: Message = {
-              id: data.message.id,
-              text: data.message.text,
-              sender: data.message.sender,
-              receiver: data.message.receiver,
-              is_read: true,
-              created_at: data.message.created_at,
-              file: data.message.file,
-              file_name: data.message.file_name,
+              id: data.message.id, text: data.message.text,
+              sender: data.message.sender, receiver: data.message.receiver,
+              is_read: true, created_at: data.message.created_at,
+              file: data.message.file, file_name: data.message.file_name,
             };
             setMessages(prev => [...prev, newMsg]);
             setNewMessage('');
@@ -221,27 +190,20 @@ export default function Chat() {
           console.error('Error parsing WebSocket message:', err);
         }
       };
-
       chatSocketRef.current.onerror = (error) => {
         clearTimeout(chatConnectTimeout);
         console.error('❌ Chat WebSocket error:', error);
         setWsConnected(false);
-        // Start polling as fallback immediately
         startPolling();
       };
-
       chatSocketRef.current.onclose = () => {
         clearTimeout(chatConnectTimeout);
         console.log('⚠️  Chat WebSocket disconnected');
         setWsConnected(false);
-        
-        // Close typing socket as well
         if (typingSocketRef.current) {
           typingSocketRef.current.close();
           typingSocketRef.current = null;
         }
-        
-        // Auto-reconnect after 5 seconds (max 3 retries)
         if (wsRetries < 3) {
           reconnectTimeoutRef.current = setTimeout(() => {
             console.log(`🔄 Reconnecting WebSocket... (attempt ${wsRetries + 1}/3)`);
@@ -253,8 +215,6 @@ export default function Chat() {
           startPolling();
         }
       };
-
-      // Set a timeout for connection establishment (5 seconds)
       chatConnectTimeout = setTimeout(() => {
         if (chatSocketRef.current && chatSocketRef.current.readyState === WebSocket.CONNECTING) {
           console.warn('⏱️  Chat WebSocket connection timeout, falling back to polling');
@@ -266,67 +226,42 @@ export default function Chat() {
     } catch (error) {
       console.error('Error creating chat WebSocket:', error);
       setWsConnected(false);
-      // Fallback to polling
       startPolling();
     }
   };
 
-  // Connect typing indicator (only if chat is connected)
   const connectTypingWebSocket = () => {
     if (!user?.id || !selectedUser?.id || !wsConnected) return;
-
     const token = localStorage.getItem('access_token');
     if (!token) return;
-
     const wsProtocol = getWebSocketProtocol();
-    const wsHost = getWebSocketHost(); // Use backend host
+    const wsHost = getWebSocketHost();
     const typingWsUrl = `${wsProtocol}://${wsHost}/ws/typing/${user.id}/?token=${token}`;
-    console.log('🔗 Connecting to typing WebSocket:', typingWsUrl);
-    
     try {
       typingSocketRef.current = new WebSocket(typingWsUrl);
-
       typingSocketRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-
-          if (
-            data.type === 'typing_indicator' &&
-            data.sender_id === selectedUser.id
-          ) {
+          if (data.type === 'typing_indicator' && data.sender_id === selectedUser.id) {
             setRemoteIsTyping(data.is_typing);
           }
         } catch (err) {
           console.error('Error parsing typing indicator:', err);
         }
       };
-
-      typingSocketRef.current.onerror = (error) => {
-        console.warn('⚠️  Typing WebSocket error (non-critical):', error);
-        // Don't fallback or reconnect for typing - it's optional
-      };
-
-      typingSocketRef.current.onclose = () => {
-        console.log('ℹ️  Typing WebSocket disconnected (non-critical)');
-      };
+      typingSocketRef.current.onerror = () => {};
+      typingSocketRef.current.onclose = () => {};
     } catch (error) {
       console.warn('Warning: Could not connect typing WebSocket:', error);
-      // Typing indicator is optional, so we don't fallback
     }
   };
 
-  // Start polling fallback
   const startPolling = () => {
-    console.log('📡 Starting message polling...');
-    // Poll every 3 seconds
     pollIntervalRef.current = setInterval(() => {
-      if (selectedUser) {
-        loadMessages();
-      }
+      if (selectedUser) loadMessages();
     }, 3000);
   };
 
-  // Stop polling
   const stopPolling = () => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
@@ -334,35 +269,22 @@ export default function Chat() {
     }
   };
 
-  // Disconnect WebSocket endpoints
   const disconnectWebSockets = () => {
-    if (chatSocketRef.current) {
-      chatSocketRef.current.close();
-      chatSocketRef.current = null;
-    }
-    if (typingSocketRef.current) {
-      typingSocketRef.current.close();
-      typingSocketRef.current = null;
-    }
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
+    if (chatSocketRef.current) { chatSocketRef.current.close(); chatSocketRef.current = null; }
+    if (typingSocketRef.current) { typingSocketRef.current.close(); typingSocketRef.current = null; }
+    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
     stopPolling();
   };
 
-  // Load conversations list from REST API
   const loadConversations = async () => {
     try {
       const response = await authFetch('/message/conversations/');
       if (response.ok) {
         const data = await response.json();
-        
-        // Handle different response formats
         const conversations = Array.isArray(data) ? data : data.results || data.conversations || [];
-        
         setChatUsers(
           conversations
-            .filter((conv: any) => conv && conv.id) 
+            .filter((conv: any) => conv && conv.id)
             .map((conv: any) => ({
               id: conv.id || '',
               first_name: conv.first_name || conv.user?.first_name || 'Unknown',
@@ -382,20 +304,13 @@ export default function Chat() {
     }
   };
 
-  // Load message history from REST API
   const loadMessages = async () => {
     if (!selectedUser) return;
-
     try {
       setIsLoadingMessages(true);
-      const response = await authFetch(
-        `/message/messages/?user_id=${selectedUser.id}`
-      );
-
+      const response = await authFetch(`/message/messages/?user_id=${selectedUser.id}`);
       if (response.ok) {
         const data = await response.json();
-        
-        // Ensure data is array
         const messagesList = Array.isArray(data) ? data : data.results || data.messages || [];
         setMessages(messagesList);
       }
@@ -406,78 +321,43 @@ export default function Chat() {
     }
   };
 
-  // Mark conversation as read
   const markAsRead = async () => {
     if (!selectedUser) return;
-
     try {
       await authFetch('/message/mark-read/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: selectedUser.id,
-        }),
+        body: JSON.stringify({ user_id: selectedUser.id }),
       });
-
-      // Update unread count in conversations list
-      setChatUsers(prev =>
-        prev.map(u =>
-          u.id === selectedUser.id ? { ...u, unread_count: 0 } : u
-        )
-      );
+      setChatUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unread_count: 0 } : u));
     } catch (error) {
       console.error('Error marking as read:', error);
     }
   };
 
-  // Send message via WebSocket or REST API fallback
   const sendMessage = async () => {
     if (!newMessage.trim() && !selectedFile) return;
-    if (!selectedUser) {
-      toast.error('Suhbat tanlang');
-      return;
-    }
-
+    if (!selectedUser) { toast.error('Suhbat tanlang'); return; }
     setIsSending(true);
     setIsTyping(false);
-
     try {
-      // Try WebSocket first if available
       if (chatSocketRef.current?.readyState === WebSocket.OPEN) {
-        chatSocketRef.current.send(
-          JSON.stringify({
-            type: 'send_message',
-            receiver_id: selectedUser.id,
-            text: newMessage.trim(),
-          })
-        );
-        // WebSocket will handle the success response and clear inputs
+        chatSocketRef.current.send(JSON.stringify({
+          type: 'send_message', receiver_id: selectedUser.id, text: newMessage.trim(),
+        }));
       } else {
-        // Fallback to REST API
         const formData = new FormData();
         formData.append('text', newMessage.trim());
         formData.append('receiver_id', selectedUser.id);
-
-        if (selectedFile) {
-          formData.append('file', selectedFile);
-        }
-
-        const response = await authFetch('/message/add/', {
-          method: 'POST',
-          body: formData,
-        });
-
+        if (selectedFile) formData.append('file', selectedFile);
+        const response = await authFetch('/message/add/', { method: 'POST', body: formData });
         if (response.ok) {
           const sentMessage = await response.json();
           const newMsg: Message = {
-            id: sentMessage.id,
-            text: sentMessage.text,
-            sender: sentMessage.sender,
-            receiver: sentMessage.receiver,
-            is_read: true,
-            created_at: sentMessage.created_at,
-            file: sentMessage.file,
-            file_name: sentMessage.file_name,
+            id: sentMessage.id, text: sentMessage.text,
+            sender: sentMessage.sender, receiver: sentMessage.receiver,
+            is_read: true, created_at: sentMessage.created_at,
+            file: sentMessage.file, file_name: sentMessage.file_name,
           };
           setMessages(prev => [...prev, newMsg]);
           setNewMessage('');
@@ -495,59 +375,31 @@ export default function Chat() {
     }
   };
 
-  // Send typing indicator
   const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value;
     setNewMessage(text);
-
-    // Send typing indicator if text is not empty
     if (text.trim() && typingSocketRef.current?.readyState === WebSocket.OPEN) {
       if (!isTyping) {
         setIsTyping(true);
-        typingSocketRef.current.send(
-          JSON.stringify({
-            receiver_id: selectedUser?.id,
-            is_typing: true,
-          })
-        );
+        typingSocketRef.current.send(JSON.stringify({ receiver_id: selectedUser?.id, is_typing: true }));
       }
-
-      // Clear previous timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      // Send stop typing after 3 seconds of inactivity
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         if (typingSocketRef.current?.readyState === WebSocket.OPEN) {
-          typingSocketRef.current.send(
-            JSON.stringify({
-              receiver_id: selectedUser?.id,
-              is_typing: false,
-            })
-          );
+          typingSocketRef.current.send(JSON.stringify({ receiver_id: selectedUser?.id, is_typing: false }));
         }
         setIsTyping(false);
       }, 3000);
     } else if (!text.trim() && isTyping) {
-      // Send stop typing when field is empty
       setIsTyping(false);
       if (typingSocketRef.current?.readyState === WebSocket.OPEN) {
-        typingSocketRef.current.send(
-          JSON.stringify({
-            receiver_id: selectedUser?.id,
-            is_typing: false,
-          })
-        );
+        typingSocketRef.current.send(JSON.stringify({ receiver_id: selectedUser?.id, is_typing: false }));
       }
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
   const isImageFile = (url: string) => {
@@ -558,27 +410,12 @@ export default function Chat() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const maxSize = 50 * 1024 * 1024; // 50MB
-    const allowedTypes = [
-      'application/pdf',
-      'image/png',
-      'image/jpeg',
-      'image/jpg',
+    const maxSize = 50 * 1024 * 1024;
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    ];
-
-    if (file.size > maxSize) {
-      toast.error('Fayl hajmi 50MB dan oshmasligi kerak');
-      return;
-    }
-
-    if (!allowedTypes.includes(file.type)) {
-      toast.error('Noto\'g\'ri fayl turi');
-      return;
-    }
-
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+    if (file.size > maxSize) { toast.error('Fayl hajmi 50MB dan oshmasligi kerak'); return; }
+    if (!allowedTypes.includes(file.type)) { toast.error('Noto\'g\'ri fayl turi'); return; }
     setSelectedFile(file);
   };
 
@@ -592,310 +429,242 @@ export default function Chat() {
     setSelectedUser(null);
   };
 
-  const handleBack = () => {
-    navigate(-1);
-  };
-
   const handleSearch = (value: string) => {
     setSearchQuery(value);
-    // Filter local users based on search
     if (!value) {
       loadConversations();
     } else {
       setChatUsers(prev =>
-        prev.filter(
-          u =>
-            u && u.first_name && u.last_name && (
-              u.first_name.toLowerCase().includes(value.toLowerCase()) ||
-              u.last_name.toLowerCase().includes(value.toLowerCase())
-            )
-        )
+        prev.filter(u => u && u.first_name && u.last_name && (
+          u.first_name.toLowerCase().includes(value.toLowerCase()) ||
+          u.last_name.toLowerCase().includes(value.toLowerCase())
+        ))
       );
     }
   };
 
-  return (
-    <DashboardLayout className={isMobile && (showChat || isChatMaximized) ? 'hidden' : ''}>
-      <div className={`flex flex-1 w-full h-full ${isChatMaximized ? 'fixed inset-0 z-50 bg-background' : ''}`}>
-      {/* Users List Sidebar */}
-      <Card className={`flex flex-col rounded-none ${showChat && !isChatMaximized ? 'hidden' : 'w-full md:w-80'}`}>
-        <div className="flex items-center justify-between p-4 border-b">
-   
-          <h2 className="font-semibold text-lg">
-            Jonli Chat real vaqt rejimida
-          </h2>
-          {!isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsChatMaximized(!isChatMaximized)}
-              title={isChatMaximized ? 'Kichraytirish' : 'To\'liq ekran'}
-            >
-              {isChatMaximized ? (
-                <Minimize2 className="h-5 w-5" />
-              ) : (
-                <Maximize2 className="h-5 w-5" />
-              )}
-            </Button>
+  const toggleFullPage = () => {
+    setIsFullPage(prev => !prev);
+  };
+
+  const exitFullPage = () => {
+    setIsFullPage(false);
+  };
+
+  const getRoleLabel = (role: string) => {
+    if (role === 'admin') return 'CEO & Asoschi';
+    if (role === 'teacher') return 'O\'qituvchi';
+    if (role === 'sub_teacher') return 'Yordamchi o\'qituvchi';
+    if (role === 'manager') return 'Administrator';
+    return 'O\'quvchi';
+  };
+
+  // ---- Render: Users List ----
+  const renderUsersList = (hideOnMobileChat = true) => (
+    <Card className={`flex flex-col rounded-none border-r ${
+      hideOnMobileChat && isMobile && showChat ? 'hidden' : ''
+    } ${isMobile ? 'w-full' : 'w-80'} ${isFullPage && !isMobile && selectedUser ? 'hidden' : ''}`}>
+      <div className="flex items-center justify-between p-4 border-b">
+        {isFullPage && (
+          <Button variant="ghost" size="icon" onClick={exitFullPage} className="mr-2">
+            <Minimize2 className="h-5 w-5" />
+          </Button>
+        )}
+        <h2 className="font-semibold text-lg flex-1">Jonli Chat</h2>
+        <Button variant="ghost" size="icon" onClick={toggleFullPage}
+          title={isFullPage ? 'Kichraytirish' : 'To\'liq ekran'}>
+          {isFullPage ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+        </Button>
+      </div>
+      <div className="p-4 border-b">
+        <Input placeholder="Qidirish..." value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)} className="w-full" />
+      </div>
+      <ScrollArea className="flex-1" ref={scrollAreaRef}>
+        <div className="p-2">
+          {chatUsers && chatUsers.length > 0 ? (
+            chatUsers.map((chatUser) => {
+              if (!chatUser || !chatUser.id || !chatUser.first_name || !chatUser.last_name) return null;
+              return (
+                <Button key={chatUser.id} variant="ghost"
+                  className={`w-full justify-start mb-2 h-auto p-3 relative ${
+                    selectedUser?.id === chatUser.id ? 'bg-accent' : ''
+                  } ${chatUser.role === 'admin' ? 'bg-red-500/10 hover:bg-red-500/20' : 
+                    chatUser.role === 'teacher' ? 'bg-blue-500/10 hover:bg-blue-500/20' : 
+                    chatUser.role === 'sub_teacher' ? 'bg-green-500/10 hover:bg-green-500/20' : 
+                    chatUser.role === 'manager' ? 'bg-purple-500/10 hover:bg-purple-500/20' : ''}`}
+                  onClick={() => handleUserSelect(chatUser)}>
+                  <Avatar className="h-10 w-10 mr-3">
+                    <AvatarImage src={chatUser.photo || undefined} />
+                    <AvatarFallback>{chatUser.first_name.charAt(0)}{chatUser.last_name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="text-left flex-1">
+                    <p className="font-medium">{chatUser.first_name} {chatUser.last_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {getRoleLabel(chatUser.role)}
+                      {chatUser.level && ` • ${chatUser.level}`}
+                    </p>
+                  </div>
+                  {chatUser.unread_count && chatUser.unread_count > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      {chatUser.unread_count > 99 ? '99+' : chatUser.unread_count}
+                    </Badge>
+                  )}
+                </Button>
+              );
+            })
+          ) : (
+            <div className="p-4 text-center text-muted-foreground">
+              <p>Suhbatlar topilmadi</p>
+            </div>
           )}
         </div>
+      </ScrollArea>
+    </Card>
+  );
 
-        <div className="p-4 border-b">
-          <Input
-            placeholder="Qidirish..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full"
-          />
-        </div>
-
-        <ScrollArea className="flex-1" ref={scrollAreaRef}>
-          <div className="p-2">
-            {chatUsers && chatUsers.length > 0 ? (
-              chatUsers.map((chatUser) => {
-                // Safety check for required fields
-                if (!chatUser || !chatUser.id || !chatUser.first_name || !chatUser.last_name) {
-                  console.warn('Invalid chatUser data:', chatUser);
-                  return null;
+  // ---- Render: Chat Area ----
+  const renderChatArea = () => (
+    <Card className={`flex flex-col border-0 rounded-none flex-1 ${
+      !showChat && isMobile ? 'hidden' : ''
+    } ${!showChat && !isMobile && !selectedUser ? '' : ''}`}>
+      {selectedUser ? (
+        <>
+          {/* Chat Header */}
+          <div className="p-4 border-b flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1">
+              <Button variant="ghost" size="icon" onClick={() => {
+                if (isFullPage && !isMobile) {
+                  // In full page desktop with user selected, go back to users list
+                  setSelectedUser(null);
+                  setShowChat(false);
+                } else {
+                  handleBackToList();
                 }
-
-                return (
-                  <Button
-                    key={chatUser.id}
-                    variant="ghost"
-                    className={`w-full justify-start mb-2 h-auto p-3 relative ${
-                      selectedUser?.id === chatUser.id ? 'bg-accent' : ''
-                    } ${chatUser.role === 'admin' ? 'bg-red-500/10 hover:bg-red-500/20' : chatUser.role === 'teacher' ? 'bg-blue-500/10 hover:bg-blue-500/20' : chatUser.role === 'sub_teacher' ? 'bg-green-500/10 hover:bg-green-500/20' : chatUser.role === 'manager' ? 'bg-purple-500/10 hover:bg-purple-500/20' :''}`}
-                    onClick={() => handleUserSelect(chatUser)}
-                  >
-                    <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={chatUser.photo || undefined} />
-                      <AvatarFallback>
-                        {chatUser.first_name.charAt(0)}{chatUser.last_name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="text-left flex-1">
-                      <p className="font-medium">{chatUser.first_name} {chatUser.last_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {chatUser.role === 'admin' ? 'CEO & Asoschi' : 
-                         chatUser.role === 'teacher' ? 'O\'qituvchi' :
-                         chatUser.role === 'sub_teacher' ? 'Yordamchi o\'qituvchi' :
-                         chatUser.role === 'manager' ? 'Administrator' :
-                         'O\'quvchi'}
-                        {chatUser.level && ` • ${chatUser.level}`}
-                      </p>
-                    </div>
-                    {chatUser.unread_count && chatUser.unread_count > 0 && (
-                      <Badge variant="destructive" className="ml-2">
-                        {chatUser.unread_count > 99 ? '99+' : chatUser.unread_count}
-                      </Badge>
-                    )}
-                  </Button>
-                );
-              })
-            ) : (
-              <div className="p-4 text-center text-muted-foreground">
-                <p>Suhbatlar topilmadi</p>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </Card>
-
-      {/* Chat Area */}
-      <Card className={`flex flex-col border-0 rounded-none ${isChatMaximized || showChat ? 'w-full' : 'hidden md:flex md:flex-1'}`}>
-        {selectedUser ? (
-          <>
-            {/* Chat Header */}
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-3 flex-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleBackToList}
-                  className="mr-2"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={selectedUser.photo || undefined} />
-                  <AvatarFallback>
-                    {selectedUser.first_name[0]}{selectedUser.last_name[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold">
-                    {selectedUser.first_name} {selectedUser.last_name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedUser.role === 'admin' ? 'CEO & Asoschi' :
-                     selectedUser.role === 'teacher' ? 'O\'qituvchi' :
-                      selectedUser.role === 'sub_teacher' ? 'Yordamchi o\'qituvchi' :
-                      selectedUser.role === 'manager' ? 'Administrator' :
-                     'O\'quvchi'}
-                    {selectedUser.level && ` • ${selectedUser.level}`}
-                    {selectedUser.unread_count !== undefined && selectedUser.unread_count > 0 && (
-                      <span className="ml-2">({selectedUser.unread_count} o'qilmagan)</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {remoteIsTyping && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Zap className="h-3 w-3 animate-pulse" />
-                    Yozyapti...
-                  </div>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    if (isChatMaximized) {
-                      setIsChatMaximized(false);
-                    } else {
-                      setIsChatMaximized(true);
-                    }
-                  }}
-                  title={isChatMaximized ? 'Kichraytirish' : 'Kattalashtirish'}
-                >
-                  {isChatMaximized ? (
-                    <Minimize2 className="h-5 w-5" />
-                  ) : (
-                    <Maximize2 className="h-5 w-5" />
-                  )}
-                </Button>
+              }} className="mr-2">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={selectedUser.photo || undefined} />
+                <AvatarFallback>{selectedUser.first_name[0]}{selectedUser.last_name[0]}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold">{selectedUser.first_name} {selectedUser.last_name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {getRoleLabel(selectedUser.role)}
+                  {selectedUser.level && ` • ${selectedUser.level}`}
+                </p>
               </div>
             </div>
-
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {isLoadingMessages ? (
-                  <div className="flex items-center justify-center h-32">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-32">
-                    <p className="text-muted-foreground">Xabarlar topilmadi</p>
-                  </div>
-                ) : (
-                  messages.map((msg) => {
-                    // Simple filter: check if message is from or to current user
-                    const senderFirstName = msg.sender?.first_name || 'Unknown';
-                    const senderLastName = msg.sender?.last_name || 'User';
-                    const senderFullName = `${senderFirstName} ${senderLastName}`;
-                    const currentUserFullName = `${user?.first_name} ${user?.last_name}`;
-                    
-                    // Message is "own" if current user is the sender
-                    const isOwn = msg.sender?.id === user?.id;
-
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[70%] rounded-lg p-3 ${isOwn
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
-                            }`}
-                        >
-                          {msg.text && <p className="break-words">{msg.text}</p>}
-                          {msg.file && (
-                            <>
-                              {isImageFile(msg.file) ? (
-                                <img
-                                  src={msg.file}
-                                  alt={msg.file_name || 'Image'}
-                                  className="mt-2 rounded-lg max-w-full max-h-64 object-cover"
-                                />
-                              ) : (
-                                <a
-                                  href={msg.file}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 mt-2 text-sm underline"
-                                >
-                                  <Paperclip className="h-4 w-4" />
-                                  {msg.file_name}
-                                </a>
-                              )}
-                            </>
-                          )}
-                          <p className="text-xs opacity-70 mt-1">
-                            {new Date(msg.created_at).toLocaleTimeString('uz-UZ', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-
-            {/* Input Area */}
-            <div className="p-4 border-t">
-              {selectedFile && (
-                <div className="mb-2 flex items-center gap-2 p-2 bg-muted rounded">
-                  <Paperclip className="h-4 w-4" />
-                  <span className="text-sm flex-1">{selectedFile.name}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSelectedFile(null)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+            <div className="flex items-center gap-2">
+              {remoteIsTyping && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Zap className="h-3 w-3 animate-pulse" />
+                  Yozyapti...
                 </div>
               )}
-              <div className="flex gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                  accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Paperclip className="h-4 w-4" />
-                </Button>
-                <Input
-                  value={newMessage}
-                  onChange={handleMessageChange}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Xabar yozing..."
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={sendMessage}
-                  disabled={isSending}
-                >
-                  {isSending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
+              <Button variant="ghost" size="icon" onClick={toggleFullPage}
+                title={isFullPage ? 'Kichraytirish' : 'Kattalashtirish'}>
+                {isFullPage ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
+              {isLoadingMessages ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex items-center justify-center h-32">
+                  <p className="text-muted-foreground">Xabarlar topilmadi</p>
+                </div>
+              ) : (
+                messages.map((msg) => {
+                  const isOwn = msg.sender?.id === user?.id;
+                  return (
+                    <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[70%] rounded-lg p-3 ${isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                        {msg.text && <p className="break-words">{msg.text}</p>}
+                        {msg.file && (
+                          <>
+                            {isImageFile(msg.file) ? (
+                              <img src={msg.file} alt={msg.file_name || 'Image'}
+                                className="mt-2 rounded-lg max-w-full max-h-64 object-cover" />
+                            ) : (
+                              <a href={msg.file} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-2 mt-2 text-sm underline">
+                                <Paperclip className="h-4 w-4" />{msg.file_name}
+                              </a>
+                            )}
+                          </>
+                        )}
+                        <p className="text-xs opacity-70 mt-1">
+                          {new Date(msg.created_at).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+
+          {/* Input Area */}
+          <div className="p-4 border-t">
+            {selectedFile && (
+              <div className="mb-2 flex items-center gap-2 p-2 bg-muted rounded">
+                <Paperclip className="h-4 w-4" />
+                <span className="text-sm flex-1">{selectedFile.name}</span>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedFile(null)}>
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
+            )}
+            <div className="flex gap-2">
+              <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect}
+                accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" />
+              <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()}>
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <Input value={newMessage} onChange={handleMessageChange} onKeyPress={handleKeyPress}
+                placeholder="Xabar yozing..." className="flex-1" />
+              <Button onClick={sendMessage} disabled={isSending}>
+                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
             </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <p>Suhbat boshlash uchun foydalanuchini tanlang</p>
           </div>
-        )}
-      </Card>
-    </div>
+        </>
+      ) : (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <p>Suhbat boshlash uchun foydalanuchini tanlang</p>
+        </div>
+      )}
+    </Card>
+  );
+
+  // ---- Full Page Mode: renders as fixed overlay ----
+  if (isFullPage) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col">
+        <div className="flex flex-1 overflow-hidden">
+          {renderUsersList(true)}
+          {renderChatArea()}
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Normal Mode: inside DashboardLayout ----
+  return (
+    <DashboardLayout>
+      <div className="flex flex-1 w-full h-[calc(100vh-8rem)] md:h-[calc(100vh-5rem)]">
+        {renderUsersList(true)}
+        {renderChatArea()}
+      </div>
     </DashboardLayout>
   );
 }
