@@ -37,6 +37,18 @@
   padding: 2em;
 }
 
+/* Shadow effect when glass is disabled - apply deep shadow to visible card elements */
+.card-shadow-enabled [class*="rounded"][class*="border"],
+.card-shadow-enabled [class*="rounded"][class*="bg-"],
+.card-shadow-enabled [class*="card"] {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.card-shadow-enabled [class*="rounded"][class*="border"]:hover,
+.card-shadow-enabled [class*="card"]:hover {
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+}
+
 .read-the-docs {
   color: #888;
 }

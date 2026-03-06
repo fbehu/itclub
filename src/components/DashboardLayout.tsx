@@ -1,4 +1,4 @@
-import { ReactNode, useState, useMemo } from 'react';
+import { ReactNode, useState, useMemo, useCallback, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -23,11 +23,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const { glassEnabled } = useGlassTheme();
   const isGlass = glassEnabled && user?.role === 'student';
+  const isFullWidthPage = location.pathname === '/dashboard/chat';
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     navigate('/');
-  };
+  }, [logout, navigate]);
 
   const getNavItems = () => {
     if (user?.role === 'admin') {
@@ -114,8 +115,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (!user) return null;
 
+  const getBackgroundStyle = () => {
+    if (!isGlass) return {};
+    const bgImage = isMobile 
+      ? 'url(/backround_image2.jpeg)' 
+      : 'url(/backround_image1.jpeg)';
+    return {
+      backgroundImage: bgImage,
+      backgroundSize: isMobile ? 'cover' : 'auto',
+      backgroundPosition: 'center',
+      backgroundAttachment: 'fixed',
+      backgroundRepeat: isMobile ? 'no-repeat' : 'repeat',
+    };
+  };
+
   return (
-    <div className={`min-h-screen bg-background ${isGlass ? 'glass-bg-main' : ''}`}>
+    <div 
+      className={`min-h-screen ${isGlass ? 'bg-background' : 'bg-background'}`}
+      style={getBackgroundStyle()}
+    >
       <WinterEffectsWrapper />
 
       {/* Desktop Sidebar */}
@@ -123,7 +141,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
          <aside
           className={`fixed left-0 top-0 h-full transition-all duration-300 ease-in-out z-30 ${
             sidebarOpen ? 'w-[260px]' : 'w-[68px]'
-          } flex flex-col border-r ${isGlass ? 'glass-nav' : 'bg-sidebar border-sidebar-border'}`}
+          } flex flex-col border-r ${isGlass ? 'bg-sidebar/30 border-sidebar-border/50 backdrop-blur-2xl' : 'bg-sidebar border-sidebar-border'}`}
         >
           {/* Sidebar Header */}
           <div className="p-4 flex-shrink-0">
@@ -209,9 +227,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Top Navbar (Desktop) */}
       {!isMobile && (
         <header
-          className={`fixed top-0 right-0 h-16 border-b transition-all duration-300 ${
+          className={`fixed top-0 right-0 h-16 border-b-2 transition-all duration-300 ${
             sidebarOpen ? 'left-[260px]' : 'left-[68px]'
-          } z-40 flex items-center justify-between px-6 ${isGlass ? 'glass-header' : 'bg-background/80 backdrop-blur-xl border-border/50'}`}
+          } z-40 flex items-center justify-between px-6 ${isGlass ? 'bg-background/20 backdrop-blur-3xl border-border/50' : 'bg-background/80 backdrop-blur-xl border-border/60'}`}
         >
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-foreground">{getCurrentPageTitle()}</h2>
@@ -233,12 +251,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             : 'pt-16 pb-20'
         } transition-all duration-300 min-h-screen`}
       >
-        <div className="p-4 md:p-6 max-w-[1600px] mx-auto">{children}</div>
+        {isFullWidthPage ? (
+          children
+        ) : (
+          <div className={`p-4 md:p-6 max-w-[1600px] mx-auto ${!isGlass ? '[&>*]:shadow-[0_20px_60px_rgba(0,0,0,0.3)] [&>*]:backdrop-blur-sm' : ''}`}>
+            {children}
+          </div>
+        )}
       </main>
 
       {/* Mobile Top Navbar */}
       {isMobile && (
-        <header className={`fixed top-0 left-0 right-0 h-16 border-b z-40 flex items-center justify-between px-4 ${isGlass ? 'glass-header' : 'bg-background/80 backdrop-blur-xl border-border/50'}`}>
+        <header className={`fixed top-0 left-0 right-0 h-16 border-b z-40 flex items-center justify-between px-4 ${isGlass ? 'bg-background/20 backdrop-blur-3xl border-border/30' : 'bg-background/80 backdrop-blur-xl border-border/50'}`}>
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8 ring-2 ring-primary/20">
               <AvatarImage src={user.photo} />
@@ -269,13 +293,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             className={`fixed left-0 right-0 z-50 transition-all duration-300 ease-in-out ${
               mobileMoreOpen
                 ? 'bottom-0 rounded-t-3xl shadow-2xl'
-                : 'bottom-0'
+                : 'bottom-0 rounded-t-3xl'
             }`}
           >
             {!mobileMoreOpen ? (
               /* Compact bottom bar */
-              <div className={`${isGlass ? 'glass-nav' : 'bg-sidebar/95 backdrop-blur-xl'} border-t ${isGlass ? '' : 'border-sidebar-border'}`}>
-                <div className="flex justify-around items-center h-16 px-2 max-w-md mx-auto">
+              <div className={`w-full rounded-t-3xl ${isGlass ? 'bg-sidebar/30 backdrop-blur-2xl border-sidebar-border/50' : 'bg-sidebar/95 backdrop-blur-xl'} border-t-2 border-l border-r border-sidebar-border`}>
+                <div className="flex justify-around items-center h-16 px-2 w-full">
                   {navItems.slice(0, 4).map((item) => {
                     const Icon = item.icon;
                     const active = isActive(item.path);
@@ -293,42 +317,50 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                               ? 'text-sidebar-primary scale-105'
                               : 'text-sidebar-foreground/60'
                         }`}
+                        title={item.label}
                       >
                         <div className={`p-1.5 rounded-xl transition-all duration-200 ${!isGlass && active ? 'bg-sidebar-primary/15' : ''}`}>
                           <Icon className={`h-5 w-5 ${active ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/60' : '')}`} />
                         </div>
-                        <span className={`text-[10px] font-medium ${
-                          active 
-                            ? (isGlass ? 'text-primary' : 'text-sidebar-primary') 
-                            : (isGlass ? 'text-foreground/50' : 'text-sidebar-foreground/50')
-                        }`}>
-                          {item.label.length > 8 ? item.label.slice(0, 7) + '…' : item.label}
-                        </span>
                       </button>
                     );
                   })}
 
+                  {/* Profile Button */}
+                  <button
+                    onClick={() => navigate(navItems.find(item => item.label === 'Profil')?.path || '/dashboard/profile')}
+                    className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-2xl transition-all duration-200 ${
+                      isGlass
+                        ? `glass-nav-item ${isActive(navItems.find(item => item.label === 'Profil')?.path || '/dashboard/profile') ? 'active' : ''}`
+                        : isActive(navItems.find(item => item.label === 'Profil')?.path || '/dashboard/profile')
+                          ? 'text-sidebar-primary scale-105'
+                          : 'text-sidebar-foreground/60'
+                    }`}
+                    title="Profil"
+                  >
+                    <div className={`p-1.5 rounded-xl transition-all duration-200 ${!isGlass && isActive(navItems.find(item => item.label === 'Profil')?.path || '/dashboard/profile') ? 'bg-sidebar-primary/15' : ''}`}>
+                      <User className={`h-5 w-5 ${isActive(navItems.find(item => item.label === 'Profil')?.path || '/dashboard/profile') ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/60' : '')}`} />
+                    </div>
+                  </button>
+
                   <button
                     onClick={() => setMobileMoreOpen(true)}
-                    className="flex flex-col items-center justify-center gap-1 py-1.5 px-3 text-sidebar-foreground/60"
+                    className={`flex items-center justify-center rounded-2xl transition-all duration-200 border-2 p-1.5 ${isGlass ? 'border-sidebar-border/50 text-foreground/70' : 'border-sidebar-border text-sidebar-foreground/60'}`}
                   >
-                    <div className="p-1.5 rounded-xl">
-                      <MoreHorizontal className="h-5 w-5" />
-                    </div>
-                    <span className="text-[10px] font-medium text-sidebar-foreground/50">Ko'proq</span>
+                    <MoreHorizontal className="h-5 w-5" />
                   </button>
                 </div>
               </div>
             ) : (
               /* Expanded menu */
-              <div className={`rounded-t-3xl max-h-[75vh] overflow-y-auto ${isGlass ? 'glass-nav' : 'bg-sidebar'}`}>
+              <div className={`glass-nav-item-noactive rounded-t-3xl max-h-[75vh] overflow-y-auto ${isGlass ? 'bg-sidebar/35 backdrop-blur-8xl' : 'bg-sidebar'}`}>
                 {/* Handle bar */}
                 <div className="flex justify-center pt-3 pb-2">
-                  <div className={`w-10 h-1 rounded-full ${isGlass ? 'bg-foreground/15' : 'bg-sidebar-foreground/20'}`} />
+                  <div className={`w-10 h-1 rounded-full ${isGlass ? 'bg-foreground/35' : 'bg-sidebar-foreground/20'}`} />
                 </div>
 
                 <div className="px-4 pb-2">
-                  <p className={`text-sm font-semibold uppercase tracking-wider px-2 mb-3 ${isGlass ? 'text-foreground/50' : 'text-sidebar-foreground/50'}`}>
+                  <p className={`text-sm font-semibold uppercase tracking-wider px-2 mb-3 ${isGlass ? 'text-foreground/70' : 'text-sidebar-foreground/50'}`}>
                     Menyu
                   </p>
                 </div>
@@ -347,17 +379,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         style={{
                           animation: `slideUpFade 0.3s ease-out ${index * 0.03}s both`,
                         }}
-                        className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all duration-200 ${
+                        className={`flex flex-col glass-nav-item-noactive bg-sidebar/50 shadow-lg items-center justify-center gap-2 p-3 rounded-2xl transition-all duration-200 ${
                           isGlass
-                            ? `glass-nav-item ${active ? 'active' : ''}`
+                            ? `${active ? 'glass-nav-item active bg-sidebar/95 shadow-lg' : 'bg-sidebar/10 backdrop-blur-md'}`
                             : active
                               ? 'bg-sidebar-primary/15 ring-1 ring-sidebar-primary/30'
                               : 'bg-sidebar-accent/50 active:scale-95'
                         }`}
                       >
-                        <Icon className={`h-5 w-5 ${active ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/70' : 'text-sidebar-foreground/70')}`} />
+                        <Icon className={`h-5 w-5 ${active ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/90' : 'text-sidebar-foreground/70')}`} />
                         <span className={`text-[10px] font-semibold text-center leading-tight ${
-                          active ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/70' : 'text-sidebar-foreground/70')
+                          active ? (isGlass ? 'text-primary' : 'text-sidebar-primary') : (isGlass ? 'text-foreground/90' : 'text-sidebar-foreground/70')
                         }`}>
                           {item.label}
                         </span>
@@ -373,7 +405,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       setMobileMoreOpen(false);
                       handleLogout();
                     }}
-                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl transition-all text-sm font-medium ${isGlass ? 'glass-btn text-destructive' : 'text-red-400 bg-red-500/10 hover:bg-red-500/15'}`}
+                    className={`glass-nav-item-chiqish w-full flex items-center justify-center gap-2 py-3 rounded-2xl transition-all text-sm font-medium ${isGlass ? 'glass-btn ' : 'text-red-400 bg-red-500/10 hover:bg-red-500/15'}`}
                   >
                     <LogOut className="h-4 w-4" />
                     Chiqish

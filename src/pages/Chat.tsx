@@ -6,12 +6,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Send, Paperclip, X, ArrowLeft, Loader2, Zap } from 'lucide-react';
+import { Send, Paperclip, X, ArrowLeft, Loader2, Zap, Maximize2, Minimize2 } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import { API_ENDPOINTS } from '@/config/api';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavigate, useLocation } from 'react-router-dom';
+import DashboardLayout from '@/components/DashboardLayout';
 
 interface Message {
   id: string;
@@ -82,6 +83,7 @@ export default function Chat() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsRetries, setWsRetries] = useState(0);
+  const [isChatMaximized, setIsChatMaximized] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -613,22 +615,29 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background">
+    <DashboardLayout className={isMobile && (showChat || isChatMaximized) ? 'hidden' : ''}>
+      <div className={`flex flex-1 w-full h-full ${isChatMaximized ? 'fixed inset-0 z-50 bg-background' : ''}`}>
       {/* Users List Sidebar */}
-      <Card className={`flex flex-col border-0 rounded-none ${showChat ? 'hidden' : 'w-full md:w-80'}`}>
-        <div className="flex items-center p-4 border-b">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleBack}
-            className="mr-2"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-    
+      <Card className={`flex flex-col rounded-none ${showChat && !isChatMaximized ? 'hidden' : 'w-full md:w-80'}`}>
+        <div className="flex items-center justify-between p-4 border-b">
+   
           <h2 className="font-semibold text-lg">
-            {user?.role === 'student' ? 'Adminlar' : 'O\'quvchilar'}
+            Jonli Chat real vaqt rejimida
           </h2>
+          {!isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsChatMaximized(!isChatMaximized)}
+              title={isChatMaximized ? 'Kichraytirish' : 'To\'liq ekran'}
+            >
+              {isChatMaximized ? (
+                <Minimize2 className="h-5 w-5" />
+              ) : (
+                <Maximize2 className="h-5 w-5" />
+              )}
+            </Button>
+          )}
         </div>
 
         <div className="p-4 border-b">
@@ -694,7 +703,7 @@ export default function Chat() {
       </Card>
 
       {/* Chat Area */}
-      <Card className={`flex flex-col border-0 rounded-none ${showChat ? 'w-full' : 'hidden md:flex md:flex-1'}`}>
+      <Card className={`flex flex-col border-0 rounded-none ${isChatMaximized || showChat ? 'w-full' : 'hidden md:flex md:flex-1'}`}>
         {selectedUser ? (
           <>
             {/* Chat Header */}
@@ -719,7 +728,7 @@ export default function Chat() {
                     {selectedUser.first_name} {selectedUser.last_name}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedUser.role === 'admin' ? 'CEO & Asoschi' : 
+                    {selectedUser.role === 'admin' ? 'CEO & Asoschi' :
                      selectedUser.role === 'teacher' ? 'O\'qituvchi' :
                       selectedUser.role === 'sub_teacher' ? 'Yordamchi o\'qituvchi' :
                       selectedUser.role === 'manager' ? 'Administrator' :
@@ -731,13 +740,33 @@ export default function Chat() {
                   </p>
                 </div>
               </div>
-              
-              {remoteIsTyping && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Zap className="h-3 w-3 animate-pulse" />
-                  Yozyapti...
-                </div>
-              )}
+
+              <div className="flex items-center gap-2">
+                {remoteIsTyping && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Zap className="h-3 w-3 animate-pulse" />
+                    Yozyapti...
+                  </div>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    if (isChatMaximized) {
+                      setIsChatMaximized(false);
+                    } else {
+                      setIsChatMaximized(true);
+                    }
+                  }}
+                  title={isChatMaximized ? 'Kichraytirish' : 'Kattalashtirish'}
+                >
+                  {isChatMaximized ? (
+                    <Minimize2 className="h-5 w-5" />
+                  ) : (
+                    <Maximize2 className="h-5 w-5" />
+                  )}
+                </Button>
+              </div>
             </div>
 
             {/* Messages */}
@@ -867,5 +896,6 @@ export default function Chat() {
         )}
       </Card>
     </div>
+    </DashboardLayout>
   );
 }

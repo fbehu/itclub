@@ -595,30 +595,36 @@
   }
 
   /* Glass nav item */
-  .glass-theme .glass-nav-item {
+  /* .glass-theme .glass-nav-item {
     background: rgba(255, 255, 255, 0.35);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 2px 4px 0px 2px rgba(0, 0, 0, 0.171), inset 0 1px 0 rgba(255, 255, 255, 0.4);
     border-radius: 1rem;
     transition: all 0.25s ease;
-  }
+  } */
   .glass-theme .glass-nav-item:hover {
-    background: rgba(255, 255, 255, 0.5);
-    transform: scale(1.03);
+    background: rgba(255, 255, 255, 0.26);
+    transform: scale(1.08);
   }
   .glass-theme .glass-nav-item.active {
     background: rgba(0, 0, 0, 0.08);
     border-color: rgba(0, 0, 0, 0.15);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    box-shadow: 2px 3px 5px rgba(73, 73, 73, 0.493), inset 0 2px 3px rgba(255, 255, 255, 0.836);
   }
-  .glass-theme.dark .glass-nav-item {
-    background: rgba(40, 40, 40, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+  .glass-theme .glass-nav-item-noactive {
+    background: rgba(255, 255, 255, 0.219);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 2px 3px 3px rgba(73, 73, 73, 0.089), inset 0 1px 2px rgb(255, 255, 255);
+  }
+  .glass-theme .glass-nav-item-chiqish {
+    background: rgba(255, 0, 0, 0.63);
+    border-color: rgba(248, 248, 248, 0.397);
+    box-shadow: 2px 3px 3px rgba(73, 73, 73, 0.089), inset 0 1px 2px rgb(255, 255, 255);
   }
   .glass-theme.dark .glass-nav-item:hover {
-    background: rgba(50, 50, 50, 0.5);
+    background: rgba(50, 50, 50, 0.295);
   }
   .glass-theme.dark .glass-nav-item.active {
     background: rgba(255, 255, 255, 0.1);
@@ -634,7 +640,7 @@
   }
   .glass-theme.dark .glass-header {
     background: rgba(15, 15, 15, 0.6) !important;
-    border-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgb(255, 255, 255) !important;
   }
 
   /* Glass input */

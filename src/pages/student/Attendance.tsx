@@ -125,10 +125,10 @@ export default function StudentAttendance({ groupId, isGroupView }: { groupId?: 
       {/* Header - only show if not in group view */}
       {!isGroupView && (
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold ">
             {isGroupView ? 'Davomat' : 'Mening davomatim'}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className=" mt-1 ">
             {isGroupView ? 'Bu guruh davomatini kuzating' : 'O\'qish davomatingizni kuzating'}
           </p>
         </div>
