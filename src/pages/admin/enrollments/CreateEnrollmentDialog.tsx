@@ -20,6 +20,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { authFetch } from '@/lib/authFetch';
 import { Search, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { uz } from 'date-fns/locale';
 
 interface Student {
   id: string;
@@ -91,6 +93,9 @@ export function CreateEnrollmentDialog({
     group_id: '',
     payment_method: 'card',
     payment_amount: '',
+    payment_month: format(new Date(), 'yyyy-MM'),
+    payment_start_date: format(new Date(), 'yyyy-MM-dd'),
+    payment_end_date: format(new Date(), 'yyyy-MM-dd'),
   });
   // compute distribution of payment across months for UI hints
   const [paymentInfo, setPaymentInfo] = useState({ months: 0, remainder: 0 });
@@ -246,6 +251,9 @@ export function CreateEnrollmentDialog({
           group_id: parseInt(formData.group_id),
           payment_method: formData.payment_method,
           payment_amount: paymentAmount,
+          payment_month: formData.payment_month,
+          payment_start_date: formData.payment_start_date,
+          payment_end_date: formData.payment_end_date,
         }),
       });
 
@@ -258,6 +266,9 @@ export function CreateEnrollmentDialog({
           group_id: '',
           payment_method: 'card',
           payment_amount: '',
+          payment_month: format(new Date(), 'yyyy-MM'),
+          payment_start_date: format(new Date(), 'yyyy-MM-dd'),
+          payment_end_date: format(new Date(), 'yyyy-MM-dd'),
         });
         setPaymentInfo({ months: 0, remainder: 0 });
       } else {
@@ -545,6 +556,59 @@ export function CreateEnrollmentDialog({
               </Select>
             </div>
           )}
+
+          {/* Payment Month */}
+          <div className="space-y-2">
+            <Label htmlFor="payment_month">Qaysi oy uchun *</Label>
+            <Select
+              value={formData.payment_month}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, payment_month: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 12 }, (_, i) => {
+                  const date = new Date(2026, i, 1);
+                  const monthValue = format(date, 'yyyy-MM');
+                  const monthLabel = format(date, 'MMMM yyyy', { locale: uz });
+                  return (
+                    <SelectItem key={monthValue} value={monthValue}>
+                      {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Payment Date Range */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="payment_start_date">Sanadan *</Label>
+              <Input
+                type="date"
+                id="payment_start_date"
+                value={formData.payment_start_date}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, payment_start_date: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment_end_date">Sanagacha *</Label>
+              <Input
+                type="date"
+                id="payment_end_date"
+                value={formData.payment_end_date}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, payment_end_date: e.target.value }))
+                }
+              />
+            </div>
+          </div>
 
           {/* Payment Method */}
           <div className="space-y-2">

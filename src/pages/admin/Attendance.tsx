@@ -235,6 +235,14 @@ export default function AdminAttendance() {
       ...prev,
       [studentId]: status
     }));
+    
+    // Agar "Kelmadi" (absent) bo'lsa, ball avtomatik 0 bo'lsin
+    if (status === 'absent') {
+      setDailyCoins(prev => ({
+        ...prev,
+        [studentId]: 0
+      }));
+    }
   };
 
   // Mark all students as present
@@ -270,6 +278,12 @@ export default function AdminAttendance() {
       else if (status === 'excuse') counts.excused++;
     });
     return counts;
+  };
+
+  // Barcha o'quvchilar uchun davomat qilinganini tekshirish
+  const isAllStudentsMarked = () => {
+    if (students.length === 0) return false;
+    return students.every(student => attendance[student.id] !== null && attendance[student.id] !== undefined);
   };
 
   // Bugungi kunni tekshirish
@@ -377,7 +391,7 @@ export default function AdminAttendance() {
                 <div className="flex items-center gap-3 flex-wrap">
                   <Button
                     onClick={markAllPresent}
-                    disabled={isLocked || !canEdit || students.length === 0}
+                    disabled={isLocked || !canEdit || students.length === 0 || !isToday()}
                     className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg shadow-green-500/30"
                     title="Barcha o'quvchilarni 'Keldi' deb belgilash"
                   >
@@ -420,10 +434,10 @@ export default function AdminAttendance() {
                       <TableRow className="bg-muted/50">
                         <TableHead className="w-14 text-center font-semibold">#</TableHead>
                         <TableHead className="font-semibold">Ism Familya</TableHead>
-                        <TableHead className="font-semibold">Username</TableHead>
+                        <TableHead className="font-semibold hidden">Username</TableHead>
                         <TableHead className="font-semibold hidden sm:table-cell">Telefon raqam</TableHead>
-                        <TableHead className="font-semibold hidden md:table-cell">Daraja</TableHead>
-                        <TableHead className="font-semibold hidden md:table-cell text-center">Ballar</TableHead>
+                        <TableHead className="font-semibold hidden lg:table-cell">Daraja</TableHead>
+                        <TableHead className="font-semibold text-center">Ballar</TableHead>
                         <TableHead className="text-center font-semibold w-44">Davomat</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -454,20 +468,20 @@ export default function AdminAttendance() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
+                            <TableCell className="text-muted-foreground hidden">
                               @{student.username}
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
                               <Badge variant="outline">{student.phone_number || '-'}</Badge>
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">
+                            <TableCell className="hidden lg:table-cell">
                               <Badge className={getLevelColor(student.level)}>
                                 {student.level === 'beginner' ? 'Boshlang\'ich' : 
                                  student.level === 'intermediate' ? 'O\'rta' : 
                                  student.level === 'expert' ? 'Yuqori' : student.level || '-'}
                               </Badge>
                             </TableCell>
-                            <TableCell className="hidden md:table-cell text-center">
+                            <TableCell className="text-center">
                               <Input
                                 type="number"
                                 min="0"
@@ -480,7 +494,7 @@ export default function AdminAttendance() {
                                     [student.id]: value
                                   }));
                                 }}
-                                disabled={isLocked || !canEdit || attendance[student.id] !== 'present'}
+                                disabled={isLocked || !canEdit || attendance[student.id] === 'absent' || !attendance[student.id]}
                                 className="w-20 text-center text-sm font-medium"
                                 placeholder="0"
                               />
@@ -573,13 +587,13 @@ export default function AdminAttendance() {
             {students.length > 0 && !isLocked && (
               <div className="border-t p-4 flex justify-between items-center bg-muted/30">
                 <div className="text-sm text-muted-foreground">
-                  💡 O'quvchilar uchun kunlik ballni kiritishingiz mumkin (maksimum 100 ball)
+                  💡 O'quvchilar uchun kunlik ballni kiritishingiz mumkin (max 100 ball)
                 </div>
                 <Button 
                   onClick={handleSaveAttendance} 
-                  disabled={saving || isLocked}
+                  disabled={saving || isLocked || !isAllStudentsMarked() || !isToday()}
                   size="lg"
-                  className="min-w-40 bg-primary hover:bg-primary/90"
+                  className="min-w-40 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <>

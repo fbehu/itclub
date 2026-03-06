@@ -554,7 +554,8 @@ export function EditGroupDialog({ open, onOpenChange, group, onSuccess }: EditGr
                 { value: 'Chor', label: 'Chorshanba' },
                 { value: 'Pa', label: 'Payshanba' },
                 { value: 'Ju', label: 'Juma' },
-                { value: 'Sha', label: 'Shanba' }
+                { value: 'Sha', label: 'Shanba' },
+                { value: 'Yak', label: 'Yakshanba' },
               ].map((day) => (
                 <div key={day.value} className="flex items-center space-x-2">
                   <Checkbox 
