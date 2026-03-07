@@ -44,6 +44,8 @@ import ManagerGroupDetail from '@/pages/manager/groups/GroupDetail';
 import Chat from '@/pages/Chat';
 import Notifications from '@/pages/Notifications';
 import NotFound from '@/pages/NotFound';
+import ExamList from '@/pages/student/exams/ExamList';
+import ExamResultPage from '@/pages/student/exams/ExamResultPage';
 
 export function AppRoutes() {
   const { isMaintenanceActive, isDegraded } = useSystemStatus();
@@ -438,6 +440,22 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <MyEnrollments />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/student/exams" 
+        element={
+          <ProtectedRoute>
+            <ExamList />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard/student/exam-results" 
+        element={
+          <ProtectedRoute>
+            <ExamResultPage />
           </ProtectedRoute>
         } 
       />
