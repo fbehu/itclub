@@ -85,6 +85,10 @@ export const API_ENDPOINTS = {
   ADMIN_LEDGER: '/referrals/admin/ledger/',
   ADMIN_LEADERBOARD: '/referrals/admin/leaderboard/',
 
+  // Student Exams
+  STUDENT_EXAMS: '/student/exams/',
+  STUDENT_EXAM_RESULTS: '/student/exam-results/',
+
   // Payments
   PAYMENTS: '/payments/',
   PAYMENTS_RECEIPT: (enrollmentId: number) => `/payments/receipt/${enrollmentId}/`,
