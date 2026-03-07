@@ -46,6 +46,7 @@ import Notifications from '@/pages/Notifications';
 import NotFound from '@/pages/NotFound';
 import ExamList from '@/pages/student/exams/ExamList';
 import ExamResultPage from '@/pages/student/exams/ExamResultPage';
+import ExamTakePage from '@/pages/student/exams/ExamTakePage';
 
 export function AppRoutes() {
   const { isMaintenanceActive, isDegraded } = useSystemStatus();
