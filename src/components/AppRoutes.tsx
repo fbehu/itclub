@@ -460,7 +460,14 @@ export function AppRoutes() {
           </ProtectedRoute>
         } 
       />
-      {/* Shared Routes */}
+      <Route 
+        path="/dashboard/student/exam/:examId/take" 
+        element={
+          <ProtectedRoute>
+            <ExamTakePage />
+          </ProtectedRoute>
+        } 
+      />
       <Route 
         path="/dashboard/chat" 
         element={
