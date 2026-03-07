@@ -86,8 +86,8 @@ export const API_ENDPOINTS = {
   ADMIN_LEADERBOARD: '/referrals/admin/leaderboard/',
 
   // Student Exams
-  STUDENT_EXAMS: '/student/exams/',
-  STUDENT_EXAM_RESULTS: '/student/exam-results/',
+  STUDENT_EXAMS: '/exams/student/exams/',
+  STUDENT_EXAM_RESULTS: '/exams/student/exam-results/',
 
   // Payments
   PAYMENTS: '/payments/',
