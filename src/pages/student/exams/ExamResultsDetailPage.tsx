@@ -16,11 +16,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 
 interface Question {
   id: number;
-  text: string;
-  yourAnswer: string;
-  correctAnswer: string;
   isCorrect: boolean;
-  category: string;
 }
 
 interface MockExamResult {
