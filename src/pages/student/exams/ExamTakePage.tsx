@@ -85,17 +85,105 @@ export default function ExamTakePage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
+  const [devToolsDetected, setDevToolsDetected] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const devToolsCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const storageKey = STORAGE_KEY + (exam?.id || 'unknown');
 
-  // Load saved answers
+  // Apply CSS protections
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try { setAnswers(JSON.parse(saved)); } catch {}
-    }
-  }, [storageKey]);
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Prevent all interactions on exam content */
+      [data-exam-protected] {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        pointer-events: auto !important;
+      }
+
+      /* Disable extension overlays */
+      [role="button"][aria-label*="screenshot"],
+      [role="button"][aria-label*="crop"],
+      [role="button"][aria-label*="capture"],
+      [role="button"][aria-label*="AI"],
+      [data-extension] {
+        pointer-events: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+      }
+
+      /* Prevent text rendering to clipboard */
+      * {
+        -webkit-touch-callout: none !important;
+        -webkit-user-modify: read-only !important;
+      }
+
+      /* Block text selection at pointer level */
+      body * {
+        cursor: not-allowed !important;
+      }
+
+      /* Prevent background images and data URIs */
+      img[data-screenshot],
+      img[data-capture],
+      canvas[data-extension] {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  // Detect Developer Tools
+  useEffect(() => {
+    const checkDevTools = () => {
+      let devToolsOpen = false;
+
+      // Method 1: Check console height
+      const threshold = 160;
+      if (window.outerHeight - window.innerHeight > threshold || 
+          window.outerWidth - window.innerWidth > threshold) {
+        devToolsOpen = true;
+      }
+
+      // Method 2: Check debugger statement
+      const before = performance.now();
+      debugger;
+      const after = performance.now();
+      if (after - before > 10) {
+        devToolsOpen = true;
+      }
+
+      if (devToolsOpen && !devToolsDetected) {
+        setDevToolsDetected(true);
+        setIsBlurred(true);
+        setWarningMessage('Developer Tools (F12) ochiq! Iltimos, yopib tastahlis');
+        setShowWarning(true);
+      } else if (!devToolsOpen && devToolsDetected) {
+        setDevToolsDetected(false);
+        setIsBlurred(false);
+        setShowWarning(false);
+      }
+    };
+
+    // Check immediately
+    checkDevTools();
+
+    // Check every 500ms
+    devToolsCheckIntervalRef.current = setInterval(checkDevTools, 500);
+
+    return () => {
+      if (devToolsCheckIntervalRef.current) {
+        clearInterval(devToolsCheckIntervalRef.current);
+      }
+    };
+  }, [devToolsDetected]);
 
   // Save answers
   useEffect(() => {
@@ -137,25 +225,81 @@ export default function ExamTakePage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Blur screen without warning
+  const blurScreenOnly = useCallback(() => {
+    setIsBlurred(true);
+    setTimeout(() => setIsBlurred(false), 2000);
+  }, []);
+
   // Block F12, right-click, Ctrl+Shift+I, PrintScreen
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F12') { e.preventDefault(); handleCheatDetected('F12 tugmasi bosildi'); return; }
+      // F12 - blur and warn
+      if (e.key === 'F12') { 
+        e.preventDefault(); 
+        handleCheatDetected('F12 tugmasi bosildi'); 
+        return; 
+      }
+      
+      // Ctrl key alone (without Shift) - just blur
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.key === 'Control') {
+        blurScreenOnly();
+        return;
+      }
+      
+      // DevTools Ctrl+Shift+I/J - just blur
       if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) {
-        e.preventDefault(); handleCheatDetected('DevTools ochishga urinildi'); return;
+        e.preventDefault(); 
+        blurScreenOnly();
+        return;
       }
+      
+      // View page source Ctrl+U - just blur
       if (e.ctrlKey && (e.key === 'u' || e.key === 'U')) {
-        e.preventDefault(); handleCheatDetected('Sahifa kodini ko\'rishga urinildi'); return;
+        e.preventDefault(); 
+        blurScreenOnly();
+        return;
       }
-      if (e.key === 'PrintScreen' || (e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5'))) {
-        e.preventDefault(); handleCheatDetected('Ekranni rasmga olishga urinildi'); return;
+      
+      // Print Screen - just blur (no warning)
+      if (e.key === 'PrintScreen') {
+        e.preventDefault(); 
+        blurScreenOnly();
+        return;
       }
-      if (e.altKey && e.key === 'Tab') { e.preventDefault(); return; }
+      
+      // Mac screenshot keys - just blur (no warning)
+      if (e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5')) {
+        e.preventDefault(); 
+        blurScreenOnly();
+        return;
+      }
+      
+      // Alt+Tab together - blur and warn
+      if (e.altKey && e.key === 'Tab') { 
+        e.preventDefault();
+        handleCheatDetected('Boshqa ilovaga o\'tishga urinildi'); 
+        return; 
+      }
+      
+      // Tab alone - just blur
+      if (e.key === 'Tab' && !e.altKey) {
+        e.preventDefault();
+        blurScreenOnly();
+        return;
+      }
+      
+      // Alt alone (without Tab) - just blur
+      if (e.key === 'Alt') {
+        e.preventDefault();
+        blurScreenOnly();
+        return;
+      }
     };
 
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
-      handleCheatDetected('Sichqonchaning o\'ng tugmasi bosildi');
+      blurScreenOnly();
     };
 
     document.addEventListener('keydown', handleKeyDown, true);
@@ -203,15 +347,193 @@ export default function ExamTakePage() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, [showFullscreenPrompt]);
 
-  // Block screenshot via CSS
+  // Mask accessibility API and block text selection
   useEffect(() => {
-    document.body.style.setProperty('-webkit-user-select', 'none');
-    document.body.style.setProperty('user-select', 'none');
-    return () => {
-      document.body.style.removeProperty('-webkit-user-select');
-      document.body.style.removeProperty('user-select');
+    let isSelecting = false;
+    let isDragging = false;
+
+    const handleSelectStart = (e: Event) => {
+      // Allow selection on buttons/clickable elements
+      const target = e.target as HTMLElement;
+      if (target?.tagName === 'BUTTON' || target?.closest('button') || target?.role === 'button') {
+        return;
+      }
+      isSelecting = true;
+      e.preventDefault();
+      blurScreenOnly();
     };
-  }, []);
+
+    const handleSelect = (e: Event) => {
+      if (isSelecting) {
+        isSelecting = false;
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Check if dragging or trying to select
+      if (e.buttons > 0) {
+        const target = e.target as HTMLElement;
+        if (target?.tagName !== 'BUTTON' && !target?.closest('button')) {
+          isDragging = true;
+          blurScreenOnly();
+        }
+      } else {
+        isDragging = false;
+      }
+    };
+
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      blurScreenOnly();
+    };
+
+    const handleCut = (e: ClipboardEvent) => {
+      e.preventDefault();
+      blurScreenOnly();
+    };
+
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+      blurScreenOnly();
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // Allow button clicks
+      if (target?.tagName === 'BUTTON' || target?.closest('button') || target?.role === 'button') {
+        return;
+      }
+
+      // Block right-click
+      if (e.button === 2) {
+        e.preventDefault();
+        blurScreenOnly();
+        return;
+      }
+
+      // Detect selection attempt on text
+      if (window.getSelection && window.getSelection()!.toString().length > 0) {
+        e.preventDefault();
+        blurScreenOnly();
+      }
+    };
+
+    // Mask all text content from accessibility tree
+    const maskElement = (elem: HTMLElement) => {
+      // Don't mask button content
+      if (elem.tagName === 'BUTTON' || elem.role === 'button') {
+        return;
+      }
+
+      const ariaAttrs = ['aria-label', 'aria-labelledby', 'title'];
+      ariaAttrs.forEach(attr => {
+        if (elem.hasAttribute(attr)) {
+          elem.setAttribute(attr, 'Content hidden for security');
+        }
+      });
+    };
+
+    // Apply masking to all non-button elements
+    document.querySelectorAll('*').forEach(elem => {
+      if (elem instanceof HTMLElement && elem.tagName !== 'BUTTON') {
+        maskElement(elem);
+      }
+    });
+
+    document.addEventListener('selectstart', handleSelectStart, true);
+    document.addEventListener('select', handleSelect, true);
+    document.addEventListener('copy', handleCopy, true);
+    document.addEventListener('cut', handleCut, true);
+    document.addEventListener('mousedown', handleMouseDown, true);
+    document.addEventListener('dragstart', handleDragStart, true);
+    document.addEventListener('mousemove', handleMouseMove, false);
+
+    // Monitor for new elements with text content
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        if (mutation.addedNodes.length) {
+          mutation.addedNodes.forEach(node => {
+            if (node instanceof HTMLElement && node.tagName !== 'BUTTON') {
+              maskElement(node);
+            }
+          });
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => {
+      document.removeEventListener('selectstart', handleSelectStart, true);
+      document.removeEventListener('select', handleSelect, true);
+      document.removeEventListener('copy', handleCopy, true);
+      document.removeEventListener('cut', handleCut, true);
+      document.removeEventListener('mousedown', handleMouseDown, true);
+      document.removeEventListener('dragstart', handleDragStart, true);
+      document.removeEventListener('mousemove', handleMouseMove, false);
+      observer.disconnect();
+    };
+  }, [blurScreenOnly]);
+
+  // Block canvas/OCR/AI screenshot attempts and extension communication
+  useEffect(() => {
+    // Block Canvas toDataURL
+    const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+    HTMLCanvasElement.prototype.toDataURL = function(...args: any[]) {
+      blurScreenOnly();
+      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    };
+
+    // Block Canvas toBlob
+    const originalToBlob = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function(callback: BlobCallback | null, ...args: any[]) {
+      blurScreenOnly();
+      if (callback) callback(null);
+    };
+
+    // Block getImageData
+    const canvasContextPrototype = CanvasRenderingContext2D.prototype;
+    const originalGetImageData = canvasContextPrototype.getImageData;
+    canvasContextPrototype.getImageData = function(...args: any[]) {
+      blurScreenOnly();
+      return new ImageData(1, 1);
+    };
+
+    // Block drawImage from other sources
+    const originalDrawImage = canvasContextPrototype.drawImage;
+    canvasContextPrototype.drawImage = function(...args: any[]) {
+      blurScreenOnly();
+      return undefined;
+    };
+
+    // Block OffscreenCanvas
+    if (typeof OffscreenCanvas !== 'undefined') {
+      const originalOffscreenCanvasConstructor = OffscreenCanvas;
+      (window as any).OffscreenCanvas = function(...args: any[]) {
+        blurScreenOnly();
+        return new originalOffscreenCanvasConstructor(...args);
+      };
+    }
+
+    // Block window.screenX/Y and getSelection
+    const originalGetSelection = window.getSelection;
+    window.getSelection = function() {
+      blurScreenOnly();
+      return originalGetSelection?.() || null;
+    };
+
+    return () => {
+      HTMLCanvasElement.prototype.toDataURL = originalToDataURL;
+      HTMLCanvasElement.prototype.toBlob = originalToBlob;
+      canvasContextPrototype.getImageData = originalGetImageData;
+      canvasContextPrototype.drawImage = originalDrawImage;
+      window.getSelection = originalGetSelection;
+    };
+  }, [blurScreenOnly]);
 
   const enterFullscreen = async () => {
     try {
@@ -238,7 +560,7 @@ export default function ExamTakePage() {
   const handleSubmit = () => {
     localStorage.removeItem(storageKey);
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    navigate('/dashboard/student/exam-results');
+    navigate(`/dashboard/student/exam/${exam?.id}/results`, { state: { exam } });
   };
 
   const formatTime = (seconds: number) => {
@@ -261,10 +583,32 @@ export default function ExamTakePage() {
     <div 
       ref={containerRef}
       className={`fixed inset-0 z-[9999] bg-background flex flex-col transition-all duration-300 ${isBlurred ? 'blur-xl' : ''}`}
-      style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+      style={{ 
+        userSelect: 'none', 
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+        WebkitUserModify: 'read-only',
+        MozUserSelect: 'none',
+      } as React.CSSProperties}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        blurScreenOnly();
+      }}
+      onDragStart={(e) => {
+        e.preventDefault();
+        blurScreenOnly();
+      }}
+      onCut={(e) => {
+        e.preventDefault();
+        blurScreenOnly();
+      }}
+      onCopy={(e) => {
+        e.preventDefault();
+        blurScreenOnly();
+      }}
     >
       {/* Fullscreen prompt overlay */}
-      {showFullscreenPrompt && (
+      {showFullscreenPrompt && !devToolsDetected && (
         <div className="absolute inset-0 z-[10000] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4">
           <Card className="max-w-md w-full">
             <CardContent className="p-8 text-center space-y-5">
@@ -391,57 +735,76 @@ export default function ExamTakePage() {
 
         {/* Question content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-2xl mx-auto space-y-6">
-            {/* Question header */}
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <span className="text-xs font-medium text-muted-foreground">
-                  Savol {currentQuestion + 1}/{totalQuestions}
-                </span>
-                <h2 className="text-lg font-semibold text-foreground mt-1">{q.text}</h2>
+          {devToolsDetected ? (
+            <div className="flex items-center justify-center h-full">
+              <Card className="max-w-sm w-full border-destructive/50">
+                <CardContent className="p-6 text-center space-y-3">
+                  <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+                  <h3 className="text-lg font-bold text-destructive">Developer Tools Ochiq</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Imtihonni davom ettirish uchun Developer Tools (F12) ni yoping.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Iltimos, F12 tugmasini bosib Developer Tools oynasini yoping va savollar ko'rinadi.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="max-w-2xl mx-auto space-y-6">
+              {/* Question header */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Savol {currentQuestion + 1}/{totalQuestions}
+                  </span>
+                  <h2 className="text-lg font-semibold text-foreground mt-1">{q.text}</h2>
+                </div>
+                <Button 
+                  variant={flagged.has(q.id) ? 'default' : 'outline'} 
+                  size="icon" 
+                  className="shrink-0 h-8 w-8"
+                  onClick={() => toggleFlag(q.id)}
+                >
+                  <Flag className="h-3.5 w-3.5" />
+                </Button>
               </div>
-              <Button 
-                variant={flagged.has(q.id) ? 'default' : 'outline'} 
-                size="icon" 
-                className="shrink-0 h-8 w-8"
-                onClick={() => toggleFlag(q.id)}
-              >
-                <Flag className="h-3.5 w-3.5" />
-              </Button>
-            </div>
 
-            {/* Options */}
-            <div className="space-y-3">
-              {q.options.map((opt) => {
-                const isSelected = answers[q.id] === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    onClick={() => handleAnswer(q.id, opt.id)}
-                    className={`w-full text-left p-4 rounded-lg border-2 transition-all
-                      ${isSelected 
-                        ? 'border-primary bg-primary/5 shadow-sm' 
-                        : 'border-border bg-card hover:border-primary/30 hover:bg-accent/50'
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold shrink-0
-                        ${isSelected 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {opt.id.toUpperCase()}
-                      </span>
-                      <span className={`text-sm ${isSelected ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                        {opt.text}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+              {/* Options */}
+              <div className="space-y-3">
+                {q.options.map((opt) => {
+                  const isSelected = answers[q.id] === opt.id;
+                  return (
+                <button
+                  key={opt.id}
+                  onClick={() => handleAnswer(q.id, opt.id)}
+                  className={`w-full text-left p-4 rounded-lg border-2 transition-all
+                    ${isSelected 
+                      ? 'border-primary bg-primary/5 shadow-sm' 
+                      : 'border-border bg-card hover:border-primary/30 hover:bg-accent/50'
+                    }`}
+                  data-exam-protected="true"
+                  style={{ pointerEvents: 'auto', userSelect: 'none' }}
+                >
+                      <div className="flex items-center gap-3">
+                        <span className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold shrink-0
+                          ${isSelected 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {opt.id.toUpperCase()}
+                        </span>
+                        <span className={`text-sm ${isSelected ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                          {opt.text}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -473,7 +836,7 @@ export default function ExamTakePage() {
           <Button
             variant="outline"
             size="sm"
-            disabled={currentQuestion === 0}
+            disabled={currentQuestion === 0 || devToolsDetected}
             onClick={() => setCurrentQuestion(prev => prev - 1)}
             className="gap-1.5"
           >
@@ -485,6 +848,7 @@ export default function ExamTakePage() {
             {currentQuestion < totalQuestions - 1 ? (
               <Button
                 size="sm"
+                disabled={devToolsDetected}
                 onClick={() => setCurrentQuestion(prev => prev + 1)}
                 className="gap-1.5"
               >
@@ -494,6 +858,7 @@ export default function ExamTakePage() {
             ) : (
               <Button
                 size="sm"
+                disabled={devToolsDetected}
                 onClick={() => setShowConfirmSubmit(true)}
                 className="gap-1.5"
               >

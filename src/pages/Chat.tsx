@@ -465,11 +465,6 @@ export default function Chat() {
       hideOnMobileChat && isMobile && showChat ? 'hidden' : ''
     } ${isMobile ? 'w-full' : 'w-80'} ${isFullPage && !isMobile && selectedUser ? 'hidden' : ''}`}>
       <div className="flex items-center justify-between p-4 border-b">
-        {isFullPage && (
-          <Button variant="ghost" size="icon" onClick={exitFullPage} className="mr-2">
-            <Minimize2 className="h-5 w-5" />
-          </Button>
-        )}
         <h2 className="font-semibold text-lg flex-1">Jonli Chat</h2>
         <Button variant="ghost" size="icon" onClick={toggleFullPage}
           title={isFullPage ? 'Kichraytirish' : 'To\'liq ekran'}>
