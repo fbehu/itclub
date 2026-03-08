@@ -513,9 +513,9 @@ export default function ExamTakePage() {
     // Block OffscreenCanvas
     if (typeof OffscreenCanvas !== 'undefined') {
       const originalOffscreenCanvasConstructor = OffscreenCanvas;
-      (window as any).OffscreenCanvas = function(...args: any[]) {
+      (window as any).OffscreenCanvas = function(width: number, height: number) {
         blurScreenOnly();
-        return new originalOffscreenCanvasConstructor(...args);
+        return new originalOffscreenCanvasConstructor(width, height);
       };
     }
 
