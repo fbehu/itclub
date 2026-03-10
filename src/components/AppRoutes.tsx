@@ -247,6 +247,10 @@ export function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+      <Route path="/dashboard/admin/exams" element={<ProtectedRoute><ExamManagement /></ProtectedRoute>} />
+      <Route path="/dashboard/admin/exams/create" element={<ProtectedRoute><ExamCreate /></ProtectedRoute>} />
+      <Route path="/dashboard/admin/exams/:examId" element={<ProtectedRoute><ExamDetailAdmin /></ProtectedRoute>} />
+      <Route path="/dashboard/admin/exams/:examId/edit" element={<ProtectedRoute><ExamCreate /></ProtectedRoute>} />
       <Route 
         path="/admin/student-detail/:studentId" 
         element={
