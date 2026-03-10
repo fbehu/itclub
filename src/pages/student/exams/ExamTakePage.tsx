@@ -1,81 +1,55 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   AlertTriangle, Clock, ChevronLeft, ChevronRight, 
   Send, Shield, Maximize, X, Flag
 } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
+import { API_ENDPOINTS } from '@/config/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface Question {
   id: number;
   text: string;
-  options: { id: string; text: string }[];
+  options: { id: number; text: string }[];
 }
 
-const MOCK_QUESTIONS: Question[] = [
-  {
-    id: 1,
-    text: 'Python dasturlash tilida o\'zgaruvchi e\'lon qilish uchun qaysi kalit so\'z ishlatiladi?',
-    options: [
-      { id: 'a', text: 'var' },
-      { id: 'b', text: 'let' },
-      { id: 'c', text: 'O\'zgaruvchi nomi to\'g\'ridan-to\'g\'ri yoziladi' },
-      { id: 'd', text: 'define' },
-    ],
-  },
-  {
-    id: 2,
-    text: 'Quyidagilardan qaysi biri Python\'da ro\'yxat (list) yaratish usuli?',
-    options: [
-      { id: 'a', text: 'my_list = {}' },
-      { id: 'b', text: 'my_list = []' },
-      { id: 'c', text: 'my_list = ()' },
-      { id: 'd', text: 'my_list = <>' },
-    ],
-  },
-  {
-    id: 3,
-    text: 'Python\'da funksiya yaratish uchun qaysi kalit so\'z ishlatiladi?',
-    options: [
-      { id: 'a', text: 'function' },
-      { id: 'b', text: 'func' },
-      { id: 'c', text: 'def' },
-      { id: 'd', text: 'fn' },
-    ],
-  },
-  {
-    id: 4,
-    text: 'Python\'da "Hello World" ni konsolga chiqarish uchun qaysi funksiya ishlatiladi?',
-    options: [
-      { id: 'a', text: 'console.log("Hello World")' },
-      { id: 'b', text: 'print("Hello World")' },
-      { id: 'c', text: 'echo("Hello World")' },
-      { id: 'd', text: 'write("Hello World")' },
-    ],
-  },
-  {
-    id: 5,
-    text: 'Python\'da tsikl yaratish uchun qaysi kalit so\'zlar ishlatiladi?',
-    options: [
-      { id: 'a', text: 'for va while' },
-      { id: 'b', text: 'loop va repeat' },
-      { id: 'c', text: 'each va do' },
-      { id: 'd', text: 'iterate va cycle' },
-    ],
-  },
-];
+interface ApiQuestion {
+  id: number;
+  text: string;
+  answers?: Array<{
+    id: number;
+    text: string;
+  }>;
+}
+
+interface ExamState {
+  id: number;
+  title: string;
+  duration_minutes: number;
+}
 
 const STORAGE_KEY = 'exam_answers_';
 
 export default function ExamTakePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const exam = location.state?.exam;
+  const { examId } = useParams();
+  const { toast } = useToast();
+  const exam = (location.state as { exam?: ExamState })?.exam;
+  const stateStudentExamId = (location.state as { studentExamId?: number })?.studentExamId;
 
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
+  const [questionError, setQuestionError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [studentExamId, setStudentExamId] = useState<number | null>(stateStudentExamId || null);
   const [timeLeft, setTimeLeft] = useState((exam?.duration_minutes || 60) * 60);
   const [isBlurred, setIsBlurred] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
@@ -89,7 +63,8 @@ export default function ExamTakePage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const devToolsCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const storageKey = STORAGE_KEY + (exam?.id || 'unknown');
+  const resolvedExamId = exam?.id || (examId ? Number(examId) : null);
+  const storageKey = STORAGE_KEY + (resolvedExamId || 'unknown');
 
   // Apply CSS protections
   useEffect(() => {
@@ -139,6 +114,96 @@ export default function ExamTakePage() {
       document.head.removeChild(style);
     };
   }, []);
+
+  useEffect(() => {
+    const ensureStudentExamAndQuestions = async () => {
+      if (!resolvedExamId) {
+        setLoadingQuestions(false);
+        setQuestionError('Imtihon ID topilmadi.');
+        return;
+      }
+
+      try {
+        let currentStudentExamId = studentExamId;
+
+        if (!currentStudentExamId) {
+          const listResponse = await authFetch(API_ENDPOINTS.STUDENT_EXAMS);
+          const listData = await listResponse.json().catch(() => []);
+
+          if (listResponse.ok) {
+            const rows = Array.isArray(listData) ? listData : (listData.results || []);
+            const inProgress = rows.find((row: any) => row.exam === resolvedExamId && row.status === 'in_progress');
+            if (inProgress) {
+              currentStudentExamId = inProgress.id;
+            }
+          }
+        }
+
+        if (!currentStudentExamId) {
+          const createResponse = await authFetch(API_ENDPOINTS.STUDENT_EXAMS, {
+            method: 'POST',
+            body: JSON.stringify({ exam: resolvedExamId }),
+          });
+          const createData = await createResponse.json().catch(() => ({}));
+
+          if (!createResponse.ok) {
+            throw new Error(createData?.detail || 'Imtihonni boshlashda xatolik yuz berdi.');
+          }
+
+          currentStudentExamId = createData.id;
+        }
+
+        setStudentExamId(currentStudentExamId);
+
+        const questionResponse = await authFetch(API_ENDPOINTS.EXAM_QUESTIONS(resolvedExamId));
+        const questionData = await questionResponse.json().catch(() => []);
+
+        if (!questionResponse.ok) {
+          throw new Error(questionData?.detail || 'Savollarni olib bo‘lmadi.');
+        }
+
+        const rawQuestions: ApiQuestion[] = Array.isArray(questionData)
+          ? questionData
+          : (questionData.results || []);
+
+        const mappedQuestions: Question[] = rawQuestions.map((item) => ({
+          id: item.id,
+          text: item.text,
+          options: (item.answers || []).map((ans) => ({
+            id: ans.id,
+            text: ans.text,
+          })),
+        }));
+
+        setQuestions(mappedQuestions);
+
+        const savedAnswers = localStorage.getItem(storageKey);
+        if (savedAnswers) {
+          try {
+            const parsed = JSON.parse(savedAnswers);
+            if (parsed && typeof parsed === 'object') {
+              setAnswers(parsed);
+            }
+          } catch {
+            localStorage.removeItem(storageKey);
+          }
+        }
+      } catch (error) {
+        console.error('Exam questions load error:', error);
+        const message = error instanceof Error ? error.message : 'Imtihon savollarini yuklashda xatolik.';
+        setQuestionError(message);
+        toast({
+          variant: 'destructive',
+          title: 'Xatolik',
+          description: message,
+        });
+      } finally {
+        setLoadingQuestions(false);
+      }
+    };
+
+    ensureStudentExamAndQuestions();
+  }, [resolvedExamId, studentExamId, storageKey, toast]);
 
   // Detect Developer Tools
   useEffect(() => {
@@ -191,6 +256,12 @@ export default function ExamTakePage() {
       localStorage.setItem(storageKey, JSON.stringify(answers));
     }
   }, [answers, storageKey]);
+
+  useEffect(() => {
+    if (questions.length > 0 && currentQuestion >= questions.length) {
+      setCurrentQuestion(0);
+    }
+  }, [questions.length, currentQuestion]);
 
   // Clear answers and navigate away on cheat
   const handleCheatDetected = useCallback((reason: string) => {
@@ -545,7 +616,7 @@ export default function ExamTakePage() {
     }
   };
 
-  const handleAnswer = (questionId: number, optionId: string) => {
+  const handleAnswer = (questionId: number, optionId: number) => {
     setAnswers(prev => ({ ...prev, [questionId]: optionId }));
   };
 
@@ -557,10 +628,72 @@ export default function ExamTakePage() {
     });
   };
 
-  const handleSubmit = () => {
-    localStorage.removeItem(storageKey);
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    navigate(`/dashboard/student/exam/${exam?.id}/results`, { state: { exam } });
+  const handleSubmit = async () => {
+    if (!studentExamId) {
+      toast({
+        variant: 'destructive',
+        title: 'Xatolik',
+        description: 'Student exam ID topilmadi. Qaytadan urinib ko‘ring.',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const answerEntries = Object.entries(answers);
+      for (const [questionId, selectedAnswerId] of answerEntries) {
+        const answerResponse = await authFetch(API_ENDPOINTS.STUDENT_ANSWERS, {
+          method: 'POST',
+          body: JSON.stringify({
+            student_exam: studentExamId,
+            question: Number(questionId),
+            selected_answer: selectedAnswerId,
+            text_answer: '',
+          }),
+        });
+
+        if (!answerResponse.ok) {
+          const answerError = await answerResponse.json().catch(() => ({}));
+          const detailText = String(answerError?.detail || '');
+          const normalizedDetail = detailText.toLowerCase();
+
+          // Duplicate yoki "savol sizga tayinlanmadi" holatlarida qolganlarini davom ettiramiz.
+          const canSkip =
+            (answerResponse.status === 400 && normalizedDetail.includes('already')) ||
+            (answerResponse.status === 403 && normalizedDetail.includes('tayinlanmadi'));
+
+          if (!canSkip) {
+            throw new Error(detailText || 'Javob yuborishda xatolik yuz berdi.');
+          }
+        }
+      }
+
+      const submitResponse = await authFetch(API_ENDPOINTS.STUDENT_EXAM_SUBMIT(studentExamId), {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      const submitData = await submitResponse.json().catch(() => ({}));
+
+      if (!submitResponse.ok) {
+        throw new Error(submitData?.detail || 'Imtihonni topshirishda xatolik yuz berdi.');
+      }
+
+      localStorage.removeItem(storageKey);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      navigate(`/dashboard/student/exam/${studentExamId}/results`, {
+        state: { exam, result: submitData },
+      });
+    } catch (error) {
+      console.error('Exam submit error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Topshirishda xatolik',
+        description: error instanceof Error ? error.message : 'Imtihonni topshirib bo‘lmadi.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -570,12 +703,17 @@ export default function ExamTakePage() {
   };
 
   const answeredCount = Object.keys(answers).length;
-  const totalQuestions = MOCK_QUESTIONS.length;
-  const q = MOCK_QUESTIONS[currentQuestion];
+  const totalQuestions = questions.length;
+  const q = questions[currentQuestion];
   const isUrgent = timeLeft < 300;
 
+  useEffect(() => {
+    if (!exam) {
+      navigate('/dashboard/student/exams');
+    }
+  }, [exam, navigate]);
+
   if (!exam) {
-    navigate('/dashboard/student/exams');
     return null;
   }
 
@@ -696,7 +834,7 @@ export default function ExamTakePage() {
         <div className="hidden lg:flex flex-col w-56 border-r border-border bg-muted/30 p-4 shrink-0">
           <p className="text-xs font-semibold text-muted-foreground mb-3">Savollar</p>
           <div className="grid grid-cols-5 gap-1.5 mb-4">
-            {MOCK_QUESTIONS.map((mq, i) => (
+            {questions.map((mq, i) => (
               <button
                 key={mq.id}
                 onClick={() => setCurrentQuestion(i)}
@@ -735,7 +873,24 @@ export default function ExamTakePage() {
 
         {/* Question content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          {devToolsDetected ? (
+          {loadingQuestions ? (
+            <div className="max-w-2xl mx-auto space-y-4">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ) : questionError ? (
+            <div className="flex items-center justify-center h-full">
+              <Card className="max-w-md w-full border-destructive/40">
+                <CardContent className="p-6 text-center space-y-3">
+                  <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
+                  <h3 className="text-lg font-semibold text-destructive">Savollar yuklanmadi</h3>
+                  <p className="text-sm text-muted-foreground">{questionError}</p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : devToolsDetected ? (
             <div className="flex items-center justify-center h-full">
               <Card className="max-w-sm w-full border-destructive/50">
                 <CardContent className="p-6 text-center space-y-3">
@@ -750,7 +905,7 @@ export default function ExamTakePage() {
                 </CardContent>
               </Card>
             </div>
-          ) : (
+          ) : q ? (
             <div className="max-w-2xl mx-auto space-y-6">
               {/* Question header */}
               <div className="flex items-start justify-between gap-3">
@@ -772,7 +927,7 @@ export default function ExamTakePage() {
 
               {/* Options */}
               <div className="space-y-3">
-                {q.options.map((opt) => {
+                {q.options.map((opt, optionIndex) => {
                   const isSelected = answers[q.id] === opt.id;
                   return (
                 <button
@@ -793,7 +948,7 @@ export default function ExamTakePage() {
                             : 'bg-muted text-muted-foreground'
                           }`}
                         >
-                          {opt.id.toUpperCase()}
+                          {String.fromCharCode(65 + optionIndex)}
                         </span>
                         <span className={`text-sm ${isSelected ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                           {opt.text}
@@ -804,6 +959,10 @@ export default function ExamTakePage() {
                 })}
               </div>
             </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground">Savollar topilmadi</p>
+            </div>
           )}
         </div>
       </div>
@@ -812,7 +971,7 @@ export default function ExamTakePage() {
       <div className="border-t border-border bg-card px-4 py-3 shrink-0">
         {/* Mobile question nav */}
         <div className="flex lg:hidden gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide">
-          {MOCK_QUESTIONS.map((mq, i) => (
+          {questions.map((mq, i) => (
             <button
               key={mq.id}
               onClick={() => setCurrentQuestion(i)}
@@ -836,7 +995,7 @@ export default function ExamTakePage() {
           <Button
             variant="outline"
             size="sm"
-            disabled={currentQuestion === 0 || devToolsDetected}
+            disabled={currentQuestion === 0 || devToolsDetected || loadingQuestions || totalQuestions === 0}
             onClick={() => setCurrentQuestion(prev => prev - 1)}
             className="gap-1.5"
           >
@@ -848,7 +1007,7 @@ export default function ExamTakePage() {
             {currentQuestion < totalQuestions - 1 ? (
               <Button
                 size="sm"
-                disabled={devToolsDetected}
+                disabled={devToolsDetected || loadingQuestions || totalQuestions === 0}
                 onClick={() => setCurrentQuestion(prev => prev + 1)}
                 className="gap-1.5"
               >
@@ -858,12 +1017,12 @@ export default function ExamTakePage() {
             ) : (
               <Button
                 size="sm"
-                disabled={devToolsDetected}
+                disabled={devToolsDetected || loadingQuestions || totalQuestions === 0 || isSubmitting}
                 onClick={() => setShowConfirmSubmit(true)}
                 className="gap-1.5"
               >
                 <Send className="h-4 w-4" />
-                Yakunlash
+                {isSubmitting ? 'Topshirilmoqda...' : 'Yakunlash'}
               </Button>
             )}
           </div>
@@ -890,9 +1049,9 @@ export default function ExamTakePage() {
                   <X className="h-4 w-4 mr-1.5" />
                   Bekor qilish
                 </Button>
-                <Button className="flex-1" onClick={handleSubmit}>
+                <Button className="flex-1" onClick={handleSubmit} disabled={isSubmitting}>
                   <Send className="h-4 w-4 mr-1.5" />
-                  Topshirish
+                  {isSubmitting ? 'Topshirilmoqda...' : 'Topshirish'}
                 </Button>
               </div>
             </CardContent>

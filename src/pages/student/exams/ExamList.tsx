@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  BookOpen, Clock, Calendar, Hash, Shield, AlertTriangle, 
+import {
+  BookOpen, Clock, Calendar, Hash, Shield, AlertTriangle,
   Play, Lock, CheckCircle, Timer, FileText, ChevronRight,
-  GraduationCap, Users, Sparkles
+  GraduationCap, Sparkles
 } from 'lucide-react';
 import { format, isBefore, isAfter, differenceInMinutes } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
+import { authFetch } from '@/lib/authFetch';
+import { API_ENDPOINTS } from '@/config/api';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export interface Exam {
   id: number;
@@ -24,86 +28,43 @@ export interface Exam {
   rules: string[];
 }
 
-const MOCK_EXAMS: Exam[] = [
-  {
-    id: 1,
-    title: 'Python asoslari — Yakuniy imtihon',
-    course_name: 'Python dasturlash',
-    hashtag: '#python_final_2024',
-    start_time: new Date(Date.now() - 30 * 60000).toISOString(),
-    end_time: new Date(Date.now() + 90 * 60000).toISOString(),
-    duration_minutes: 60,
-    total_questions: 30,
-    status: 'available',
-    rules: [
-      'Imtihon vaqtida boshqa sahifalarga o\'tish taqiqlanadi',
-      'Ekran yozish va screenshot olish cheklangan',
-      'Imtihondan chiqib ketish javoblarni o\'chiradi',
-      'Har bir savolga faqat 1 ta javob tanlash mumkin',
-    ],
-  },
-  {
-    id: 2,
-    title: 'Web dasturlash — Oraliq nazorat',
-    course_name: 'Frontend Development',
-    hashtag: '#frontend_mid_2024',
-    start_time: new Date(Date.now() + 2 * 3600000).toISOString(),
-    end_time: new Date(Date.now() + 4 * 3600000).toISOString(),
-    duration_minutes: 45,
-    total_questions: 25,
-    status: 'not_started',
-    rules: [
-      'Imtihon vaqtida boshqa sahifalarga o\'tish taqiqlanadi',
-      'Har bir savolga 1.5 daqiqa vaqt beriladi',
-    ],
-  },
-  {
-    id: 3,
-    title: 'Ma\'lumotlar bazasi — Yakuniy test',
-    course_name: 'SQL & Database',
-    hashtag: '#sql_final_2024',
-    start_time: new Date(Date.now() - 5 * 3600000).toISOString(),
-    end_time: new Date(Date.now() - 3 * 3600000).toISOString(),
-    duration_minutes: 90,
-    total_questions: 40,
-    status: 'finished',
-    rules: [],
-  },
-  {
-    id: 4,
-    title: 'Algoritm va ma\'lumot tuzilmalari',
-    course_name: 'Computer Science',
-    hashtag: '#algo_2024',
-    start_time: new Date(Date.now() + 24 * 3600000).toISOString(),
-    end_time: new Date(Date.now() + 26 * 3600000).toISOString(),
-    duration_minutes: 120,
-    total_questions: 50,
-    status: 'not_started',
-    rules: [
-      'Imtihon vaqtida boshqa sahifalarga o\'tish taqiqlanadi',
-      'Ekran yozish va screenshot olish cheklangan',
-      'Kalkulyator ishlatish mumkin emas',
-    ],
-  },
-];
+interface ApiExam {
+  id: number;
+  title: string;
+  description?: string;
+  subject?: string;
+  hashtag?: string;
+  start_date: string;
+  end_date: string;
+  duration_minutes: number;
+  num_questions_to_show?: number;
+  status?: string;
+  questions?: Array<{ id: number }>;
+}
+
+interface ApiStudentExam {
+  id: number;
+  exam: number;
+  status: 'in_progress' | 'submitted' | 'graded';
+}
 
 const statusConfig = {
-  not_started: { 
-    label: 'Boshlanmagan', 
+  not_started: {
+    label: 'Boshlanmagan',
     icon: Lock,
     bgClass: 'bg-muted/50',
     badgeClass: 'bg-muted text-muted-foreground border-border',
     accentColor: 'border-l-muted-foreground/40',
   },
-  available: { 
-    label: 'Mavjud', 
+  available: {
+    label: 'Mavjud',
     icon: Play,
     bgClass: 'bg-primary/[0.02]',
     badgeClass: 'bg-primary/10 text-primary border-primary/30',
     accentColor: 'border-l-primary',
   },
-  finished: { 
-    label: 'Yakunlangan', 
+  finished: {
+    label: 'Yakunlangan',
     icon: CheckCircle,
     bgClass: 'bg-muted/30',
     badgeClass: 'bg-secondary text-secondary-foreground border-border',
@@ -128,22 +89,137 @@ function getTimeInfo(exam: Exam) {
   return { text: `${remaining} daqiqa qoldi`, color: 'text-primary', urgent: true };
 }
 
-export default function ExamList() {
-  const [exams] = useState<Exam[]>(MOCK_EXAMS);
-  const navigate = useNavigate();
+function mapExamStatus(exam: ApiExam): Exam['status'] {
+  const now = new Date();
+  const start = new Date(exam.start_date);
+  const end = new Date(exam.end_date);
 
-  const handleStartExam = (exam: Exam) => {
-    navigate(`/dashboard/student/exam/${exam.id}/take`, { state: { exam } });
+  if (exam.status && ['closed', 'expired', 'archived'].includes(exam.status)) {
+    return 'finished';
+  }
+
+  if (isBefore(now, start)) return 'not_started';
+  if (isAfter(now, end)) return 'finished';
+  return 'available';
+}
+
+function normalizeExam(exam: ApiExam): Exam {
+  const rules: string[] = [];
+  if (exam.description?.trim()) {
+    rules.push(exam.description.trim());
+  }
+
+  return {
+    id: exam.id,
+    title: exam.title,
+    course_name: exam.subject || 'Fan',
+    hashtag: exam.hashtag || '#exam',
+    start_time: exam.start_date,
+    end_time: exam.end_date,
+    duration_minutes: exam.duration_minutes,
+    total_questions: exam.questions?.length || exam.num_questions_to_show || 0,
+    status: mapExamStatus(exam),
+    rules,
+  };
+}
+
+export default function ExamList() {
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [startingExamId, setStartingExamId] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchExams = async () => {
+      try {
+        const response = await authFetch(API_ENDPOINTS.EXAMS);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data?.detail || 'Imtihonlar ro\'yxatini olib bo\'lmadi');
+        }
+
+        const rawExams: ApiExam[] = Array.isArray(data) ? data : (data.results || []);
+        setExams(rawExams.map(normalizeExam));
+      } catch (error) {
+        console.error('Exam list fetch error:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Xatolik',
+          description: 'Imtihonlar ro\'yxatini yuklashda xatolik yuz berdi.',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExams();
+  }, [toast]);
+
+  const handleStartExam = async (exam: Exam) => {
+    setStartingExamId(exam.id);
+
+    try {
+      const response = await authFetch(API_ENDPOINTS.STUDENT_EXAMS, {
+        method: 'POST',
+        body: JSON.stringify({ exam: exam.id }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        navigate(`/dashboard/student/exam/${exam.id}/take`, {
+          state: { exam, studentExamId: data.id },
+        });
+        return;
+      }
+
+      const detail = data?.detail || 'Imtihonni boshlashda xatolik yuz berdi';
+
+      if (response.status === 400 && String(detail).toLowerCase().includes('allaqachon')) {
+        const existingResponse = await authFetch(API_ENDPOINTS.STUDENT_EXAMS);
+        const existingData = await existingResponse.json().catch(() => []);
+
+        if (existingResponse.ok) {
+          const rows: ApiStudentExam[] = Array.isArray(existingData)
+            ? existingData
+            : (existingData.results || []);
+          const existing = rows.find((item) => item.exam === exam.id && item.status === 'in_progress');
+
+          if (existing) {
+            navigate(`/dashboard/student/exam/${exam.id}/take`, {
+              state: { exam, studentExamId: existing.id },
+            });
+            return;
+          }
+        }
+      }
+
+      toast({
+        variant: 'destructive',
+        title: 'Imtihon boshlanmadi',
+        description: detail,
+      });
+    } catch (error) {
+      console.error('Exam start error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Xatolik',
+        description: 'Imtihonni boshlashda server bilan bog\'lanib bo\'lmadi.',
+      });
+    } finally {
+      setStartingExamId(null);
+    }
   };
 
-  const availableExams = exams.filter(e => e.status === 'available');
-  const upcomingExams = exams.filter(e => e.status === 'not_started');
-  const finishedExams = exams.filter(e => e.status === 'finished');
+  const availableExams = exams.filter((e) => e.status === 'available');
+  const upcomingExams = exams.filter((e) => e.status === 'not_started');
+  const finishedExams = exams.filter((e) => e.status === 'finished');
 
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -154,9 +230,9 @@ export default function ExamList() {
               <p className="text-muted-foreground text-sm">Sizga tayinlangan barcha imtihonlar</p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => navigate('/dashboard/student/exam-results')}
             className="gap-2"
           >
@@ -165,7 +241,6 @@ export default function ExamList() {
           </Button>
         </div>
 
-        {/* Stats bar */}
         <div className="grid grid-cols-3 gap-3">
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="p-4 flex items-center gap-3">
@@ -202,61 +277,110 @@ export default function ExamList() {
           </Card>
         </div>
 
-        {/* Available exams */}
-        {availableExams.length > 0 && (
-          <ExamSection title="Hozir mavjud" exams={availableExams} onStart={handleStartExam} navigate={navigate} />
-        )}
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[1, 2, 3, 4].map((item) => (
+              <Skeleton key={item} className="h-64 rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <>
+            {availableExams.length > 0 && (
+              <ExamSection
+                title="Hozir mavjud"
+                exams={availableExams}
+                onStart={handleStartExam}
+                navigate={navigate}
+                startingExamId={startingExamId}
+              />
+            )}
 
-        {/* Upcoming */}
-        {upcomingExams.length > 0 && (
-          <ExamSection title="Kutilmoqda" exams={upcomingExams} onStart={handleStartExam} navigate={navigate} />
-        )}
+            {upcomingExams.length > 0 && (
+              <ExamSection
+                title="Kutilmoqda"
+                exams={upcomingExams}
+                onStart={handleStartExam}
+                navigate={navigate}
+                startingExamId={startingExamId}
+              />
+            )}
 
-        {/* Finished */}
-        {finishedExams.length > 0 && (
-          <ExamSection title="Yakunlangan" exams={finishedExams} onStart={handleStartExam} navigate={navigate} />
+            {finishedExams.length > 0 && (
+              <ExamSection
+                title="Yakunlangan"
+                exams={finishedExams}
+                onStart={handleStartExam}
+                navigate={navigate}
+                startingExamId={startingExamId}
+              />
+            )}
+
+            {exams.length === 0 && (
+              <div className="text-center py-20 text-muted-foreground">
+                Hozircha sizga biriktirilgan imtihonlar topilmadi.
+              </div>
+            )}
+          </>
         )}
       </div>
     </DashboardLayout>
   );
 }
 
-function ExamSection({ title, exams, onStart, navigate }: { 
-  title: string; 
-  exams: Exam[]; 
+function ExamSection({
+  title,
+  exams,
+  onStart,
+  navigate,
+  startingExamId,
+}: {
+  title: string;
+  exams: Exam[];
   onStart: (exam: Exam) => void;
   navigate: ReturnType<typeof useNavigate>;
+  startingExamId: number | null;
 }) {
   return (
     <div className="space-y-3">
       <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{title}</h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        {exams.map(exam => (
-          <ExamCardItem key={exam.id} exam={exam} onStart={onStart} navigate={navigate} />
+        {exams.map((exam) => (
+          <ExamCardItem
+            key={exam.id}
+            exam={exam}
+            onStart={onStart}
+            navigate={navigate}
+            startingExamId={startingExamId}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function ExamCardItem({ exam, onStart, navigate }: { 
-  exam: Exam; 
+function ExamCardItem({
+  exam,
+  onStart,
+  navigate,
+  startingExamId,
+}: {
+  exam: Exam;
   onStart: (exam: Exam) => void;
   navigate: ReturnType<typeof useNavigate>;
+  startingExamId: number | null;
 }) {
   const cfg = statusConfig[exam.status];
   const timeInfo = getTimeInfo(exam);
   const StatusIcon = cfg.icon;
   const now = new Date();
-  const canStart = exam.status === 'available' && 
-    !isBefore(now, new Date(exam.start_time)) && 
+  const canStart = exam.status === 'available' &&
+    !isBefore(now, new Date(exam.start_time)) &&
     !isAfter(now, new Date(exam.end_time));
 
   return (
     <Card className={`overflow-hidden border-l-4 ${cfg.accentColor} hover:shadow-lg transition-all duration-200`}>
       <CardContent className="p-0">
         <div className={`p-5 space-y-4 ${cfg.bgClass}`}>
-          {/* Top: title + badge */}
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-1">
               <h3 className="font-semibold text-foreground leading-tight">{exam.title}</h3>
@@ -265,7 +389,8 @@ function ExamCardItem({ exam, onStart, navigate }: {
                   <BookOpen className="h-3 w-3" />
                   {exam.course_name}
                 </span>
-                <span className="text-xs text-primary/70 font-medium">
+                <span className="text-xs text-primary/70 font-medium flex items-center gap-1">
+                  <Hash className="h-3 w-3" />
                   {exam.hashtag}
                 </span>
               </div>
@@ -276,7 +401,6 @@ function ExamCardItem({ exam, onStart, navigate }: {
             </Badge>
           </div>
 
-          {/* Info pills */}
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-card border border-border text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
@@ -296,7 +420,6 @@ function ExamCardItem({ exam, onStart, navigate }: {
             </span>
           </div>
 
-          {/* Time status */}
           {timeInfo.urgent && (
             <div className={`flex items-center gap-1.5 text-xs font-semibold ${timeInfo.color}`}>
               <AlertTriangle className="h-3.5 w-3.5" />
@@ -310,7 +433,6 @@ function ExamCardItem({ exam, onStart, navigate }: {
             </div>
           )}
 
-          {/* Rules */}
           {exam.rules.length > 0 && exam.status !== 'finished' && (
             <div className="p-3 rounded-lg bg-card/80 border border-border">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
@@ -328,12 +450,11 @@ function ExamCardItem({ exam, onStart, navigate }: {
             </div>
           )}
 
-          {/* Action */}
           <div className="pt-1">
             {exam.status === 'finished' ? (
-              <Button 
-                variant="secondary" 
-                size="sm" 
+              <Button
+                variant="secondary"
+                size="sm"
                 className="w-full gap-2"
                 onClick={() => navigate('/dashboard/student/exam-results')}
               >
@@ -341,20 +462,21 @@ function ExamCardItem({ exam, onStart, navigate }: {
                 Natijani ko'rish
               </Button>
             ) : canStart ? (
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 className="w-full gap-2"
                 onClick={() => onStart(exam)}
+                disabled={startingExamId === exam.id}
               >
                 <Play className="h-4 w-4" />
-                Imtihonni boshlash
+                {startingExamId === exam.id ? 'Boshlanmoqda...' : 'Imtihonni boshlash'}
                 <ChevronRight className="h-4 w-4" />
               </Button>
             ) : (
-              <Button 
-                disabled 
-                variant="outline" 
-                size="sm" 
+              <Button
+                disabled
+                variant="outline"
+                size="sm"
                 className="w-full gap-2"
               >
                 <Lock className="h-4 w-4" />
