@@ -48,6 +48,9 @@ import ExamList from '@/pages/student/exams/ExamList';
 import ExamResultPage from '@/pages/student/exams/ExamResultPage';
 import ExamResultsDetailPage from '@/pages/student/exams/ExamResultsDetailPage';
 import ExamTakePage from '@/pages/student/exams/ExamTakePage';
+import ExamManagement from '@/pages/admin/exams/ExamManagement';
+import ExamCreate from '@/pages/admin/exams/ExamCreate';
+import ExamDetailAdmin from '@/pages/admin/exams/ExamDetailAdmin';
 
 export function AppRoutes() {
   const { isMaintenanceActive, isDegraded } = useSystemStatus();
@@ -244,6 +247,10 @@ export function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+      <Route path="/dashboard/admin/exams" element={<ProtectedRoute><ExamManagement /></ProtectedRoute>} />
+      <Route path="/dashboard/admin/exams/create" element={<ProtectedRoute><ExamCreate /></ProtectedRoute>} />
+      <Route path="/dashboard/admin/exams/:examId" element={<ProtectedRoute><ExamDetailAdmin /></ProtectedRoute>} />
+      <Route path="/dashboard/admin/exams/:examId/edit" element={<ProtectedRoute><ExamCreate /></ProtectedRoute>} />
       <Route 
         path="/admin/student-detail/:studentId" 
         element={
@@ -255,6 +262,10 @@ export function AppRoutes() {
         } 
       />
       {/* Teacher Routes */}
+      <Route path="/dashboard/teacher/exams" element={<ProtectedRoute><ExamManagement /></ProtectedRoute>} />
+      <Route path="/dashboard/teacher/exams/create" element={<ProtectedRoute><ExamCreate /></ProtectedRoute>} />
+      <Route path="/dashboard/teacher/exams/:examId" element={<ProtectedRoute><ExamDetailAdmin /></ProtectedRoute>} />
+      <Route path="/dashboard/teacher/exams/:examId/edit" element={<ProtectedRoute><ExamCreate /></ProtectedRoute>} />
       <Route 
         path="/dashboard/teacher/groups" 
         element={
@@ -402,6 +413,10 @@ export function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+      <Route path="/dashboard/manager/exams" element={<ProtectedRoute><ExamManagement /></ProtectedRoute>} />
+      <Route path="/dashboard/manager/exams/create" element={<ProtectedRoute><ExamCreate /></ProtectedRoute>} />
+      <Route path="/dashboard/manager/exams/:examId" element={<ProtectedRoute><ExamDetailAdmin /></ProtectedRoute>} />
+      <Route path="/dashboard/manager/exams/:examId/edit" element={<ProtectedRoute><ExamCreate /></ProtectedRoute>} />
 
       <Route 
         path="/dashboard/manager/send-sms" 

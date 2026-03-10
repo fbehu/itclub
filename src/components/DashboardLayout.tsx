@@ -40,6 +40,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         { path: '/dashboard/admin/courses', label: 'Kurslar', icon: BookOpen },
         { path: '/dashboard/admin/payments', label: 'To\'lovlar', icon: CreditCard },
         { path: '/dashboard/admin/rooms', label: 'Xonalar', icon: Home },
+        { path: '/dashboard/admin/exams', label: 'Imtihonlar', icon: GraduationCap },
         { path: '/dashboard/admin/send-sms', label: 'SMS', icon: Mail },
         { path: '/dashboard/admin/system-updates', label: 'Yangiliklar', icon: Megaphone },
         { path: '/dashboard/admin/certificates', label: 'Sertifikatlar', icon: Award },
@@ -58,6 +59,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         { path: '/dashboard/manager/courses', label: 'Kurslar', icon: BookOpen },
         { path: '/dashboard/manager/payments', label: 'To\'lovlar', icon: CreditCard },
         { path: '/dashboard/manager/rooms', label: 'Xonalar', icon: Home },
+        { path: '/dashboard/manager/exams', label: 'Imtihonlar', icon: GraduationCap },
         { path: '/dashboard/manager/send-sms', label: 'SMS', icon: Mail },
         { path: '/dashboard/admin/certificates', label: 'Sertifikatlar', icon: Award },
         { path: '/dashboard/chat', label: 'Suhbat', icon: MessageSquare },
@@ -69,6 +71,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       return [
         { path: '/dashboard/teacher/groups', label: 'Guruhlar', icon: UsersRound },
         { path: '/dashboard/teacher/attendance', label: 'Davomat', icon: ClipboardList },
+        { path: '/dashboard/teacher/exams', label: 'Imtihonlar', icon: GraduationCap },
         { path: '/dashboard/teacher/marketplace', label: 'Kurslar', icon: Store },
         { path: '/dashboard/teacher/system-updates', label: 'Yangiliklar', icon: Megaphone },
         { path: '/dashboard/chat', label: 'Suhbat', icon: MessageSquare },
