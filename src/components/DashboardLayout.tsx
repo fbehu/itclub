@@ -40,6 +40,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         { path: '/dashboard/admin/courses', label: 'Kurslar', icon: BookOpen },
         { path: '/dashboard/admin/payments', label: 'To\'lovlar', icon: CreditCard },
         { path: '/dashboard/admin/rooms', label: 'Xonalar', icon: Home },
+        { path: '/dashboard/admin/exams', label: 'Imtihonlar', icon: GraduationCap },
         { path: '/dashboard/admin/send-sms', label: 'SMS', icon: Mail },
         { path: '/dashboard/admin/system-updates', label: 'Yangiliklar', icon: Megaphone },
         { path: '/dashboard/admin/certificates', label: 'Sertifikatlar', icon: Award },

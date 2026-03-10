@@ -48,6 +48,9 @@ import ExamList from '@/pages/student/exams/ExamList';
 import ExamResultPage from '@/pages/student/exams/ExamResultPage';
 import ExamResultsDetailPage from '@/pages/student/exams/ExamResultsDetailPage';
 import ExamTakePage from '@/pages/student/exams/ExamTakePage';
+import ExamManagement from '@/pages/admin/exams/ExamManagement';
+import ExamCreate from '@/pages/admin/exams/ExamCreate';
+import ExamDetailAdmin from '@/pages/admin/exams/ExamDetailAdmin';
 
 export function AppRoutes() {
   const { isMaintenanceActive, isDegraded } = useSystemStatus();
