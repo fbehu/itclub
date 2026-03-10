@@ -71,6 +71,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       return [
         { path: '/dashboard/teacher/groups', label: 'Guruhlar', icon: UsersRound },
         { path: '/dashboard/teacher/attendance', label: 'Davomat', icon: ClipboardList },
+        { path: '/dashboard/teacher/exams', label: 'Imtihonlar', icon: GraduationCap },
         { path: '/dashboard/teacher/marketplace', label: 'Kurslar', icon: Store },
         { path: '/dashboard/teacher/system-updates', label: 'Yangiliklar', icon: Megaphone },
         { path: '/dashboard/chat', label: 'Suhbat', icon: MessageSquare },
