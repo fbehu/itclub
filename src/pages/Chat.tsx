@@ -153,7 +153,7 @@ export default function Chat() {
     console.log('🔗 Connecting to chat WebSocket:', chatWsUrl);
     try {
       chatSocketRef.current = new WebSocket(chatWsUrl);
-      let chatConnectTimeout: NodeJS.Timeout;
+      let chatConnectTimeout: ReturnType<typeof setTimeout>;
       chatSocketRef.current.onopen = () => {
         clearTimeout(chatConnectTimeout);
         console.log('✅ Chat WebSocket connected');

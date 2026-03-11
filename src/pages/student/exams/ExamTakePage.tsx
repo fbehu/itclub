@@ -106,7 +106,7 @@ export default function ExamTakePage() {
   const [devToolsDetected, setDevToolsDetected] = useState(false);
   const [sessionTerminated, setSessionTerminated] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const devToolsCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const devToolsCheckIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionSocketRef = useRef<WebSocket | null>(null);
   const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const submitRef = useRef<() => void>(() => {});
