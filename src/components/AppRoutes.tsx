@@ -51,6 +51,7 @@ import ExamTakePage from '@/pages/student/exams/ExamTakePage';
 import ExamManagement from '@/pages/admin/exams/ExamManagement';
 import ExamCreate from '@/pages/admin/exams/ExamCreate';
 import ExamDetailAdmin from '@/pages/admin/exams/ExamDetailAdmin';
+import ExamMonitoring from '@/pages/admin/exams/ExamMonitoring';
 
 export function AppRoutes() {
   const { isMaintenanceActive, isDegraded } = useSystemStatus();
