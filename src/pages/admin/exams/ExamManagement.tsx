@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Plus, Search, Calendar, Clock, Users, Hash, FileText,
   Edit, Trash2, Eye, MoreHorizontal, GraduationCap, Filter,
-  CheckCircle, XCircle, AlertCircle
+  CheckCircle, XCircle, AlertCircle, Activity
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -148,6 +148,11 @@ export default function ExamManagement() {
     closed: exams.filter((e) => e.status === 'closed' || e.status === 'expired' || e.status === 'archived').length,
   };
 
+  const canCreate = user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'sub_teacher';
+  const canEdit = canCreate;
+  const canDelete = user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'sub_teacher';
+  const canMonitor = true; // all roles can monitor
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -157,12 +162,16 @@ export default function ExamManagement() {
               <GraduationCap className="h-7 w-7 text-primary" />
               Imtihonlar boshqaruvi
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Imtihonlarni yarating, tahrirlang va boshqaring</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {canCreate ? 'Imtihonlarni yarating, tahrirlang va boshqaring' : 'Imtihon statistikalarini ko\'ring va kuzating'}
+            </p>
           </div>
-          <Button onClick={() => navigate(`${basePath}/exams/create`)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Yangi imtihon
-          </Button>
+          {canCreate && (
+            <Button onClick={() => navigate(`${basePath}/exams/create`)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Yangi imtihon
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -259,12 +268,21 @@ export default function ExamManagement() {
                               <DropdownMenuItem onClick={() => navigate(`${basePath}/exams/${exam.id}`)}>
                                 <Eye className="h-4 w-4 mr-2" />Ko'rish
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`${basePath}/exams/${exam.id}/edit`)}>
-                                <Edit className="h-4 w-4 mr-2" />Tahrirlash
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteExamId(exam.id)}>
-                                <Trash2 className="h-4 w-4 mr-2" />O'chirish
-                              </DropdownMenuItem>
+                              {canMonitor && (
+                                <DropdownMenuItem onClick={() => navigate(`${basePath}/exams/${exam.id}/monitor`)}>
+                                  <Activity className="h-4 w-4 mr-2" />Kuzatish
+                                </DropdownMenuItem>
+                              )}
+                              {canEdit && (
+                                <DropdownMenuItem onClick={() => navigate(`${basePath}/exams/${exam.id}/edit`)}>
+                                  <Edit className="h-4 w-4 mr-2" />Tahrirlash
+                                </DropdownMenuItem>
+                              )}
+                              {canDelete && (
+                                <DropdownMenuItem className="text-destructive" onClick={() => setDeleteExamId(exam.id)}>
+                                  <Trash2 className="h-4 w-4 mr-2" />O'chirish
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -303,9 +321,16 @@ export default function ExamManagement() {
                         <Button variant="outline" size="sm" className="gap-1.5 flex-1 lg:flex-none" onClick={() => navigate(`${basePath}/exams/${exam.id}`)}>
                           <Eye className="h-3.5 w-3.5" />Ko'rish
                         </Button>
-                        <Button variant="outline" size="sm" className="gap-1.5 flex-1 lg:flex-none" onClick={() => navigate(`${basePath}/exams/${exam.id}/edit`)}>
-                          <Edit className="h-3.5 w-3.5" />Tahrirlash
-                        </Button>
+                        {canMonitor && (
+                          <Button variant="outline" size="sm" className="gap-1.5 flex-1 lg:flex-none border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={() => navigate(`${basePath}/exams/${exam.id}/monitor`)}>
+                            <Activity className="h-3.5 w-3.5" />Kuzatish
+                          </Button>
+                        )}
+                        {canEdit && (
+                          <Button variant="outline" size="sm" className="gap-1.5 flex-1 lg:flex-none" onClick={() => navigate(`${basePath}/exams/${exam.id}/edit`)}>
+                            <Edit className="h-3.5 w-3.5" />Tahrirlash
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

@@ -86,7 +86,7 @@ export function CreateEnrollmentDialog({
   const [receipt, setReceipt] = useState<EnrollmentResponse | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const [formData, setFormData] = useState({
     student_id: '',
     course_id: '',

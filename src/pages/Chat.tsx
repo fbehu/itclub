@@ -90,9 +90,9 @@ export default function Chat() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const chatSocketRef = useRef<WebSocket | null>(null);
   const typingSocketRef = useRef<WebSocket | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-  const pollIntervalRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const pollIntervalRef = useRef<ReturnType<typeof setTimeout>>();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -153,7 +153,7 @@ export default function Chat() {
     console.log('🔗 Connecting to chat WebSocket:', chatWsUrl);
     try {
       chatSocketRef.current = new WebSocket(chatWsUrl);
-      let chatConnectTimeout: NodeJS.Timeout;
+      let chatConnectTimeout: ReturnType<typeof setTimeout>;
       chatSocketRef.current.onopen = () => {
         clearTimeout(chatConnectTimeout);
         console.log('✅ Chat WebSocket connected');
