@@ -321,9 +321,16 @@ export default function ExamManagement() {
                         <Button variant="outline" size="sm" className="gap-1.5 flex-1 lg:flex-none" onClick={() => navigate(`${basePath}/exams/${exam.id}`)}>
                           <Eye className="h-3.5 w-3.5" />Ko'rish
                         </Button>
-                        <Button variant="outline" size="sm" className="gap-1.5 flex-1 lg:flex-none" onClick={() => navigate(`${basePath}/exams/${exam.id}/edit`)}>
-                          <Edit className="h-3.5 w-3.5" />Tahrirlash
-                        </Button>
+                        {canMonitor && (
+                          <Button variant="outline" size="sm" className="gap-1.5 flex-1 lg:flex-none border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={() => navigate(`${basePath}/exams/${exam.id}/monitor`)}>
+                            <Activity className="h-3.5 w-3.5" />Kuzatish
+                          </Button>
+                        )}
+                        {canEdit && (
+                          <Button variant="outline" size="sm" className="gap-1.5 flex-1 lg:flex-none" onClick={() => navigate(`${basePath}/exams/${exam.id}/edit`)}>
+                            <Edit className="h-3.5 w-3.5" />Tahrirlash
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
