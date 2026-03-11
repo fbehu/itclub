@@ -148,6 +148,11 @@ export default function ExamManagement() {
     closed: exams.filter((e) => e.status === 'closed' || e.status === 'expired' || e.status === 'archived').length,
   };
 
+  const canCreate = user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'sub_teacher';
+  const canEdit = canCreate;
+  const canDelete = user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'sub_teacher';
+  const canMonitor = true; // all roles can monitor
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -157,12 +162,16 @@ export default function ExamManagement() {
               <GraduationCap className="h-7 w-7 text-primary" />
               Imtihonlar boshqaruvi
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Imtihonlarni yarating, tahrirlang va boshqaring</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {canCreate ? 'Imtihonlarni yarating, tahrirlang va boshqaring' : 'Imtihon statistikalarini ko\'ring va kuzating'}
+            </p>
           </div>
-          <Button onClick={() => navigate(`${basePath}/exams/create`)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Yangi imtihon
-          </Button>
+          {canCreate && (
+            <Button onClick={() => navigate(`${basePath}/exams/create`)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Yangi imtihon
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
