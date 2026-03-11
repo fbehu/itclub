@@ -268,12 +268,21 @@ export default function ExamManagement() {
                               <DropdownMenuItem onClick={() => navigate(`${basePath}/exams/${exam.id}`)}>
                                 <Eye className="h-4 w-4 mr-2" />Ko'rish
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`${basePath}/exams/${exam.id}/edit`)}>
-                                <Edit className="h-4 w-4 mr-2" />Tahrirlash
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteExamId(exam.id)}>
-                                <Trash2 className="h-4 w-4 mr-2" />O'chirish
-                              </DropdownMenuItem>
+                              {canMonitor && (
+                                <DropdownMenuItem onClick={() => navigate(`${basePath}/exams/${exam.id}/monitor`)}>
+                                  <Activity className="h-4 w-4 mr-2" />Kuzatish
+                                </DropdownMenuItem>
+                              )}
+                              {canEdit && (
+                                <DropdownMenuItem onClick={() => navigate(`${basePath}/exams/${exam.id}/edit`)}>
+                                  <Edit className="h-4 w-4 mr-2" />Tahrirlash
+                                </DropdownMenuItem>
+                              )}
+                              {canDelete && (
+                                <DropdownMenuItem className="text-destructive" onClick={() => setDeleteExamId(exam.id)}>
+                                  <Trash2 className="h-4 w-4 mr-2" />O'chirish
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
