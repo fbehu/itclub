@@ -9,6 +9,13 @@ import {
   Send, Shield, Maximize, X, Flag
 } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
+import {
+  buildExamSessionWebSocketUrl,
+  getExamSessionKey,
+  getOrCreateExamDeviceId,
+  removeExamSessionKey,
+  setExamSessionKey,
+} from '@/lib/examSession';
 import { API_ENDPOINTS } from '@/config/api';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,15 +40,49 @@ interface ExamState {
   duration_minutes: number;
 }
 
+interface ApiStudentExam {
+  id: number;
+  exam: number;
+  status: 'in_progress' | 'submitted' | 'graded';
+  exam_session_key?: string;
+}
+
+interface ExamLocationState {
+  exam?: ExamState;
+  studentExamId?: number;
+  examSessionKey?: string | null;
+}
+
+interface SessionStatusMessage {
+  type: 'session_status';
+  expired: boolean;
+  status?: string;
+  student_exam_id?: number;
+  reason?: string;
+  message?: string;
+  new_device?: string;
+  session_updated_at?: string;
+  server_time?: string;
+}
+
+interface ForceLogoutMessage {
+  type: 'force_logout';
+  reason?: string;
+  message?: string;
+}
+
 const STORAGE_KEY = 'exam_answers_';
+const SESSION_CONFLICT_FALLBACK = "Sessiya boshqa qurilmaga o'tgan. Imtihonni qayta ochib davom eting.";
 
 export default function ExamTakePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { examId } = useParams();
   const { toast } = useToast();
-  const exam = (location.state as { exam?: ExamState })?.exam;
-  const stateStudentExamId = (location.state as { studentExamId?: number })?.studentExamId;
+  const locationState = (location.state as ExamLocationState | null) || null;
+  const exam = locationState?.exam;
+  const stateStudentExamId = locationState?.studentExamId;
+  const stateExamSessionKey = locationState?.examSessionKey;
 
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -50,6 +91,9 @@ export default function ExamTakePage() {
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [studentExamId, setStudentExamId] = useState<number | null>(stateStudentExamId || null);
+  const [examSessionKey, setExamSessionKeyState] = useState<string | null>(
+    stateExamSessionKey || getExamSessionKey(stateStudentExamId ?? null)
+  );
   const [timeLeft, setTimeLeft] = useState((exam?.duration_minutes || 60) * 60);
   const [isBlurred, setIsBlurred] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
@@ -60,11 +104,79 @@ export default function ExamTakePage() {
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
   const [devToolsDetected, setDevToolsDetected] = useState(false);
+  const [sessionTerminated, setSessionTerminated] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const devToolsCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionSocketRef = useRef<WebSocket | null>(null);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const submitRef = useRef<() => void>(() => {});
+  const sessionConflictHandledRef = useRef(false);
 
   const resolvedExamId = exam?.id || (examId ? Number(examId) : null);
   const storageKey = STORAGE_KEY + (resolvedExamId || 'unknown');
+
+  const stopSessionMonitoring = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+
+    if (sessionSocketRef.current) {
+      const socket = sessionSocketRef.current;
+      sessionSocketRef.current = null;
+
+      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+        socket.close();
+      }
+    }
+  }, []);
+
+  const handleSessionConflict = useCallback((detail?: string, targetStudentExamId?: number | null) => {
+    if (sessionConflictHandledRef.current) {
+      return;
+    }
+    sessionConflictHandledRef.current = true;
+
+    const message = detail || SESSION_CONFLICT_FALLBACK;
+    const resolvedStudentExamId = targetStudentExamId ?? studentExamId;
+
+    if (resolvedStudentExamId) {
+      removeExamSessionKey(resolvedStudentExamId);
+    }
+
+    setSessionTerminated(true);
+    stopSessionMonitoring();
+    setQuestionError(message);
+    toast({
+      variant: 'destructive',
+      title: 'Sessiya tugatildi',
+      description: message,
+    });
+    navigate('/dashboard/student/exams');
+  }, [navigate, stopSessionMonitoring, studentExamId, toast]);
+
+  const handleForceLogout = useCallback((detail?: string) => {
+    setSessionTerminated(true);
+    stopSessionMonitoring();
+
+    if (studentExamId) {
+      removeExamSessionKey(studentExamId);
+    }
+
+    const message = detail || "Sizning akkountingizga boshqa qurilmadan kirildi. Iltimos, qayta login qiling.";
+    alert(message);
+    toast({
+      variant: 'destructive',
+      title: 'Majburiy logout',
+      description: message,
+    });
+
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('currentUser');
+    navigate('/login');
+  }, [navigate, stopSessionMonitoring, studentExamId, toast]);
 
   // Apply CSS protections
   useEffect(() => {
@@ -124,39 +236,93 @@ export default function ExamTakePage() {
       }
 
       try {
+        const deviceId = getOrCreateExamDeviceId();
         let currentStudentExamId = studentExamId;
+        let currentExamSessionKey = examSessionKey || getExamSessionKey(currentStudentExamId);
 
         if (!currentStudentExamId) {
           const listResponse = await authFetch(API_ENDPOINTS.STUDENT_EXAMS);
           const listData = await listResponse.json().catch(() => []);
 
           if (listResponse.ok) {
-            const rows = Array.isArray(listData) ? listData : (listData.results || []);
-            const inProgress = rows.find((row: any) => row.exam === resolvedExamId && row.status === 'in_progress');
+            const rows: ApiStudentExam[] = Array.isArray(listData) ? listData : (listData.results || []);
+            const inProgress = rows.find((row) => row.exam === resolvedExamId && row.status === 'in_progress');
             if (inProgress) {
               currentStudentExamId = inProgress.id;
+              currentExamSessionKey = inProgress.exam_session_key || getExamSessionKey(inProgress.id);
             }
           }
+        }
+
+        if (currentStudentExamId && !currentExamSessionKey) {
+          const detailResponse = await authFetch(API_ENDPOINTS.STUDENT_EXAM_DETAIL(currentStudentExamId), {
+            headers: {
+              'X-Device-Id': deviceId,
+            },
+          });
+          const detailData = await detailResponse.json().catch(() => ({}));
+
+          if (detailResponse.status === 409) {
+            handleSessionConflict(detailData?.detail || SESSION_CONFLICT_FALLBACK, currentStudentExamId);
+            return;
+          }
+
+          if (!detailResponse.ok) {
+            throw new Error(detailData?.detail || 'Imtihon sessiyasi topilmadi.');
+          }
+
+          currentExamSessionKey = detailData?.exam_session_key || null;
         }
 
         if (!currentStudentExamId) {
           const createResponse = await authFetch(API_ENDPOINTS.STUDENT_EXAMS, {
             method: 'POST',
+            headers: {
+              'X-Device-Id': deviceId,
+            },
             body: JSON.stringify({ exam: resolvedExamId }),
           });
           const createData = await createResponse.json().catch(() => ({}));
+
+          if (createResponse.status === 409) {
+            handleSessionConflict(createData?.detail || SESSION_CONFLICT_FALLBACK);
+            return;
+          }
 
           if (!createResponse.ok) {
             throw new Error(createData?.detail || 'Imtihonni boshlashda xatolik yuz berdi.');
           }
 
           currentStudentExamId = createData.id;
+          currentExamSessionKey = createData?.exam_session_key || null;
+
+          if (createData?.session_replaced) {
+            toast({
+              title: 'Sessiya yangilandi',
+              description: 'Imtihon sessiyasi ushbu qurilmaga ko‘chirildi.',
+            });
+          }
+        }
+
+        if (!currentStudentExamId || !currentExamSessionKey) {
+          throw new Error('Imtihon sessiyasi olinmadi. Qaytadan boshlang.');
         }
 
         setStudentExamId(currentStudentExamId);
+        setExamSessionKeyState(currentExamSessionKey);
+        setExamSessionKey(currentStudentExamId, currentExamSessionKey);
 
-        const questionResponse = await authFetch(API_ENDPOINTS.EXAM_QUESTIONS(resolvedExamId));
+        const questionResponse = await authFetch(API_ENDPOINTS.STUDENT_EXAM_QUESTIONS(currentStudentExamId), {
+          headers: {
+            'X-Exam-Session-Key': currentExamSessionKey,
+          },
+        });
         const questionData = await questionResponse.json().catch(() => []);
+
+        if (questionResponse.status === 409) {
+          handleSessionConflict(questionData?.detail || SESSION_CONFLICT_FALLBACK, currentStudentExamId);
+          return;
+        }
 
         if (!questionResponse.ok) {
           throw new Error(questionData?.detail || 'Savollarni olib bo‘lmadi.');
@@ -203,7 +369,99 @@ export default function ExamTakePage() {
     };
 
     ensureStudentExamAndQuestions();
-  }, [resolvedExamId, studentExamId, storageKey, toast]);
+  }, [examSessionKey, handleSessionConflict, resolvedExamId, storageKey, studentExamId, toast]);
+
+  useEffect(() => {
+    if (!studentExamId || !examSessionKey || sessionTerminated) {
+      return;
+    }
+
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      return;
+    }
+
+    stopSessionMonitoring();
+    const socketUrl = buildExamSessionWebSocketUrl(studentExamId, token, examSessionKey);
+
+    try {
+      const socket = new WebSocket(socketUrl);
+      sessionSocketRef.current = socket;
+
+      const sendHeartbeat = () => {
+        if (socket.readyState !== WebSocket.OPEN) {
+          return;
+        }
+
+        socket.send(JSON.stringify({
+          type: 'heartbeat',
+          session_key: examSessionKey,
+        }));
+      };
+
+      socket.onopen = () => {
+        sendHeartbeat();
+        heartbeatIntervalRef.current = setInterval(sendHeartbeat, 3000);
+      };
+
+      socket.onmessage = (event) => {
+        let message: SessionStatusMessage | ForceLogoutMessage | null = null;
+
+        try {
+          message = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+
+        if (!message?.type) {
+          return;
+        }
+
+        if (sessionConflictHandledRef.current) {
+          return;
+        }
+
+        if (message.type === 'session_status' && message.expired) {
+          const conflictMessage = message.message || SESSION_CONFLICT_FALLBACK;
+          if (message.new_device) {
+            alert(`${conflictMessage}\nYangi qurilma: ${message.new_device}`);
+          } else {
+            alert(conflictMessage);
+          }
+
+          const fullMessage = message.new_device
+            ? `${conflictMessage} (${message.new_device})`
+            : conflictMessage;
+          handleSessionConflict(fullMessage, studentExamId);
+          return;
+        }
+
+        if (message.type === 'force_logout') {
+          handleForceLogout(message.message);
+        }
+      };
+
+      socket.onclose = () => {
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+          heartbeatIntervalRef.current = null;
+        }
+      };
+    } catch (error) {
+      console.error('Exam session websocket error:', error);
+    }
+
+    return () => {
+      stopSessionMonitoring();
+    };
+  }, [
+    examSessionKey,
+    handleForceLogout,
+    handleSessionConflict,
+    sessionTerminated,
+    stopSessionMonitoring,
+    studentExamId,
+  ]);
 
   // Detect Developer Tools
   useEffect(() => {
@@ -269,6 +527,8 @@ export default function ExamTakePage() {
       const newCount = prev + 1;
       if (newCount >= 3) {
         localStorage.removeItem(storageKey);
+        setSessionTerminated(true);
+        stopSessionMonitoring();
         alert('⚠️ Imtihon bekor qilindi!\n\nNoto\'g\'ri harakatlar aniqlandi. Barcha javoblaringiz o\'chirildi.');
         navigate('/dashboard/student/exams');
         return newCount;
@@ -279,22 +539,26 @@ export default function ExamTakePage() {
       setTimeout(() => { setIsBlurred(false); setShowWarning(false); }, 3000);
       return newCount;
     });
-  }, [navigate, storageKey]);
+  }, [navigate, storageKey, stopSessionMonitoring]);
 
   // Timer
   useEffect(() => {
+    if (sessionTerminated) {
+      return;
+    }
+
     const interval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(interval);
-          handleSubmit();
+          submitRef.current();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [sessionTerminated]);
 
   // Blur screen without warning
   const blurScreenOnly = useCallback(() => {
@@ -629,12 +893,29 @@ export default function ExamTakePage() {
   };
 
   const handleSubmit = async () => {
+    if (sessionTerminated) {
+      return;
+    }
+
     if (!studentExamId) {
       toast({
         variant: 'destructive',
         title: 'Xatolik',
         description: 'Student exam ID topilmadi. Qaytadan urinib ko‘ring.',
       });
+      return;
+    }
+
+    const currentSessionKey = examSessionKey || getExamSessionKey(studentExamId);
+    if (!currentSessionKey) {
+      setSessionTerminated(true);
+      stopSessionMonitoring();
+      toast({
+        variant: 'destructive',
+        title: 'Sessiya topilmadi',
+        description: 'Imtihon sessiyasi yo‘qolgan. Imtihonni qayta oching.',
+      });
+      navigate('/dashboard/student/exams');
       return;
     }
 
@@ -645,6 +926,9 @@ export default function ExamTakePage() {
       for (const [questionId, selectedAnswerId] of answerEntries) {
         const answerResponse = await authFetch(API_ENDPOINTS.STUDENT_ANSWERS, {
           method: 'POST',
+          headers: {
+            'X-Exam-Session-Key': currentSessionKey,
+          },
           body: JSON.stringify({
             student_exam: studentExamId,
             question: Number(questionId),
@@ -652,6 +936,12 @@ export default function ExamTakePage() {
             text_answer: '',
           }),
         });
+
+        if (answerResponse.status === 409) {
+          const conflictData = await answerResponse.json().catch(() => ({}));
+          handleSessionConflict(conflictData?.detail || SESSION_CONFLICT_FALLBACK, studentExamId);
+          return;
+        }
 
         if (!answerResponse.ok) {
           const answerError = await answerResponse.json().catch(() => ({}));
@@ -671,15 +961,26 @@ export default function ExamTakePage() {
 
       const submitResponse = await authFetch(API_ENDPOINTS.STUDENT_EXAM_SUBMIT(studentExamId), {
         method: 'POST',
+        headers: {
+          'X-Exam-Session-Key': currentSessionKey,
+        },
         body: JSON.stringify({}),
       });
       const submitData = await submitResponse.json().catch(() => ({}));
+
+      if (submitResponse.status === 409) {
+        handleSessionConflict(submitData?.detail || SESSION_CONFLICT_FALLBACK, studentExamId);
+        return;
+      }
 
       if (!submitResponse.ok) {
         throw new Error(submitData?.detail || 'Imtihonni topshirishda xatolik yuz berdi.');
       }
 
       localStorage.removeItem(storageKey);
+      removeExamSessionKey(studentExamId);
+      setSessionTerminated(true);
+      stopSessionMonitoring();
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       navigate(`/dashboard/student/exam/${studentExamId}/results`, {
         state: { exam, result: submitData },
@@ -695,6 +996,12 @@ export default function ExamTakePage() {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    submitRef.current = () => {
+      void handleSubmit();
+    };
+  }, [handleSubmit]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);

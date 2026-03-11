@@ -11,6 +11,7 @@ import { format, isBefore, isAfter, differenceInMinutes } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import { authFetch } from '@/lib/authFetch';
+import { getOrCreateExamDeviceId, setExamSessionKey } from '@/lib/examSession';
 import { API_ENDPOINTS } from '@/config/api';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,6 +47,7 @@ interface ApiStudentExam {
   id: number;
   exam: number;
   status: 'in_progress' | 'submitted' | 'graded';
+  exam_session_key?: string;
 }
 
 const statusConfig = {
@@ -161,16 +163,31 @@ export default function ExamList() {
     setStartingExamId(exam.id);
 
     try {
+      const deviceId = getOrCreateExamDeviceId();
       const response = await authFetch(API_ENDPOINTS.STUDENT_EXAMS, {
         method: 'POST',
+        headers: {
+          'X-Device-Id': deviceId,
+        },
         body: JSON.stringify({ exam: exam.id }),
       });
 
       const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
+        if (data?.id && data?.exam_session_key) {
+          setExamSessionKey(data.id, data.exam_session_key);
+        }
+
+        if (data?.session_replaced) {
+          toast({
+            title: 'Sessiya yangilandi',
+            description: 'Imtihon sessiyasi ushbu qurilmaga ko‘chirildi.',
+          });
+        }
+
         navigate(`/dashboard/student/exam/${exam.id}/take`, {
-          state: { exam, studentExamId: data.id },
+          state: { exam, studentExamId: data.id, examSessionKey: data.exam_session_key || null },
         });
         return;
       }
@@ -188,8 +205,27 @@ export default function ExamList() {
           const existing = rows.find((item) => item.exam === exam.id && item.status === 'in_progress');
 
           if (existing) {
+            let examSessionKey = existing.exam_session_key || null;
+
+            if (!examSessionKey) {
+              const detailResponse = await authFetch(API_ENDPOINTS.STUDENT_EXAM_DETAIL(existing.id), {
+                headers: {
+                  'X-Device-Id': deviceId,
+                },
+              });
+              const detailData = await detailResponse.json().catch(() => ({}));
+
+              if (detailResponse.ok) {
+                examSessionKey = detailData?.exam_session_key || null;
+              }
+            }
+
+            if (examSessionKey) {
+              setExamSessionKey(existing.id, examSessionKey);
+            }
+
             navigate(`/dashboard/student/exam/${exam.id}/take`, {
-              state: { exam, studentExamId: existing.id },
+              state: { exam, studentExamId: existing.id, examSessionKey },
             });
             return;
           }

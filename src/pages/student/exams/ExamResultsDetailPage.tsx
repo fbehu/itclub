@@ -200,7 +200,7 @@ export default function ExamResultsDetailPage() {
               <p className="text-muted-foreground text-sm">Savol javoblari mavjud emas.</p>
             ) : (
               <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-3">
-                {result.answers.map((answer) => {
+                {result.answers.map((answer, index) => {
                   const isCorrect = (answer.points_earned || 0) > 0;
                   return (
                     <div
@@ -211,7 +211,7 @@ export default function ExamResultsDetailPage() {
                           : 'bg-destructive/10 border-destructive/30'
                         }`}
                     >
-                      <span className="text-sm font-bold text-muted-foreground mb-1">{answer.question}</span>
+                      <span className="text-sm font-bold text-muted-foreground mb-1">{index + 1}</span>
                       {isCorrect
                         ? <CheckCircle className="h-6 w-6 text-primary" />
                         : <XCircle className="h-6 w-6 text-destructive" />

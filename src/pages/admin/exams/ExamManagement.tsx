@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +20,14 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { authFetch } from '@/lib/authFetch';
+import { API_ENDPOINTS } from '@/config/api';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface GroupItem {
+  id: number;
+  name: string;
+}
 
 interface Exam {
   id: number;
@@ -27,7 +35,7 @@ interface Exam {
   description: string;
   subject: string;
   hashtag: string;
-  groups: { id: number; name: string }[];
+  groups: GroupItem[];
   start_date: string;
   end_date: string;
   duration_minutes: number;
@@ -38,76 +46,10 @@ interface Exam {
   status: string;
   show_results_immediately: boolean;
   shuffled_questions: boolean;
-  questions_count: number;
+  questions?: Array<{ id: number }>;
   created_by_username: string;
   created_at: string;
 }
-
-const mockExams: Exam[] = [
-  {
-    id: 1,
-    title: 'Matematika yakuniy imtihon',
-    description: 'Algebra va geometriya bo\'yicha yakuniy test',
-    subject: 'Matematika',
-    hashtag: '#math_final',
-    groups: [{ id: 1, name: 'A1' }, { id: 2, name: 'A2' }],
-    start_date: '2026-03-15T09:00:00Z',
-    end_date: '2026-03-15T11:00:00Z',
-    duration_minutes: 60,
-    passing_score: 60,
-    question_score: 5,
-    total_points: 100,
-    num_questions_to_show: 20,
-    status: 'published',
-    show_results_immediately: false,
-    shuffled_questions: true,
-    questions_count: 30,
-    created_by_username: 'teacher1',
-    created_at: '2026-03-10T08:00:00Z',
-  },
-  {
-    id: 2,
-    title: 'Ingliz tili grammar test',
-    description: 'Grammar va vocabulary bo\'yicha test',
-    subject: 'Ingliz tili',
-    hashtag: '#eng_grammar',
-    groups: [{ id: 3, name: 'B1' }],
-    start_date: '2026-03-20T14:00:00Z',
-    end_date: '2026-03-20T15:30:00Z',
-    duration_minutes: 45,
-    passing_score: 50,
-    question_score: 2,
-    total_points: 50,
-    num_questions_to_show: 25,
-    status: 'published',
-    show_results_immediately: true,
-    shuffled_questions: true,
-    questions_count: 25,
-    created_by_username: 'teacher2',
-    created_at: '2026-03-09T12:00:00Z',
-  },
-  {
-    id: 3,
-    title: 'Python dasturlash',
-    description: 'Python asoslari bo\'yicha test',
-    subject: 'Dasturlash',
-    hashtag: '#python_basics',
-    groups: [{ id: 1, name: 'A1' }],
-    start_date: '2026-03-25T10:00:00Z',
-    end_date: '2026-03-25T11:00:00Z',
-    duration_minutes: 50,
-    passing_score: 70,
-    question_score: 10,
-    total_points: 100,
-    num_questions_to_show: 10,
-    status: 'closed',
-    show_results_immediately: false,
-    shuffled_questions: false,
-    questions_count: 15,
-    created_by_username: 'teacher1',
-    created_at: '2026-03-08T09:00:00Z',
-  },
-];
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   published: { label: 'Faol', color: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400', icon: CheckCircle },
@@ -123,16 +65,51 @@ export default function ExamManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
-  const basePath = user?.role === 'manager' ? '/dashboard/manager' : user?.role === 'teacher' || user?.role === 'sub_teacher' ? '/dashboard/teacher' : '/dashboard/admin';
+  const basePath = user?.role === 'manager'
+    ? '/dashboard/manager'
+    : user?.role === 'teacher' || user?.role === 'sub_teacher'
+      ? '/dashboard/teacher'
+      : '/dashboard/admin';
 
-  const filtered = mockExams.filter(exam => {
-    const matchesSearch = exam.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exam.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exam.hashtag.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || exam.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const fetchExams = async () => {
+    try {
+      setLoading(true);
+      const response = await authFetch(API_ENDPOINTS.EXAMS);
+      const data = await response.json().catch(() => []);
+
+      if (!response.ok) {
+        throw new Error(data?.detail || 'Imtihonlar ro\'yxatini olib bo\'lmadi');
+      }
+
+      const rows: Exam[] = Array.isArray(data) ? data : (data.results || []);
+      setExams(rows);
+    } catch (error) {
+      console.error('Exam management fetch error:', error);
+      toast.error('Imtihonlar ro\'yxatini yuklab bo\'lmadi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExams();
+  }, []);
+
+  const filtered = useMemo(() => {
+    return exams.filter((exam) => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        exam.title.toLowerCase().includes(q) ||
+        exam.subject.toLowerCase().includes(q) ||
+        (exam.hashtag || '').toLowerCase().includes(q);
+      const matchesStatus = statusFilter === 'all' || exam.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [exams, searchQuery, statusFilter]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('uz-UZ', {
@@ -140,21 +117,40 @@ export default function ExamManagement() {
     });
   };
 
-  const handleDelete = () => {
-    toast.success('Imtihon o\'chirildi');
-    setDeleteExamId(null);
+  const handleDelete = async () => {
+    if (!deleteExamId) return;
+
+    try {
+      setDeleting(true);
+      const response = await authFetch(API_ENDPOINTS.EXAM_DETAIL(deleteExamId), {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.detail || 'Imtihonni o\'chirib bo\'lmadi');
+      }
+
+      toast.success('Imtihon o\'chirildi');
+      setExams((prev) => prev.filter((item) => item.id !== deleteExamId));
+      setDeleteExamId(null);
+    } catch (error) {
+      console.error('Delete exam error:', error);
+      toast.error(error instanceof Error ? error.message : 'O\'chirishda xatolik yuz berdi');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const stats = {
-    total: mockExams.length,
-    active: mockExams.filter(e => e.status === 'published' || e.status === 'open').length,
-    closed: mockExams.filter(e => e.status === 'closed' || e.status === 'expired' || e.status === 'archived').length,
+    total: exams.length,
+    active: exams.filter((e) => e.status === 'published' || e.status === 'open').length,
+    closed: exams.filter((e) => e.status === 'closed' || e.status === 'expired' || e.status === 'archived').length,
   };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -169,7 +165,6 @@ export default function ExamManagement() {
           </Button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Jami', value: stats.total, icon: FileText, color: 'text-primary' },
@@ -190,7 +185,6 @@ export default function ExamManagement() {
           ))}
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -217,9 +211,14 @@ export default function ExamManagement() {
           </Select>
         </div>
 
-        {/* Exam Cards */}
         <div className="grid gap-4">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <>
+              {[1, 2, 3].map((item) => (
+                <Skeleton key={item} className="h-52 rounded-xl" />
+              ))}
+            </>
+          ) : filtered.length === 0 ? (
             <Card className="border-dashed border-2 border-border">
               <CardContent className="p-12 text-center">
                 <GraduationCap className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
@@ -231,11 +230,12 @@ export default function ExamManagement() {
             filtered.map(exam => {
               const status = statusConfig[exam.status] || statusConfig.closed;
               const StatusIcon = status.icon;
+              const questionsCount = exam.questions?.length || 0;
+
               return (
                 <Card key={exam.id} className="border-border/50 hover:border-primary/30 transition-all duration-200 hover:shadow-md group">
                   <CardContent className="p-5">
                     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                      {/* Left: Info */}
                       <div className="flex-1 min-w-0 space-y-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -249,7 +249,6 @@ export default function ExamManagement() {
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{exam.description}</p>
                           </div>
 
-                          {/* Actions */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
@@ -270,10 +269,9 @@ export default function ExamManagement() {
                           </DropdownMenu>
                         </div>
 
-                        {/* Meta info pills */}
                         <div className="flex flex-wrap gap-2">
                           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 rounded-lg px-2.5 py-1.5">
-                            <Hash className="h-3 w-3" />{exam.hashtag}
+                            <Hash className="h-3 w-3" />{exam.hashtag || '#exam'}
                           </span>
                           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 rounded-lg px-2.5 py-1.5">
                             <FileText className="h-3 w-3" />{exam.subject}
@@ -282,18 +280,17 @@ export default function ExamManagement() {
                             <Clock className="h-3 w-3" />{exam.duration_minutes} daqiqa
                           </span>
                           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 rounded-lg px-2.5 py-1.5">
-                            <FileText className="h-3 w-3" />{exam.questions_count} savol ({exam.num_questions_to_show} ko'rsatiladi)
+                            <FileText className="h-3 w-3" />{questionsCount} savol ({exam.num_questions_to_show} ko'rsatiladi)
                           </span>
                           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 rounded-lg px-2.5 py-1.5">
                             <GraduationCap className="h-3 w-3" />O'tish bali: {exam.passing_score}%
                           </span>
                         </div>
 
-                        {/* Groups + Date */}
                         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1.5">
                             <Users className="h-3.5 w-3.5" />
-                            {exam.groups.map(g => g.name).join(', ')}
+                            {exam.groups?.map(g => g.name).join(', ') || 'Guruh biriktirilmagan'}
                           </span>
                           <span className="flex items-center gap-1.5">
                             <Calendar className="h-3.5 w-3.5" />
@@ -302,7 +299,6 @@ export default function ExamManagement() {
                         </div>
                       </div>
 
-                      {/* Right: Quick actions */}
                       <div className="flex lg:flex-col gap-2 shrink-0">
                         <Button variant="outline" size="sm" className="gap-1.5 flex-1 lg:flex-none" onClick={() => navigate(`${basePath}/exams/${exam.id}`)}>
                           <Eye className="h-3.5 w-3.5" />Ko'rish
@@ -320,8 +316,7 @@ export default function ExamManagement() {
         </div>
       </div>
 
-      {/* Delete confirmation */}
-      <AlertDialog open={deleteExamId !== null} onOpenChange={() => setDeleteExamId(null)}>
+      <AlertDialog open={deleteExamId !== null} onOpenChange={() => !deleting && setDeleteExamId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Imtihonni o'chirishni tasdiqlang</AlertDialogTitle>
@@ -330,9 +325,13 @@ export default function ExamManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              O'chirish
+            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'O\'chirilmoqda...' : 'O\'chirish'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
