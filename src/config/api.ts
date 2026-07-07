@@ -1,5 +1,5 @@
 // API Base URL - .env.local dan o'qiydi
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.onedu.uz/api';
 
 export const API_ENDPOINTS = {
   // Auth
